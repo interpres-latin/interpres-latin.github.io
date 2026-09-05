@@ -64,6 +64,8 @@ const cases = [
   ['how do you say tener in the past tense', /tener/i, 'verb beats the past-tense topic'],
   ['what is hablar in the future', /hablar/i, 'verb beats the future topic'],
   ['give me the preterite forms of pedir', /pedir/i, 'verb beats the preterite topic'],
+  ['give the present tense for ir', /\bir\b/i, 'imperative phrasing, verb last'],
+  ['give me the present tense of ir', /\bir\b/i, 'the same with "of"'],
   // …but an exact topic match still wins, articles and all.
   ['cuándo se usa el subjuntivo', /subjuntivo no es un tiempo|subjunctive isn/i, 'exact topic beats the verb "usar"'],
   ['el subjuntivo', /subjuntivo no es un tiempo|subjunctive isn/i, 'topic despite the leading article'],

@@ -25,7 +25,22 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, ai: hasProvider(), provider: providerInfo() });
 });
 
-app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
+/**
+ * The app is a single page, so a stale module can survive in an open tab for a
+ * long time — navigating between pages never re-fetches it. Code and markup
+ * therefore revalidate on every load (cheap: a 304 when nothing changed), while
+ * the photographs, which only change when their file does, cache hard.
+ */
+app.use(express.static(PUBLIC_DIR, {
+  extensions: ['html'],
+  setHeaders(res, filePath) {
+    if (/\.(?:html|js|css)$/.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache');
+    } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  },
+}));
 
 // Single-page app: anything that is not an API route falls through to the shell.
 app.use((req, res, next) => {
