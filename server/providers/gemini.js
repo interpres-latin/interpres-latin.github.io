@@ -5,6 +5,8 @@
  * site without a bill. Get a key at https://aistudio.google.com/apikey.
  */
 
+import { readEventStream } from './sse.js';
+
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export const id = 'gemini';
@@ -17,7 +19,9 @@ export function configured() {
 }
 
 export function model() {
-  return process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+  // An alias Google keeps pointed at the current Flash. Pinning a version
+  // instead invites "no longer available to new users" once it is retired.
+  return process.env.GEMINI_MODEL || 'gemini-flash-latest';
 }
 
 function requestBody({ system, messages, maxTokens }) {
@@ -46,6 +50,30 @@ async function failure(response) {
   return error;
 }
 
+/** Free-tier capacity is shared, so overload answers are routine, not fatal. */
+const TRANSIENT = new Set([429, 500, 503]);
+const RETRIES = 2;
+const BACKOFF_MS = 900;
+
+const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+/**
+ * Open a request, retrying while the model is merely busy. Retried before any
+ * tokens have been read, so a caller never sees a half-written answer restart.
+ */
+async function open(target, init) {
+  let last = null;
+  for (let attempt = 0; attempt <= RETRIES; attempt += 1) {
+    const response = await fetch(target, init);
+    if (response.ok) return response;
+
+    last = await failure(response);
+    if (!TRANSIENT.has(response.status) || attempt === RETRIES) throw last;
+    await wait(BACKOFF_MS * (attempt + 1));
+  }
+  throw last;
+}
+
 /** A prompt the safety filters refused comes back as a block, not an HTTP error. */
 function checkBlocked(payload) {
   const reason = payload?.promptFeedback?.blockReason;
@@ -63,14 +91,12 @@ function textOf(payload) {
 }
 
 export async function ask({ system, messages, maxTokens = 2000 }) {
-  const response = await fetch(url('generateContent'), {
+  const response = await open(url('generateContent'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(requestBody({ system, messages, maxTokens })),
     signal: AbortSignal.timeout(60000),
   });
-
-  if (!response.ok) throw await failure(response);
 
   const payload = await response.json();
   checkBlocked(payload);
@@ -79,47 +105,21 @@ export async function ask({ system, messages, maxTokens = 2000 }) {
 
 export async function* askStream({ system, messages, maxTokens = 4000 }) {
   const controller = new AbortController();
-  const response = await fetch(url('streamGenerateContent', '&alt=sse'), {
+  const response = await open(url('streamGenerateContent', '&alt=sse'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(requestBody({ system, messages, maxTokens })),
     signal: controller.signal,
   });
 
-  if (!response.ok) throw await failure(response);
   if (!response.body) throw new Error('Gemini returned no stream.');
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let finished = false;
+  for await (const data of readEventStream(response, controller)) {
+    let payload;
+    try { payload = JSON.parse(data); } catch { continue; }
 
-  try {
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      let split;
-      while ((split = buffer.indexOf('\n\n')) !== -1) {
-        const chunk = buffer.slice(0, split);
-        buffer = buffer.slice(split + 2);
-
-        const line = chunk.split('\n').find((item) => item.startsWith('data:'));
-        if (!line) continue;
-
-        let payload;
-        try { payload = JSON.parse(line.slice(5).trim()); } catch { continue; }
-
-        checkBlocked(payload);
-        const text = textOf(payload);
-        if (text) yield text;
-      }
-    }
-    finished = true;
-  } finally {
-    // The consumer hung up — stop pulling tokens we are not going to use.
-    if (!finished) controller.abort();
-    reader.cancel().catch(() => {});
+    checkBlocked(payload);
+    const text = textOf(payload);
+    if (text) yield text;
   }
 }

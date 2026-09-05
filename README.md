@@ -54,7 +54,7 @@ so the site costs nothing to run:
 
 | Provider | Key | Default model | Cost |
 | --- | --- | --- | --- |
-| Google AI Studio | `GEMINI_API_KEY` | `gemini-3.8-flash` | free tier |
+| Google AI Studio | `GEMINI_API_KEY` | `gemini-flash-latest` | free tier |
 | Groq | `GROQ_API_KEY` | `llama-3.3-70b-versatile` | free tier |
 | Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-5` | paid |
 
@@ -110,11 +110,21 @@ dark mode, the Plaza de Cibeles by day in light mode**, chosen by a per-theme
 front readable; the strengths were calibrated by rendering the actual composite
 with text over it rather than guessing.
 
+It runs behind the hero and the translator on the home page, and as a band
+behind the header on the conjugation and dictionary pages, fading out as the
+next section rises into view.
+
 Both sources are about 1024 px wide, which is well short of a modern display, so
 the photo carries a 1.5 px blur: it turns the upscaling softness into something
 that reads as depth of field instead of as a low-resolution image. **For genuinely
 higher resolution, drop a larger original into `public/assets/` under the same
-names** — nothing in the code assumes the current dimensions.
+names** (`madrid-day.jpg`/`.webp`, `madrid-night.jpg`/`.webp`) — nothing in the
+code assumes the current dimensions.
+
+The image is declared as a plain `url()` followed by an `image-set()`, rather
+than through a custom property. A `var()` whose value a browser cannot parse is
+invalid at computed-value time and resets to *initial* — it does not fall back
+to the previous declaration — which is how the photo silently disappeared once.
 
 The hero hands over to the translator with a soft dissolve rather than a hard
 edge: the hero is masked out over its last stretch while the wallpaper is

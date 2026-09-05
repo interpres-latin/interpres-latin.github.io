@@ -1,6 +1,6 @@
 import { el, icon, ICONS, clear, debounce, postJson } from '../lib/dom.js';
 import { startNetwork } from '../lib/network.js';
-import { startWallpaper } from '../lib/wallpaper.js';
+import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import { lang, t } from '../lib/i18n.js';
 
 const LANGUAGES = {
@@ -13,11 +13,8 @@ const SAMPLE_WORDS = ['sobremesa', 'madrugar', 'entrañable', 'friolero', 'estre
 
 export function renderHome(main) {
   const canvas = el('canvas', { class: 'hero__canvas', 'aria-hidden': 'true' });
-  // The photo sits in its own child so the parallax transform and the opacity
-  // fade do not fight over the same element.
-  const wallpaper = el('div', { class: 'wallpaper', 'aria-hidden': 'true' },
-    el('div', { class: 'wallpaper__photo' }),
-    el('div', { class: 'wallpaper__scrim' }));
+  // Behind the hero and the translator both, then gone by the dictionary search.
+  const wallpaper = wallpaperLayer();
 
   const hero = el('section', { class: 'hero' },
     canvas,
@@ -42,7 +39,7 @@ export function renderHome(main) {
   main.append(wallpaper, hero, translator, finder, features);
 
   const stopNetwork = startNetwork(canvas);
-  const stopWallpaper = startWallpaper(wallpaper, translator, finder);
+  const stopWallpaper = startWallpaper(wallpaper, finder);
 
   return () => { stopNetwork(); stopWallpaper(); };
 }

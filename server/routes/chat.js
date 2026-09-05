@@ -62,7 +62,10 @@ router.post('/', async (req, res) => {
   const send = (event) => res.write(`data: ${JSON.stringify(event)}\n\n`);
   let aborted = false;
   let produced = false;
-  req.on('close', () => { aborted = true; });
+  // On the *response*, not the request: in modern Node a request emits 'close'
+  // as soon as its body has been read, which is immediately for a POST —
+  // listening there aborts every stream before the first token arrives.
+  res.on('close', () => { aborted = true; });
 
   send({ type: 'quota', quota });
 

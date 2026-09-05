@@ -4,6 +4,8 @@
  * Second choice after Gemini. Get a key at https://console.groq.com/keys.
  */
 
+import { readEventStream } from './sse.js';
+
 const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
 export const id = 'groq';
@@ -71,38 +73,13 @@ export async function* askStream({ system, messages, maxTokens = 4000 }) {
   if (!response.ok) throw await failure(response);
   if (!response.body) throw new Error('Groq returned no stream.');
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let finished = false;
+  for await (const data of readEventStream(response, controller)) {
+    if (data === '[DONE]') return;
 
-  try {
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+    let payload;
+    try { payload = JSON.parse(data); } catch { continue; }
 
-      let split;
-      while ((split = buffer.indexOf('\n\n')) !== -1) {
-        const chunk = buffer.slice(0, split);
-        buffer = buffer.slice(split + 2);
-
-        const line = chunk.split('\n').find((item) => item.startsWith('data:'));
-        if (!line) continue;
-
-        const data = line.slice(5).trim();
-        if (data === '[DONE]') { finished = true; return; }
-
-        let payload;
-        try { payload = JSON.parse(data); } catch { continue; }
-
-        const text = payload.choices?.[0]?.delta?.content;
-        if (text) yield text;
-      }
-    }
-    finished = true;
-  } finally {
-    if (!finished) controller.abort();
-    reader.cancel().catch(() => {});
+    const text = payload.choices?.[0]?.delta?.content;
+    if (text) yield text;
   }
 }

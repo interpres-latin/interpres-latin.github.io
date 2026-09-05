@@ -1,4 +1,5 @@
 import { el, icon, ICONS, clear, debounce, fold, getJson } from '../lib/dom.js';
+import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import { conjugate, irregularCells, PERSONS, PERSON_LABELS } from '../lib/conjugator.js';
 import { COMMON_VERBS, MODEL_VERBS } from '../data/verbs.js';
 import { lang, t } from '../lib/i18n.js';
@@ -59,6 +60,7 @@ export function renderConjugator(main) {
   const state = { mode: 'ar', verb: MODEL_VERBS.ar.verb, highlight: true, request: 0 };
 
   const results = el('div', {});
+  const wallpaper = wallpaperLayer({ band: true });
   const searchInput = el('input', {
     type: 'search',
     placeholder: t('conjugator.search'),
@@ -85,7 +87,7 @@ export function renderConjugator(main) {
     results.querySelector('.conj-tables')?.classList.toggle('mark-irregular', state.highlight);
   });
 
-  main.append(el('div', { class: 'page shell' },
+  main.append(wallpaper, el('div', { class: 'page shell' },
     el('div', { class: 'page__head' },
       el('p', { class: 'eyebrow' }, t('conjugator.eyebrow')),
       el('h1', {}, t('conjugator.title')),
@@ -197,7 +199,12 @@ export function renderConjugator(main) {
 
   show(state.verb, 'ar');
 
-  return () => document.removeEventListener('click', onDocumentClick);
+  const stopWallpaper = startWallpaper(wallpaper, results);
+
+  return () => {
+    document.removeEventListener('click', onDocumentClick);
+    stopWallpaper();
+  };
 }
 
 // ---------------------------------------------------------------------------

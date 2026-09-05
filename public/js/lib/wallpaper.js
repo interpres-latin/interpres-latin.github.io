@@ -1,52 +1,51 @@
 /**
- * The wallpaper behind the middle of the home page.
+ * The photograph behind the top of a page.
  *
- * A photograph of the Plaza de Cibeles that parallaxes against the scroll,
- * fades in as the translator arrives and fades back out as the dictionary
- * search takes over. A theme-coloured scrim sits on top of it so the text in
- * front stays readable in either palette.
+ * Gran Vía at night in dark mode, the Plaza de Cibeles by day in light mode —
+ * chosen in CSS, so the theme switch needs no help from here. It is fully up at
+ * the top of the page and fades out as the element you hand it rises into view,
+ * which is what keeps it to the hero and translator on the home page and to a
+ * band behind the header on the inner ones.
+ *
+ * A theme-coloured scrim sits over the photo so text in front stays readable.
  */
 
-const IMAGE = '/assets/madrid';
+import { el } from './dom.js';
 
 const clamp = (value) => Math.min(Math.max(value, 0), 1);
 
-/**
- * @param {HTMLElement} layer  the fixed element to paint
- * @param {HTMLElement} from   section where the wallpaper fades in
- * @param {HTMLElement} to     section where it fades back out
- */
-export function startWallpaper(layer, from, to) {
-  // WebP where it is understood, JPEG everywhere else. The plain url() first is
-  // the fallback for browsers that do not know image-set at all.
-  const photo = layer.querySelector('.wallpaper__photo') || layer;
-  photo.style.backgroundImage = `url("${IMAGE}.jpg")`;
-  photo.style.backgroundImage = `image-set(url("${IMAGE}.webp") type("image/webp"), url("${IMAGE}.jpg") type("image/jpeg"))`;
+/** The layer itself, for a view to put at the top of its tree. */
+export function wallpaperLayer({ band = false } = {}) {
+  return el('div', { class: `wallpaper${band ? ' wallpaper--band' : ''}`, 'aria-hidden': 'true' },
+    el('div', { class: 'wallpaper__photo' }),
+    el('div', { class: 'wallpaper__scrim' }));
+}
 
+/**
+ * @param {HTMLElement} layer  the element returned by wallpaperLayer()
+ * @param {HTMLElement} until  fades out as this rises through the viewport
+ */
+export function startWallpaper(layer, until) {
+  const photo = layer.querySelector('.wallpaper__photo');
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let queued = false;
-
-  // How strongly the photo reads through its scrim, per theme.
   let strength = readStrength();
 
   function readStrength() {
     const value = getComputedStyle(document.documentElement).getPropertyValue('--wallpaper-strength');
-    return Number(value) || 0.5;
+    return Number(value) || 1;
   }
 
   function update() {
     queued = false;
     const viewport = window.innerHeight;
-    const start = from.getBoundingClientRect().top;
-    const end = to.getBoundingClientRect().top;
+    const edge = until?.getBoundingClientRect().top ?? Infinity;
 
-    // Starts arriving while the hero is still on screen, so the two sections
-    // dissolve into each other rather than cutting.
-    const arriving = clamp((viewport * 1.05 - start) / (viewport * 0.6));
-    const leaving = clamp((viewport * 0.8 - end) / (viewport * 0.45));
+    // Full at the top of the page, gone by the time `until` is well in view.
+    const leaving = clamp((viewport * 0.85 - edge) / (viewport * 0.5));
 
-    layer.style.opacity = (arriving * (1 - leaving) * strength).toFixed(3);
-    if (!reduced) photo.style.transform = `translate3d(0, ${(-window.scrollY * 0.12).toFixed(1)}px, 0) scale(1.12)`;
+    layer.style.opacity = ((1 - leaving) * strength).toFixed(3);
+    if (!reduced) photo.style.transform = `translate3d(0, ${(-window.scrollY * 0.12).toFixed(1)}px, 0) scale(1.06)`;
   }
 
   function onScroll() {
