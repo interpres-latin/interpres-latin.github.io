@@ -1,0 +1,19 @@
+{
+  "name": "profegpt",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ProfeGPT — Spanish/English translator, conjugation tables, RAE dictionary and an AI tutor.",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node test/conjugator.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
+    "express": "^5.2.1"
+  }
+}

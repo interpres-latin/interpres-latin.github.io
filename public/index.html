@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ProfeGPT — español, sin fricción</title>
+  <meta name="description" content="Traductor español ↔ inglés, tablas de conjugación completas, diccionario de la RAE y un tutor con IA." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇪🇸</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+
+  <header class="nav" id="nav">
+    <a class="nav__brand" href="/" data-link>
+      <span class="nav__mark" aria-hidden="true"></span>
+      <span class="nav__wordmark">ProfeGPT</span>
+    </a>
+    <nav class="nav__links" aria-label="Principal">
+      <a href="/#traductor" data-link data-nav="traductor">Traductor</a>
+      <a href="/conjugacion" data-link data-nav="conjugacion">Conjugación</a>
+      <a href="/diccionario" data-link data-nav="diccionario">Diccionario</a>
+      <a href="/chat" data-link data-nav="chat">Chat</a>
+    </nav>
+    <button class="nav__toggle" type="button" aria-label="Abrir menú" aria-expanded="false">
+      <span></span><span></span>
+    </button>
+  </header>
+
+  <main id="main"></main>
+
+  <footer class="footer">
+    <p>ProfeGPT · definiciones del <a href="https://dle.rae.es" target="_blank" rel="noopener">Diccionario de la lengua española</a> (RAE)</p>
+  </footer>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
