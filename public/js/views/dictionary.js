@@ -1,4 +1,5 @@
 import { el, icon, ICONS, clear, getJson } from '../lib/dom.js';
+import { t } from '../lib/i18n.js';
 
 const CATEGORIES = {
   noun: 'sustantivo',
@@ -39,10 +40,10 @@ export function renderDictionary(main) {
 
   const input = el('input', {
     type: 'search',
-    placeholder: 'Busca una palabra: sobremesa, madrugar, entrañable…',
+    placeholder: t('dictionary.search'),
     autocomplete: 'off',
     spellcheck: false,
-    'aria-label': 'Buscar una palabra en el diccionario',
+    'aria-label': t('finder.label'),
   });
 
   const results = el('div', {});
@@ -51,7 +52,7 @@ export function renderDictionary(main) {
     el('div', { class: 'search__field' },
       icon(ICONS.search, { size: 15 }),
       input,
-      el('button', { class: 'btn btn--primary btn--sm', type: 'submit' }, 'Buscar')));
+      el('button', { class: 'btn btn--primary btn--sm', type: 'submit' }, t('dictionary.button'))));
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -60,10 +61,9 @@ export function renderDictionary(main) {
 
   main.append(el('div', { class: 'page shell' },
     el('div', { class: 'page__head' },
-      el('p', { class: 'eyebrow' }, 'Diccionario'),
-      el('h1', {}, 'Qué dice la RAE'),
-      el('p', {}, 'Definiciones del Diccionario de la lengua española, con sus acepciones, ' +
-        'sinónimos y una frase de ejemplo para cada sentido.')),
+      el('p', { class: 'eyebrow' }, t('dictionary.eyebrow')),
+      el('h1', {}, t('dictionary.title')),
+      el('p', {}, t('dictionary.lead'))),
     form,
     el('div', { style: { marginTop: '34px' } }, results),
   ));
@@ -79,7 +79,7 @@ export function renderDictionary(main) {
 
     const ticket = (state.request += 1);
     clear(results);
-    results.appendChild(el('div', { class: 'empty' }, el('p', {}, el('span', { class: 'spinner' }), ' Consultando el diccionario…')));
+    results.appendChild(el('div', { class: 'empty' }, el('p', {}, el('span', { class: 'spinner' }), ` ${t('dictionary.looking')}`)));
 
     try {
       const data = await getJson(`/api/dictionary?word=${encodeURIComponent(word)}`);
@@ -97,8 +97,8 @@ export function renderDictionary(main) {
   if (initial) search(initial);
   else {
     results.appendChild(el('div', { class: 'empty' },
-      el('h3', {}, 'Escribe una palabra'),
-      el('p', {}, 'Prueba con sobremesa, entrañable, madrugar o cualquier palabra que te haya llamado la atención.')));
+      el('h3', {}, t('dictionary.emptyTitle')),
+      el('p', {}, t('dictionary.emptyBody'))));
     input.focus();
   }
 }
@@ -108,11 +108,11 @@ export function renderDictionary(main) {
 function renderMiss(word, error, search) {
   const suggestions = error.data?.suggestions || [];
   return el('div', { class: 'empty' },
-    el('h3', {}, 'Sin resultados'),
+    el('h3', {}, t('dictionary.noResults')),
     el('p', {}, error.message || `No encontré "${word}".`),
     suggestions.length
       ? el('div', { class: 'wordlist', style: { justifyContent: 'center', marginTop: '18px' } },
-        el('span', {}, '¿Quisiste decir?'),
+        el('span', {}, t('dictionary.didYouMean')),
         ...suggestions.slice(0, 8).map((suggestion) =>
           el('button', { type: 'button', onclick: () => search(suggestion) }, suggestion)))
       : null);
@@ -123,7 +123,7 @@ function renderEntry(data, search) {
 
   wrap.appendChild(el('div', { class: 'entry__head' },
     el('h2', {}, data.word),
-    el('a', { class: 'chip', href: data.source.url, target: '_blank', rel: 'noopener' }, 'ver en dle.rae.es ↗')));
+    el('a', { class: 'chip', href: data.source.url, target: '_blank', rel: 'noopener' }, t('dictionary.seeOnRae'))));
 
   let senseIndex = 0;
 
@@ -141,7 +141,7 @@ function renderEntry(data, search) {
 
     if (entry.locutions.length) {
       wrap.appendChild(el('section', { class: 'locutions' },
-        el('h3', { class: 'mood__title' }, 'Locuciones y expresiones'),
+        el('h3', { class: 'mood__title' }, t('dictionary.locutions')),
         ...entry.locutions.map((locution) => el('div', { class: 'locution' },
           el('b', {}, locution.expression),
           ...locution.senses.map((sense) => el('p', {}, sense.description))))));
@@ -164,16 +164,15 @@ function renderSense(sense, example, exampleSource, search) {
     ...sense.usageNotes.map((note) => el('p', { class: 'sense__note' }, note)),
   );
 
-  if (sense.synonyms.length) body.appendChild(wordList('Sinónimos', sense.synonyms, search));
-  if (sense.antonyms.length) body.appendChild(wordList('Antónimos', sense.antonyms, search));
+  if (sense.synonyms.length) body.appendChild(wordList(t('dictionary.synonyms'), sense.synonyms, search));
+  if (sense.antonyms.length) body.appendChild(wordList(t('dictionary.antonyms'), sense.antonyms, search));
 
   if (example?.es) {
     body.appendChild(el('div', { class: 'sense__example' },
       el('p', {}, example.es),
       example.en ? el('p', {}, example.en) : null,
       exampleSource === 'template'
-        ? el('p', { class: 'sense__note', style: { marginTop: '8px' } },
-          'Ejemplo de plantilla — añade una clave de API para generar frases reales.')
+        ? el('p', { class: 'sense__note', style: { marginTop: '8px' } }, t('dictionary.templateNote'))
         : null));
   }
 

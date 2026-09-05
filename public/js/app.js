@@ -4,6 +4,8 @@ import { renderDictionary } from './views/dictionary.js';
 import { renderChat } from './views/chat.js';
 import { clear } from './lib/dom.js';
 import { mountThemeToggle } from './lib/theme.js';
+import { mountLanguageSwitch, restoreLock } from './lib/language-switch.js';
+import { lang, t } from './lib/i18n.js';
 
 const ROUTES = [
   { path: '/', nav: 'traductor', render: renderHome },
@@ -17,6 +19,22 @@ const links = document.querySelector('.nav__links');
 const toggle = document.querySelector('.nav__toggle');
 
 mountThemeToggle(document.querySelector('.nav__theme'));
+mountLanguageSwitch(document.querySelector('.langswitch'));
+restoreLock();
+
+function paintChrome() {
+  for (const link of document.querySelectorAll('[data-nav]')) {
+    link.textContent = t(`nav.${{ traductor: 'translator', conjugacion: 'conjugation', diccionario: 'dictionary', chat: 'chat' }[link.dataset.nav]}`);
+  }
+  document.querySelector('.skip-link').textContent = t('meta.skip');
+  const footer = document.querySelector('.footer p');
+  clear(footer);
+  footer.append('ProfeGPT · ', t('meta.footer'), ' ');
+  footer.appendChild(Object.assign(document.createElement('a'), {
+    href: 'https://dle.rae.es', target: '_blank', rel: 'noopener', textContent: t('meta.footerDict'),
+  }));
+  footer.append(' (RAE)');
+}
 
 let teardown = null;
 let currentPath = null;
@@ -47,7 +65,7 @@ async function navigate({ replace = false } = {}) {
     if (typeof teardown === 'function') teardown();
     teardown = null;
     clear(main);
-    document.title = route.path === '/' ? 'ProfeGPT — español, sin fricción' : `ProfeGPT · ${route.nav}`;
+    document.title = route.path === '/' ? t('meta.home') : `ProfeGPT · ${t(`nav.${route.nav === 'traductor' ? 'translator' : route.nav === 'conjugacion' ? 'conjugation' : route.nav === 'diccionario' ? 'dictionary' : 'chat'}`)}`;
     teardown = (await route.render(main)) || null;
     currentPath = route.path;
     if (!hash) window.scrollTo({ top: 0 });
@@ -98,5 +116,15 @@ toggle.addEventListener('click', () => {
 
 document.addEventListener('click', onClick);
 window.addEventListener('popstate', () => navigate({ replace: true }));
+
+// A language change rebuilds the current view, since every string is baked in
+// at render time rather than bound.
+window.addEventListener('langchange', () => {
+  paintChrome();
+  currentPath = null;
+  navigate({ replace: true });
+});
+
+paintChrome();
 
 navigate({ replace: true });

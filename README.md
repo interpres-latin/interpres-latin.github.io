@@ -67,6 +67,18 @@ corners and cross into an X over the chat panel, sealing it until the window
 rolls forward. The angle and length are measured from the panel, so the X lands
 on its corners at any size. Spanish questions carry on working throughout.
 
+### Site language
+
+The interface is Spanish. The **ES / EN** switch in the header offers English
+behind a passcode; getting it wrong seals the entire page with tape until the
+right code is entered, and the lock survives a reload. Strings live in
+`public/js/lib/i18n.js`; a language change re-renders the current view.
+
+What the site is *about* stays in Spanish either way — verb forms, dictionary
+headwords, the person pronouns in the conjugation tables. Only the chrome moves.
+In English the conjugation tables lead with the English tense name and keep the
+Spanish one underneath.
+
 ### The profe's interjections
 
 Three expressions she actually used, spelled as the RAE has them, fired on the
@@ -87,16 +99,22 @@ remembers. Colours that get painted to canvas — the hero network, the wallpape
 strength — are CSS custom properties the JS reads back, so the palette has a
 single home.
 
-Headings and the menu are **Inter** — uppercase, weight 700, `letter-spacing: -0.03em`,
-`line-height: 1`. Body copy is **JetBrains Mono**. Flat colour throughout: no
-gradients, no rounded corners.
+**Inter** throughout — headings uppercase at weight 700 with `letter-spacing:
+-0.03em`. A system monospace is kept only for literal code inside chat replies.
+Flat colour: no gradients, no rounded corners.
 
-Between the translator and the dictionary search, a photograph of the Plaza de
-Cibeles fades in behind the page and parallaxes against the scroll, under a
-theme-coloured scrim that keeps the text in front readable — the photo sits at
-about 38% against the dark palette and 28% against the light one, calibrated by
-rendering the actual composite rather than guessing. It ships as WebP (95 KB)
-with a JPEG fallback (202 KB).
+Between the translator and the dictionary search, a photograph of Madrid fades
+in behind the page and parallaxes against the scroll — **Gran Vía at night in
+dark mode, the Plaza de Cibeles by day in light mode**, chosen by a per-theme
+`--wallpaper-image` custom property. A theme-coloured scrim keeps the text in
+front readable; the strengths were calibrated by rendering the actual composite
+with text over it rather than guessing.
+
+Both sources are about 1024 px wide, which is well short of a modern display, so
+the photo carries a 1.5 px blur: it turns the upscaling softness into something
+that reads as depth of field instead of as a low-resolution image. **For genuinely
+higher resolution, drop a larger original into `public/assets/` under the same
+names** — nothing in the code assumes the current dimensions.
 
 The hero hands over to the translator with a soft dissolve rather than a hard
 edge: the hero is masked out over its last stretch while the wallpaper is
@@ -155,7 +173,9 @@ public/
     lib/tutor.js        intent routing for the chat: what can be grounded, and how
     lib/theme.js        dark/light switching
     lib/tape.js         the X that seals the chat when the allowance is gone
-    lib/wallpaper.js    the Cibeles photo: parallax, scrim, scroll fade
+    lib/wallpaper.js    the Madrid photo: parallax, scrim, scroll fade
+    lib/i18n.js         every interface string, in both languages
+    lib/language-switch.js  the ES/EN switch and its passcode gate
     data/grammar.js     16 grammar explanations, Spanish and English
     data/verbs.js       stem changes, irregulars, the search index
     views/              one module per page

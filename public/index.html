@@ -8,11 +8,15 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇪🇸</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
   <script>
     // Runs before the first paint so the page never flashes the wrong palette.
     (function () {
+      try {
+        var l = localStorage.getItem('profegpt:lang');
+        document.documentElement.lang = l === 'en' ? 'en' : 'es';
+      } catch (e) {}
       var stored = null;
       try { stored = localStorage.getItem('profegpt:theme'); } catch (e) {}
       var system = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
@@ -34,6 +38,7 @@
       <a href="/diccionario" data-link data-nav="diccionario">Diccionario</a>
       <a href="/chat" data-link data-nav="chat">Chat</a>
     </nav>
+    <div class="langswitch" role="group"></div>
     <button class="nav__theme" type="button" aria-label="Cambiar de tema"></button>
     <button class="nav__toggle" type="button" aria-label="Abrir menú" aria-expanded="false">
       <span></span><span></span>

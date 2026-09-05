@@ -3,6 +3,7 @@ import { renderMarkdown } from '../lib/markdown.js';
 import { answer as askTutor } from '../lib/tutor.js';
 import { sealWithTape } from '../lib/tape.js';
 import { EXCLAMATIONS } from '../data/grammar.js';
+import { t } from '../lib/i18n.js';
 
 const STARTERS = [
   'ser y estar',
@@ -14,7 +15,7 @@ const STARTERS = [
 
 export function renderChat(main) {
   const history = [];
-  let claudeEnabled = false;
+  let modelEnabled = false;
   let busy = false;
   let streaming = null;
   let language = null; // whichever language the conversation has settled into
@@ -22,41 +23,41 @@ export function renderChat(main) {
   let unseal = null;   // removes the tape, if it is up
 
   const log = el('div', { class: 'chat__log' });
-  const input = el('textarea', { rows: 1, placeholder: 'Pregunta lo que quieras…', 'aria-label': 'Mensaje' });
+  const input = el('textarea', { rows: 1, placeholder: t('chat.placeholder'), 'aria-label': t('chat.messageLabel') });
 
-  const send = el('button', { class: 'composer__send', type: 'submit', disabled: true, 'aria-label': 'Enviar' },
+  const send = el('button', { class: 'composer__send', type: 'submit', disabled: true, 'aria-label': t('chat.send') },
     icon(ICONS.send, { size: 16, fill: true }));
 
   const composer = el('form', { class: 'composer' }, input, send);
-  const hint = el('p', { class: 'composer__hint' }, 'Enter para enviar · Shift + Enter para un salto de línea');
+  const hint = el('p', { class: 'composer__hint' }, t('chat.enterHint'));
   const chat = el('div', { class: 'chat' }, log, composer, hint);
 
   main.append(el('div', { class: 'page shell', style: { paddingBottom: '24px' } }, chat));
 
   greet();
 
-  // The tutor works with no key at all. Claude, when configured, only picks up
+  // The tutor works with no key at all. A model, when configured, only picks up
   // the questions the tutor decided it could not answer from the site's data.
   getJson('/api/chat/status')
     .then((status) => {
-      claudeEnabled = Boolean(status.enabled);
+      modelEnabled = Boolean(status.enabled);
       quota = status.quota || null;
       updateHint();
-      if (claudeEnabled && quota && quota.remaining <= 0) rollTape();
+      if (modelEnabled && quota && quota.remaining <= 0) rollTape();
     })
     .catch(() => updateHint());
 
   function updateHint() {
     clear(hint);
-    if (!claudeEnabled) {
-      hint.textContent = 'Respuestas del conjugador, la RAE y las fichas de gramática — sin conexión a ninguna IA';
+    if (!modelEnabled) {
+      hint.textContent = t('chat.groundedOnly');
       return;
     }
-    hint.append('Preguntas de español, ilimitadas · ');
+    hint.append(t('chat.withModel'));
     hint.appendChild(el('span', { class: 'quota' },
-      'otros temas: ',
+      t('chat.otherTopics'),
       el('b', {}, `${quota ? quota.remaining : '—'} / ${quota ? quota.limit : '—'}`),
-      ` cada ${quota ? quota.windowMinutes : 30} min`));
+      t('chat.perWindow', { minutes: quota ? quota.windowMinutes : 30 })));
   }
 
   function pick(kind) {
@@ -76,16 +77,16 @@ export function renderChat(main) {
 
     unseal = sealWithTape(chat, {
       title: pick('bad'),
-      detail: `Se acabaron las preguntas libres sobre otros temas. Vuelven dentro de unos ${minutes} minutos.`,
-      note: 'Las preguntas de español no gastan nada: conjugaciones, definiciones, traducciones y gramática siguen abiertas en el resto del sitio.',
+      detail: t('tape.quotaDetail', { minutes }),
+      note: t('tape.quotaNote'),
     });
   }
 
   function greet() {
     clear(log);
     log.appendChild(el('div', { class: 'empty' },
-      el('h3', {}, 'Pregúntale a ProfeGPT'),
-      el('p', {}, 'Conjugaciones, definiciones de la RAE, traducciones y explicaciones de gramática.'),
+      el('h3', {}, t('chat.title')),
+      el('p', {}, t('chat.lead')),
       el('div', { class: 'starters', style: { justifyContent: 'center' } },
         ...STARTERS.map((starter) => el('button', {
           type: 'button',
@@ -155,18 +156,24 @@ export function renderChat(main) {
       result = await askTutor(text, { language });
       language = result.language;
     } catch (error) {
-      result = { blocks: [{ type: 'md', text: `No pude responder: ${error.message}` }], confident: false };
+      result = { blocks: [{ type: 'md', text: t('chat.failed', { error: error.message }) }], confident: false };
     }
 
     // Hand the unanswerable ones to Claude if there is a key; otherwise the
     // tutor's own "outside my scope" reply stands.
-    if (!result.confident && claudeEnabled) {
+    if (!result.confident && modelEnabled) {
       clear(target);
-      await streamFromClaude(target);
+      await streamFromModel(target);
       if (quota && quota.remaining <= 0) rollTape();
     } else {
-      paint(target, result.blocks);
-      history.push({ role: 'assistant', content: blocksToText(result.blocks) });
+      // Out of scope with no model configured: say what would make it work,
+      // rather than leaving a dead end.
+      const blocks = result.confident ? result.blocks : [...result.blocks, {
+        type: 'md',
+        text: t('chat.needsKey', { limit: quota?.limit ?? 10, minutes: quota?.windowMinutes ?? 30 }),
+      }];
+      paint(target, blocks);
+      history.push({ role: 'assistant', content: blocksToText(blocks) });
     }
 
     busy = false;
@@ -175,7 +182,7 @@ export function renderChat(main) {
     input.focus();
   }
 
-  async function streamFromClaude(target) {
+  async function streamFromModel(target) {
     const caret = el('span', { class: 'caret' });
     target.appendChild(caret);
 

@@ -1,0 +1,105 @@
+/**
+ * The ES / EN switch in the header.
+ *
+ * Spanish is open. English is behind a passcode, and a wrong one seals the
+ * whole page with tape until the right one is entered — the lock survives a
+ * reload, so closing the tab is not a way around it.
+ */
+
+import { el, clear } from './dom.js';
+import { checkPasscode, isLocked, lang, setLang, setLocked, t } from './i18n.js';
+import { sealWithTape } from './tape.js';
+
+let unseal = null;
+
+/** Put the page back under tape if the visitor left it locked. */
+export function restoreLock() {
+  if (isLocked()) lockPage();
+}
+
+function lockPage({ wrongAgain = false } = {}) {
+  if (unseal) return;
+  setLocked(true);
+
+  unseal = sealWithTape(document.body, {
+    title: t('tape.lockedTitle'),
+    detail: wrongAgain ? t('tape.wrongAgain') : t('tape.lockedDetail'),
+    note: t('tape.lockedNote'),
+    prompt: {
+      placeholder: t('tape.passcodePlaceholder'),
+      submit: t('tape.unlock'),
+      wrong: t('tape.wrongAgain'),
+      onSubmit: (value) => {
+        if (!checkPasscode(value)) return false;
+        setLocked(false);
+        unseal = null;
+        setLang('en');
+        return true;
+      },
+    },
+  });
+}
+
+/** Small inline dialog asking for the code before switching to English. */
+function askForPasscode(anchor) {
+  anchor.querySelector('.passgate')?.remove();
+
+  const field = el('input', {
+    type: 'text',
+    inputMode: 'numeric',
+    autocomplete: 'off',
+    placeholder: t('tape.passcodePlaceholder'),
+    'aria-label': t('tape.passcodePlaceholder'),
+  });
+
+  const form = el('form', { class: 'passgate' },
+    el('p', { class: 'passgate__title' }, t('passcode.title')),
+    el('p', { class: 'passgate__detail' }, t('passcode.detail')),
+    el('div', { class: 'passgate__row' },
+      field,
+      el('button', { class: 'btn btn--primary btn--sm', type: 'submit' }, t('tape.unlock'))),
+    el('button', { class: 'passgate__cancel', type: 'button', onclick: () => form.remove() }, t('passcode.cancel')));
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const value = field.value;
+    form.remove();
+    if (checkPasscode(value)) setLang('en');
+    else lockPage();
+  });
+
+  anchor.appendChild(form);
+  field.focus();
+}
+
+export function mountLanguageSwitch(container) {
+  const buttons = new Map();
+
+  function paint() {
+    for (const [code, button] of buttons) {
+      button.classList.toggle('is-active', code === lang());
+      button.setAttribute('aria-pressed', String(code === lang()));
+    }
+  }
+
+  clear(container);
+  container.setAttribute('aria-label', t('nav.langLabel'));
+
+  for (const code of ['es', 'en']) {
+    const button = el('button', {
+      class: 'langswitch__option',
+      type: 'button',
+      onclick: () => {
+        if (lang() === code) return;
+        if (code === 'es') { setLang('es'); return; }
+        askForPasscode(container);
+      },
+    }, code.toUpperCase());
+    buttons.set(code, button);
+    container.appendChild(button);
+  }
+
+  paint();
+  window.addEventListener('langchange', paint);
+  return paint;
+}

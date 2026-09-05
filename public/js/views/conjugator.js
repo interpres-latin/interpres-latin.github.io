@@ -1,6 +1,7 @@
 import { el, icon, ICONS, clear, debounce, fold, getJson } from '../lib/dom.js';
 import { conjugate, irregularCells, PERSONS, PERSON_LABELS } from '../lib/conjugator.js';
 import { COMMON_VERBS, MODEL_VERBS } from '../data/verbs.js';
+import { lang, t } from '../lib/i18n.js';
 
 const INDICATIVE_SIMPLE = [
   ['presente', 'Presente', 'present'],
@@ -60,10 +61,10 @@ export function renderConjugator(main) {
   const results = el('div', {});
   const searchInput = el('input', {
     type: 'search',
-    placeholder: 'Busca un verbo: pedir, obtener, construir…',
+    placeholder: t('conjugator.search'),
     autocomplete: 'off',
     spellcheck: false,
-    'aria-label': 'Buscar un verbo',
+    'aria-label': t('conjugator.searchLabel'),
   });
   const suggestions = el('div', { class: 'suggest', role: 'listbox' });
 
@@ -73,7 +74,7 @@ export function renderConjugator(main) {
       type: 'button',
       role: 'tab',
       onclick: () => { searchInput.value = ''; clear(suggestions); show(verb, mode); },
-    }, `verbos -${mode}`);
+    }, t('conjugator.tab', { ending: mode }));
     tabs.appendChild(button);
     return [mode, button];
   });
@@ -86,16 +87,15 @@ export function renderConjugator(main) {
 
   main.append(el('div', { class: 'page shell' },
     el('div', { class: 'page__head' },
-      el('p', { class: 'eyebrow' }, 'Conjugación'),
-      el('h1', {}, 'Todos los tiempos, todos los verbos'),
-      el('p', {}, 'Empieza por uno de los tres modelos regulares o busca el verbo que necesites. ' +
-        'Las formas irregulares aparecen resaltadas.')),
+      el('p', { class: 'eyebrow' }, t('conjugator.eyebrow')),
+      el('h1', {}, t('conjugator.title')),
+      el('p', {}, t('conjugator.lead'))),
     el('div', { class: 'toolbar' },
       tabs,
       el('div', { class: 'search' },
         el('div', { class: 'search__field' }, icon(ICONS.search, { size: 15 }), searchInput),
         suggestions),
-      el('label', { class: 'switch' }, highlightToggle, 'Resaltar irregulares')),
+      el('label', { class: 'switch' }, highlightToggle, t('conjugator.highlight'))),
     results,
   ));
 
@@ -166,7 +166,7 @@ export function renderConjugator(main) {
     if (!result.ok) {
       clear(results);
       results.appendChild(el('div', { class: 'empty' },
-        el('h3', {}, 'No reconozco ese verbo'),
+        el('h3', {}, t('conjugator.notAVerb')),
         el('p', {}, result.error)));
       return;
     }
@@ -243,28 +243,29 @@ function verbCard(result) {
   const gloss = GLOSSES.get(result.verb);
   const tags = [];
 
-  tags.push(el('span', { class: 'chip' }, `verbo -${result.class}`));
-  if (result.flags.irregular) tags.push(el('span', { class: 'chip chip--warn' }, 'irregular'));
+  tags.push(el('span', { class: 'chip' }, t('conjugator.verbClass', { ending: result.class })));
+  if (result.flags.irregular) tags.push(el('span', { class: 'chip chip--warn' }, t('conjugator.irregular')));
   if (result.flags.stemChange) {
-    tags.push(el('span', { class: 'chip chip--es' }, `cambio de raíz ${STEM_CHANGE_LABELS[result.flags.stemChange] ?? result.flags.stemChange}`));
+    tags.push(el('span', { class: 'chip chip--es' },
+      t('conjugator.stemChange', { change: STEM_CHANGE_LABELS[result.flags.stemChange] ?? result.flags.stemChange })));
   }
-  if (result.flags.ortho) tags.push(el('span', { class: 'chip' }, `ortografía ${result.flags.ortho}`));
-  if (result.flags.derivedFrom) tags.push(el('span', { class: 'chip' }, `se conjuga como ${result.flags.derivedFrom}`));
-  if (result.pronominal) tags.push(el('span', { class: 'chip' }, 'pronominal · me / te / se'));
-  if (result.voseo) tags.push(el('span', { class: 'chip' }, `voseo ${result.voseo.tu}`));
-  tags.push(el('span', { class: 'chip' }, result.source === 'rae' ? 'formas de la RAE' : 'formas generadas'));
+  if (result.flags.ortho) tags.push(el('span', { class: 'chip' }, t('conjugator.spelling', { change: result.flags.ortho })));
+  if (result.flags.derivedFrom) tags.push(el('span', { class: 'chip' }, t('conjugator.likeVerb', { verb: result.flags.derivedFrom })));
+  if (result.pronominal) tags.push(el('span', { class: 'chip' }, t('conjugator.pronominal')));
+  if (result.voseo) tags.push(el('span', { class: 'chip' }, t('conjugator.voseo', { form: result.voseo.tu })));
+  tags.push(el('span', { class: 'chip' }, result.source === 'rae' ? t('conjugator.fromRae') : t('conjugator.generated')));
 
   const forms = result.table.formas;
   return el('div', { class: 'verbcard' },
     el('div', {},
       el('h2', {}, result.input),
-      el('p', { class: 'verbcard__gloss' }, result.definition || (gloss ? `“${gloss}”` : 'Conjugación completa')),
+      el('p', { class: 'verbcard__gloss' }, result.definition || (gloss ? `“${gloss}”` : t('conjugator.fullTable'))),
       el('div', { class: 'verbcard__tags' }, tags)),
     el('div', { class: 'verbcard__forms' },
-      formRow('gerundio', forms.gerundio),
-      formRow('participio', forms.participio),
-      formRow('inf. compuesto', forms.infinitivoCompuesto),
-      formRow('ger. compuesto', forms.gerundioCompuesto)));
+      formRow(t('conjugator.gerund'), forms.gerundio),
+      formRow(t('conjugator.participle'), forms.participio),
+      formRow(t('conjugator.compoundInf'), forms.infinitivoCompuesto),
+      formRow(t('conjugator.compoundGer'), forms.gerundioCompuesto)));
 }
 
 function formRow(label, value) {
@@ -276,21 +277,26 @@ function tables(result, highlight) {
   const wrap = el('div', { class: `conj-tables${highlight ? ' mark-irregular' : ''}` });
 
   wrap.append(
-    mood('Indicativo', [
-      tenseTable(result.table.indicativo, INDICATIVE_SIMPLE, 'indicativo', marks, 'Tiempos simples'),
-      tenseTable(result.table.indicativo, INDICATIVE_COMPOUND, 'indicativo', marks, 'Tiempos compuestos'),
+    mood(t('conjugator.indicative'), [
+      tenseTable(result.table.indicativo, INDICATIVE_SIMPLE, 'indicativo', marks, t('conjugator.simple')),
+      tenseTable(result.table.indicativo, INDICATIVE_COMPOUND, 'indicativo', marks, t('conjugator.compound')),
     ]),
-    mood('Subjuntivo', [
-      tenseTable(result.table.subjuntivo, SUBJUNCTIVE_SIMPLE, 'subjuntivo', marks, 'Tiempos simples'),
-      tenseTable(result.table.subjuntivo, SUBJUNCTIVE_COMPOUND, 'subjuntivo', marks, 'Tiempos compuestos'),
+    mood(t('conjugator.subjunctive'), [
+      tenseTable(result.table.subjuntivo, SUBJUNCTIVE_SIMPLE, 'subjuntivo', marks, t('conjugator.simple')),
+      tenseTable(result.table.subjuntivo, SUBJUNCTIVE_COMPOUND, 'subjuntivo', marks, t('conjugator.compound')),
     ]),
-    mood('Imperativo', [imperativeTable(result.table.imperativo, marks)]),
+    mood(t('conjugator.imperative'), [imperativeTable(result.table.imperativo, marks)]),
   );
   return wrap;
 }
 
 function mood(title, children) {
   return el('section', { class: 'mood' }, el('h2', { class: 'mood__title' }, title), ...children);
+}
+
+/** In English the English name leads and the Spanish one becomes the hint. */
+function tenseNames(label, hint) {
+  return lang() === 'en' ? [hint, label] : [label, hint];
 }
 
 function tenseTable(tenses, rows, moodKey, marks, caption) {
@@ -303,7 +309,8 @@ function tenseTable(tenses, rows, moodKey, marks, caption) {
   for (const [key, label, hint] of rows) {
     const forms = tenses[key];
     if (!forms) continue;
-    const tr = el('tr', {}, el('th', { scope: 'row' }, label, el('small', {}, hint)));
+    const [main, sub] = tenseNames(label, hint);
+    const tr = el('tr', {}, el('th', { scope: 'row' }, main, el('small', {}, sub)));
     for (const person of PERSONS) {
       const value = forms[person];
       tr.appendChild(el('td', {
@@ -318,12 +325,13 @@ function tenseTable(tenses, rows, moodKey, marks, caption) {
 }
 
 function imperativeTable(imperative, marks) {
-  const head = el('tr', {}, el('th', { scope: 'col' }, 'Imperativo'));
+  const head = el('tr', {}, el('th', { scope: 'col' }, t('conjugator.imperative')));
   for (const [, label] of IMPERATIVE_PERSONS) head.appendChild(el('th', { scope: 'col' }, label));
 
   const body = el('tbody', {});
   for (const [kind, label, hint] of [['afirmativo', 'Afirmativo', 'do it'], ['negativo', 'Negativo', "don't do it"]]) {
-    const tr = el('tr', {}, el('th', { scope: 'row' }, label, el('small', {}, hint)));
+    const [main, sub] = tenseNames(label, hint);
+    const tr = el('tr', {}, el('th', { scope: 'row' }, main, el('small', {}, sub)));
     for (const [person] of IMPERATIVE_PERSONS) {
       const value = imperative[kind][person];
       tr.appendChild(el('td', {

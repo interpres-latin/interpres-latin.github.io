@@ -1,10 +1,11 @@
 import { el, icon, ICONS, clear, debounce, postJson } from '../lib/dom.js';
 import { startNetwork } from '../lib/network.js';
 import { startWallpaper } from '../lib/wallpaper.js';
+import { lang, t } from '../lib/i18n.js';
 
 const LANGUAGES = {
-  es: { label: 'Español', colour: 'var(--es)', placeholder: 'Escribe algo en español…' },
-  en: { label: 'English', colour: 'var(--en)', placeholder: 'Type something in English…' },
+  es: { label: 'Español', colour: 'var(--es)', placeholder: 'translator.placeholderEs', out: 'translator.outEs' },
+  en: { label: 'English', colour: 'var(--en)', placeholder: 'translator.placeholderEn', out: 'translator.outEn' },
 };
 
 const MAX_CHARS = 5000;
@@ -21,14 +22,12 @@ export function renderHome(main) {
   const hero = el('section', { class: 'hero' },
     canvas,
     el('div', { class: 'hero__inner' },
-      el('p', { class: 'hero__badge' }, 'Español ↔ Inglés'),
+      el('p', { class: 'hero__badge' }, t('hero.badge')),
       el('h1', { class: 'hero__title' }, 'ProfeGPT'),
-      el('p', { class: 'hero__sub' },
-        'Traduce en los dos sentidos, conjuga cualquier verbo en todos los tiempos, ',
-        'consulta la RAE y pregunta lo que quieras. Todo en una página.'),
+      el('p', { class: 'hero__sub' }, t('hero.sub')),
       el('div', { class: 'hero__cta' },
-        el('a', { class: 'btn btn--primary', href: '/#traductor', 'data-link': '' }, 'Probar el traductor'),
-        el('a', { class: 'btn', href: '/chat', 'data-link': '' }, 'Hablar con ProfeGPT'))));
+        el('a', { class: 'btn btn--primary', href: '/#traductor', 'data-link': '' }, t('hero.ctaTranslate')),
+        el('a', { class: 'btn', href: '/chat', 'data-link': '' }, t('hero.ctaChat')))));
 
   const translator = el('section', { class: 'translator shell', id: 'traductor' });
   buildTranslator(translator);
@@ -36,9 +35,9 @@ export function renderHome(main) {
   const finder = buildFinder();
 
   const features = el('section', { class: 'features shell' },
-    feature('01', '/conjugacion', 'Conjugación', 'Todos los tiempos del indicativo, el subjuntivo y el imperativo, con los tres modelos -ar, -er e -ir y buscador de verbos.'),
-    feature('02', '/diccionario', 'Diccionario', 'Definiciones del Diccionario de la lengua española, con sinónimos y una frase de ejemplo por acepción.'),
-    feature('03', '/chat', 'Chat', 'Un asistente para dudas de gramática, matices de vocabulario o cualquier otra cosa.'));
+    feature('01', '/conjugacion', t('features.conjugation'), t('features.conjugationBody')),
+    feature('02', '/diccionario', t('features.dictionary'), t('features.dictionaryBody')),
+    feature('03', '/chat', t('features.chat'), t('features.chatBody')));
 
   main.append(wallpaper, hero, translator, finder, features);
 
@@ -72,12 +71,12 @@ function buildFinder() {
     placeholder: 'sobremesa',
     autocomplete: 'off',
     spellcheck: false,
-    'aria-label': 'Buscar una palabra en el diccionario',
+    'aria-label': t('finder.label'),
   });
 
   const form = el('form', { class: 'finder__form' },
     input,
-    el('button', { type: 'submit' }, 'Buscar'));
+    el('button', { type: 'submit' }, t('finder.button')));
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -88,18 +87,16 @@ function buildFinder() {
     el('div', { class: 'shell' },
       el('div', { class: 'finder__grid' },
         el('div', {},
-          el('p', { class: 'eyebrow' }, 'Diccionario'),
-          el('h2', {}, 'Busca una palabra'),
-          el('p', { class: 'finder__lead' },
-            'Definiciones del Diccionario de la lengua española, acepción por acepción, ',
-            'con sinónimos y una frase de ejemplo.')),
+          el('p', { class: 'eyebrow' }, t('finder.eyebrow')),
+          el('h2', {}, t('finder.title')),
+          el('p', { class: 'finder__lead' }, t('finder.lead'))),
         el('div', {},
           form,
           el('div', { class: 'finder__hints' },
-            el('span', {}, 'Prueba con'),
+            el('span', {}, t('finder.tryWith')),
             ...SAMPLE_WORDS.map((word) =>
               el('button', { type: 'button', onclick: () => openDictionary(word) }, word))),
-          el('p', { class: 'finder__note' }, 'Pulsa Enter para abrir la página del diccionario.')))));
+          el('p', { class: 'finder__note' }, t('finder.note'))))));
 }
 
 // ---------------------------------------------------------------------------
@@ -107,12 +104,12 @@ function buildFinder() {
 function buildTranslator(root) {
   const state = { from: 'es', to: 'en', pending: null };
 
-  const input = el('textarea', { spellcheck: false, maxLength: MAX_CHARS, 'aria-label': 'Texto original' });
+  const input = el('textarea', { spellcheck: false, maxLength: MAX_CHARS, 'aria-label': t('translator.sourceLabel') });
 
   const output = el('div', {
     class: 'pane__out',
     'aria-live': 'polite',
-    'data-placeholder': 'La traducción aparecerá aquí.',
+    'data-placeholder': t('translator.outEs'),
   });
 
   const sourceLang = el('span', {});
@@ -120,35 +117,35 @@ function buildTranslator(root) {
   const sourceDot = el('span', { class: 'pane__dot' });
   const targetDot = el('span', { class: 'pane__dot' });
   const counter = el('span', {}, `0 / ${MAX_CHARS}`);
-  const status = el('span', {}, 'Listo');
+  const status = el('span', {}, t('translator.ready'));
   const engine = el('span', {}, '');
 
-  const copy = el('button', { class: 'btn btn--sm', type: 'button', title: 'Copiar traducción' },
-    icon(ICONS.copy, { size: 13 }), 'Copiar');
+  const copy = el('button', { class: 'btn btn--sm', type: 'button', title: t('translator.copy') },
+    icon(ICONS.copy, { size: 13 }), t('translator.copy'));
 
   copy.addEventListener('click', async () => {
     if (!output.textContent.trim()) return;
     try {
       await navigator.clipboard.writeText(output.textContent);
-      copy.lastChild.textContent = '¡Copiado!';
-      setTimeout(() => { copy.lastChild.textContent = 'Copiar'; }, 1400);
+      copy.lastChild.textContent = t('translator.copied');
+      setTimeout(() => { copy.lastChild.textContent = t('translator.copy'); }, 1400);
     } catch {
-      copy.lastChild.textContent = 'No se pudo';
-      setTimeout(() => { copy.lastChild.textContent = 'Copiar'; }, 1400);
+      copy.lastChild.textContent = t('translator.copyFailed');
+      setTimeout(() => { copy.lastChild.textContent = t('translator.copy'); }, 1400);
     }
   });
 
   const swap = el('button', {
     class: 'swap',
     type: 'button',
-    title: 'Cambiar de idioma',
-    'aria-label': 'Intercambiar español e inglés',
+    title: t('translator.swapTitle'),
+    'aria-label': t('translator.swap'),
   }, icon(ICONS.swap, { size: 18 }));
 
   const sourcePane = el('div', { class: 'pane pane--source' },
     el('div', { class: 'pane__bar' },
       el('span', { class: 'pane__lang' }, sourceDot, sourceLang),
-      el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { input.value = ''; sync(); } }, 'Limpiar')),
+      el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { input.value = ''; sync(); } }, t('translator.clear'))),
     el('div', { class: 'pane__body' }, input),
     el('div', { class: 'pane__foot' }, counter, status));
 
@@ -162,10 +159,10 @@ function buildTranslator(root) {
   root.append(
     el('div', { class: 'translator__head' },
       el('div', {},
-        el('p', { class: 'eyebrow' }, 'Traductor'),
-        el('h2', {}, 'Los dos sentidos, un botón'),
-        el('p', {}, 'Escribe y traduce al instante. El botón central cambia de idioma y se lleva el texto consigo.')),
-      el('button', { class: 'btn btn--primary', type: 'button', onclick: () => translate(true) }, 'Traducir')),
+        el('p', { class: 'eyebrow' }, t('translator.eyebrow')),
+        el('h2', {}, t('translator.title')),
+        el('p', {}, t('translator.lead'))),
+      el('button', { class: 'btn btn--primary', type: 'button', onclick: () => translate(true) }, t('translator.button'))),
     el('div', { class: 'trio' }, sourcePane, swap, targetPane),
   );
 
@@ -178,8 +175,8 @@ function buildTranslator(root) {
     targetLang.textContent = target.label;
     sourceDot.style.background = source.colour;
     targetDot.style.background = target.colour;
-    input.placeholder = source.placeholder;
-    output.dataset.placeholder = state.to === 'es' ? 'La traducción aparecerá aquí.' : 'The translation will appear here.';
+    input.placeholder = t(source.placeholder);
+    output.dataset.placeholder = t(target.out);
   }
 
   function sync() {
@@ -187,7 +184,7 @@ function buildTranslator(root) {
     if (!input.value.trim()) {
       clear(output);
       engine.textContent = '';
-      status.textContent = 'Listo';
+      status.textContent = t('translator.ready');
       return;
     }
     scheduleTranslate();
@@ -202,14 +199,14 @@ function buildTranslator(root) {
     state.pending = controller;
 
     clear(status);
-    status.append(el('span', { class: 'spinner' }), ' traduciendo…');
+    status.append(el('span', { class: 'spinner' }), ` ${t('translator.working')}`);
 
     try {
       const data = await postJson('/api/translate', { text, from: state.from }, { signal: controller.signal });
       if (controller.signal.aborted) return;
       output.textContent = data.translation || '';
-      engine.textContent = data.engine ? `traducido con ${data.engine}` : '';
-      status.textContent = force ? 'Traducido' : 'Listo';
+      engine.textContent = data.engine ? t('translator.engine', { engine: data.engine }) : '';
+      status.textContent = force ? t('translator.done') : t('translator.ready');
     } catch (error) {
       if (controller.signal.aborted || error.name === 'AbortError') return;
       clear(status);
@@ -239,7 +236,7 @@ function buildTranslator(root) {
     input.focus();
 
     if (input.value.trim()) translate();
-    else { clear(output); engine.textContent = ''; status.textContent = 'Listo'; }
+    else { clear(output); engine.textContent = ''; status.textContent = t('translator.ready'); }
   });
 
   input.addEventListener('input', sync);

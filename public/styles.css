@@ -1,8 +1,8 @@
 /* ---------------------------------------------------------------------------
    ProfeGPT
 
-   Headings and menu: Inter — uppercase, 700, tight tracking, line-height 1.
-   Body copy:         JetBrains Mono, the typeface Python IDEs ship with.
+   Inter throughout. Headings are uppercase, 700, tight tracking; a system
+   monospace is kept only for literal code inside chat replies.
 
    Flat colour only: no gradients, no rounded corners.
 --------------------------------------------------------------------------- */
@@ -28,7 +28,7 @@
   --bad: #d4645f;
 
   --sans: Inter, "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --mono: "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --nav-h: 62px;
   --shell: 1180px;
@@ -41,7 +41,8 @@
   --net-dot-warm: 77, 141, 255;
   --hero-scrim: rgba(11, 12, 15, 0.62);
   --wallpaper-strength: 1;
-  --wallpaper-scrim: rgba(11, 12, 15, 0.62);
+  --wallpaper-scrim: rgba(11, 12, 15, 0.55);
+  --wallpaper-image: image-set(url("/assets/madrid-night.webp") type("image/webp"), url("/assets/madrid-night.jpg") type("image/jpeg"));
 
   --tape-fill: rgba(255, 255, 255, 0.1);
   --tape-edge: rgba(255, 255, 255, 0.32);
@@ -76,6 +77,7 @@
   --hero-scrim: rgba(244, 241, 234, 0.66);
   --wallpaper-strength: 1;
   --wallpaper-scrim: rgba(244, 241, 234, 0.72);
+  --wallpaper-image: image-set(url("/assets/madrid-day.webp") type("image/webp"), url("/assets/madrid-day.jpg") type("image/jpeg"));
 
   --tape-fill: rgba(255, 255, 255, 0.34);
   --tape-edge: rgba(255, 255, 255, 0.8);
@@ -92,19 +94,24 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--mono);
-  font-size: 14px;
+  font-family: var(--sans);
+  font-size: 14.5px;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
+/*
+ * line-height 1 clips the accent on an uppercase É — on "QUÉ DICE LA RAE" it
+ * rode up into the eyebrow above it. 1.12 gives accented capitals their room
+ * back without loosening the setting noticeably.
+ */
 h1, h2, h3, h4 {
   font-family: var(--sans);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: -0.03em;
-  line-height: 1;
+  line-height: 1.12;
   margin: 0;
 }
 
@@ -135,12 +142,21 @@ button, input, textarea, select { font: inherit; color: inherit; }
   will-change: opacity;
 }
 
+/*
+ * The source photographs are only ~1024px wide, so on a large display they get
+ * upscaled well past their real detail. A small blur turns that softness into
+ * something that reads as depth of field rather than as a low-resolution image,
+ * and the scale hides the blur's soft edges.
+ */
 .wallpaper__photo {
   position: absolute;
   inset: -8% 0;
-  background-position: center 40%;
+  background-image: var(--wallpaper-image);
+  background-position: center 45%;
   background-size: cover;
   background-repeat: no-repeat;
+  filter: blur(1.5px);
+  transform: scale(1.06);
   will-change: transform;
 }
 
@@ -241,10 +257,12 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 .page__head { max-width: 660px; margin-bottom: 34px; }
 .page__head h1 { font-size: clamp(32px, 5vw, 52px); }
+.page__head .eyebrow { margin-bottom: 16px; }
 .page__head p { color: var(--text-dim); margin: 16px 0 0; font-size: 13px; }
 
 .eyebrow {
-  font-family: var(--mono);
+  font-family: var(--sans);
+  font-weight: 500;
   font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -300,7 +318,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   margin-bottom: 30px;
 }
 
-.hero__title { font-size: clamp(62px, 15vw, 168px); letter-spacing: -0.045em; }
+.hero__title { font-size: clamp(62px, 15vw, 168px); letter-spacing: -0.045em; line-height: 1.02; }
 
 .hero__sub { margin: 26px auto 0; max-width: 520px; color: var(--text-dim); font-size: 14px; line-height: 1.75; }
 
@@ -494,7 +512,7 @@ table.conj tr:last-child th, table.conj tr:last-child td { border-bottom: 0; }
 table.conj thead th { position: sticky; top: 0; z-index: 2; background: var(--bg-raised); font-family: var(--sans); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: -0.01em; color: var(--text-dim); white-space: nowrap; }
 
 table.conj tbody th { position: sticky; left: 0; z-index: 1; background: var(--bg-raised); font-family: var(--sans); font-weight: 700; font-size: 12px; text-transform: none; letter-spacing: -0.01em; color: var(--text); white-space: nowrap; min-width: 178px; border-right: 1px solid var(--line); }
-table.conj tbody th small { display: block; font-family: var(--mono); font-weight: 400; font-size: 10px; color: var(--text-faint); letter-spacing: 0; margin-top: 2px; }
+table.conj tbody th small { display: block; font-family: var(--sans); font-weight: 400; font-size: 10px; color: var(--text-faint); letter-spacing: 0; margin-top: 2px; }
 
 table.conj tbody tr:hover td { background: var(--panel-hi); }
 table.conj td { white-space: nowrap; }
@@ -577,7 +595,51 @@ table.conj td.is-empty { color: var(--text-faint); }
 
 .error { color: var(--bad); font-size: 12.5px; }
 
-/* --- tape: seals the chat once the free questions run out ----------------- */
+/* --- language switch ------------------------------------------------------ */
+
+.langswitch { display: inline-flex; border: 1px solid var(--line-hi); flex: none; }
+
+.langswitch__option {
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 0 9px;
+  height: 32px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.langswitch__option + .langswitch__option { border-left: 1px solid var(--line-hi); }
+.langswitch__option:hover { color: var(--text); }
+.langswitch__option.is-active { background: var(--text); color: var(--bg); }
+
+.passgate {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  width: 268px;
+  padding: 16px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line-hi);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4);
+  text-align: left;
+}
+.passgate__title { font-family: var(--sans); font-weight: 700; text-transform: uppercase; letter-spacing: -0.02em; font-size: 13px; margin: 0 0 6px; }
+.passgate__detail { margin: 0 0 12px; font-size: 11.5px; color: var(--text-dim); line-height: 1.6; }
+.passgate__row { display: flex; gap: 6px; }
+.passgate__row input { flex: 1; min-width: 0; border: 1px solid var(--line-hi); background: var(--panel); padding: 7px 10px; outline: none; font-size: 13px; }
+.passgate__row input:focus { border-color: var(--accent); }
+.passgate__cancel { display: block; margin-top: 10px; border: 0; background: none; padding: 0; color: var(--text-faint); font-size: 11px; cursor: pointer; text-decoration: underline; }
+.passgate__cancel:hover { color: var(--text-dim); }
+
+.nav { position: sticky; }
+.langswitch { position: relative; }
+
+/* --- tape: seals the chat, or the whole page ------------------------------ */
 
 .chat { position: relative; }
 
@@ -637,6 +699,15 @@ table.conj td.is-empty { color: var(--text-faint); }
 .tape__title { font-family: var(--sans); font-weight: 700; text-transform: uppercase; letter-spacing: -0.02em; font-size: 19px; margin: 0 0 10px; }
 .tape__detail { margin: 0; font-size: 12.5px; color: var(--text-dim); line-height: 1.7; }
 .tape__note { margin: 12px 0 0; font-size: 11px; color: var(--text-faint); }
+
+.tape__form { display: flex; gap: 6px; margin-top: 14px; }
+.tape__form input { flex: 1; min-width: 0; border: 1px solid var(--line-hi); background: var(--panel); padding: 9px 12px; outline: none; font-size: 15px; text-align: center; letter-spacing: 0.3em; }
+.tape__form input:focus { border-color: var(--accent); }
+.tape__error { margin: 8px 0 0; font-size: 11.5px; color: var(--bad); min-height: 16px; }
+
+/* Sealing the whole page, rather than one panel. */
+.tape--page { position: fixed; z-index: 90; }
+html.is-sealed, html.is-sealed body { overflow: hidden; }
 
 .quota { font-size: 10.5px; color: var(--text-faint); }
 .quota b { color: var(--text-dim); font-weight: 400; }
