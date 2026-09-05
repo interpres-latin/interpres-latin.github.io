@@ -12,9 +12,15 @@
 
 import * as gemini from './providers/gemini.js';
 import * as groq from './providers/groq.js';
+import * as openrouter from './providers/openrouter.js';
 import * as anthropic from './providers/anthropic.js';
 
-const PROVIDERS = [gemini, groq, anthropic];
+/**
+ * Preference order. Free tiers first, and OpenRouter last among them because
+ * it is the designated overflow: the primary's allowance is spent before
+ * anything reaches it.
+ */
+const PROVIDERS = [gemini, groq, openrouter, anthropic];
 
 export function activeProvider() {
   const forced = process.env.LLM_PROVIDER?.trim().toLowerCase();
@@ -24,6 +30,30 @@ export function activeProvider() {
 
 export function hasProvider() {
   return activeProvider() !== null;
+}
+
+/**
+ * Every configured provider, in the order the chat should fall through them.
+ * Each becomes its own quota tier, so spending the first one's allowance moves
+ * traffic to the next rather than cutting the visitor off.
+ */
+export function providerChain() {
+  const forced = process.env.LLM_PROVIDER?.trim().toLowerCase();
+  if (forced) {
+    const only = PROVIDERS.find((provider) => provider.id === forced && provider.configured());
+    return only ? [only] : [];
+  }
+  return PROVIDERS.filter((provider) => provider.configured());
+}
+
+/** Describe the chain for the UI and the startup banner. */
+export function chainInfo() {
+  return providerChain().map((provider) => ({
+    id: provider.id,
+    label: provider.label,
+    model: provider.model(),
+    free: provider.free,
+  }));
 }
 
 /** What to show in the UI and the startup banner. */

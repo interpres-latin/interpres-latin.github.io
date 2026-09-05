@@ -580,6 +580,8 @@ table.conj td.is-empty { color: var(--text-faint); }
 .msg__body strong { font-weight: 700; color: #fff; }
 .msg__body blockquote { border-left: 2px solid var(--line-hi); margin: 0 0 10px; padding-left: 12px; color: var(--text-dim); }
 
+.msg__source { margin: 10px 0 0; font-size: 10.5px; color: var(--text-faint); }
+
 .caret { display: inline-block; width: 7px; height: 14px; background: var(--accent); vertical-align: -2px; animation: blink 1s step-end infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 

@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { askStream, hasProvider, providerInfo } from '../llm.js';
-import { callerOf, consume, peek, refund } from '../quota.js';
+import { chainInfo, providerChain } from '../llm.js';
+import { callerOf, consume, overall, refund } from '../quota.js';
 
 export const router = Router();
 
@@ -21,25 +21,24 @@ general-purpose assistant.
 Keep answers tight. Use markdown only when structure genuinely helps.`;
 
 router.get('/status', (req, res) => {
-  res.json({ enabled: hasProvider(), provider: providerInfo(), quota: peek(callerOf(req)) });
+  const chain = chainInfo();
+  res.json({
+    enabled: chain.length > 0,
+    provider: chain[0] || null,
+    chain,
+    quota: overall(callerOf(req), chain.length),
+  });
 });
 
 router.post('/', async (req, res) => {
-  if (!hasProvider()) {
+  const chain = providerChain();
+  if (!chain.length) {
     return res.status(503).json({
       error: 'Las preguntas que no son de español necesitan un modelo. Añade GEMINI_API_KEY (gratis) a tu .env y reinicia el servidor.',
     });
   }
 
   const caller = callerOf(req);
-  const quota = consume(caller);
-  if (!quota.allowed) {
-    return res.status(429).json({
-      error: `Se acabaron las preguntas libres. Vuelven ${quota.windowMinutes} minutos después de la primera.`,
-      quota,
-    });
-  }
-
   const incoming = Array.isArray(req.body?.messages) ? req.body.messages : [];
   const messages = incoming
     .filter((message) => (message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string')
@@ -48,8 +47,17 @@ router.post('/', async (req, res) => {
     .filter((message) => message.content.trim());
 
   if (!messages.length || messages.at(-1).role !== 'user') {
-    refund(caller);
     return res.status(400).json({ error: 'Se esperaba un mensaje del usuario.' });
+  }
+
+  // Nothing left in any tier: refuse before opening a stream, so the client
+  // gets a plain 429 to roll the tape from.
+  const before = overall(caller, chain.length);
+  if (before.remaining <= 0) {
+    return res.status(429).json({
+      error: `Se acabaron las preguntas libres. Vuelven ${before.windowMinutes} minutos después de la primera.`,
+      quota: before,
+    });
   }
 
   res.writeHead(200, {
@@ -61,30 +69,58 @@ router.post('/', async (req, res) => {
 
   const send = (event) => res.write(`data: ${JSON.stringify(event)}\n\n`);
   let aborted = false;
-  let produced = false;
   // On the *response*, not the request: in modern Node a request emits 'close'
   // as soon as its body has been read, which is immediately for a POST —
   // listening there aborts every stream before the first token arrives.
   res.on('close', () => { aborted = true; });
 
-  send({ type: 'quota', quota });
+  const failures = [];
 
-  try {
-    for await (const text of askStream({ system: SYSTEM, messages })) {
-      if (aborted) return;
-      produced = true;
-      send({ type: 'delta', text });
+  // Walk the chain. A tier whose allowance is spent, or which fails before
+  // producing anything, hands straight over to the next one.
+  for (let tier = 0; tier < chain.length; tier += 1) {
+    if (aborted) return;
+
+    const provider = chain[tier];
+    const quota = consume(caller, tier);
+    if (!quota.allowed) continue;
+
+    let produced = false;
+    try {
+      send({ type: 'quota', quota: overall(caller, chain.length), provider: provider.label });
+
+      for await (const text of provider.askStream({ system: SYSTEM, messages })) {
+        if (aborted) return;
+        produced = true;
+        send({ type: 'delta', text });
+      }
+
+      send({ type: 'done', provider: provider.label });
+      return res.end();
+    } catch (error) {
+      console.warn(`[chat] ${provider.id} failed:`, error.message);
+      failures.push(`${provider.label}: ${error.message}`);
+
+      // Nothing was generated, so the question should not count against them.
+      if (!produced) {
+        refund(caller, tier);
+        continue;
+      }
+
+      // Half an answer is already on screen; do not start a second one over it.
+      send({ type: 'error', error: error.message });
+      return res.end();
     }
-    send({ type: 'done' });
-  } catch (error) {
-    console.error('[chat]', error);
-    // Nothing was generated, so the question should not count against them.
-    if (!produced) {
-      refund(caller);
-      send({ type: 'quota', quota: peek(caller) });
-    }
-    send({ type: 'error', error: error.message || 'Algo salió mal.' });
-  } finally {
-    res.end();
   }
+
+  const quota = overall(caller, chain.length);
+  send({ type: 'quota', quota });
+  send({
+    type: 'error',
+    error: failures.length
+      ? `Ningún modelo pudo responder. ${failures.join(' · ')}`
+      : `Se acabaron las preguntas libres. Vuelven ${quota.windowMinutes} minutos después de la primera.`,
+    exhausted: quota.remaining <= 0,
+  });
+  res.end();
 });

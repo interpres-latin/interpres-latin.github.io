@@ -1,7 +1,7 @@
 import path from 'node:path';
 import express from 'express';
 import { loadEnv, ROOT } from './env.js';
-import { hasProvider, providerInfo } from './llm.js';
+import { chainInfo, hasProvider, providerInfo } from './llm.js';
 import { router as translate } from './routes/translate.js';
 import { router as dictionary } from './routes/dictionary.js';
 import { router as verbs } from './routes/verbs.js';
@@ -40,11 +40,16 @@ app.use((error, _req, res, _next) => {
 
 const server = app.listen(PORT, () => {
   console.log(`ProfeGPT → http://localhost:${PORT}`);
-  const provider = providerInfo();
-  console.log(provider
-    ? `  Model: ${provider.label} (${provider.model})${provider.free ? ' — free tier' : ' — paid'}`
-    : '  Model: none configured — the tutor, conjugator and dictionary still work;'
-      + '\n         translation falls back to MyMemory. Set GEMINI_API_KEY for a free one.');
+  const chain = chainInfo();
+  if (!chain.length) {
+    console.log('  Models: none configured — the tutor, conjugator and dictionary still work;');
+    console.log('          translation falls back to MyMemory. Set GEMINI_API_KEY for a free one.');
+  } else {
+    chain.forEach((provider, index) => {
+      const role = index === 0 ? 'Model' : ' ↳ then';
+      console.log(`  ${role}: ${provider.label} (${provider.model})${provider.free ? ' — free' : ' — PAID'}`);
+    });
+  }
 });
 
 server.on('error', (error) => {

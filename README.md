@@ -49,18 +49,51 @@ go to a language model, and are metered at **10 per 30 minutes per visitor**,
 enforced server-side in `server/quota.js` with a sliding window. Tune it with
 `CHAT_FREE_LIMIT` and `CHAT_WINDOW_MINUTES`.
 
-The model itself comes from whichever provider is configured, free tiers first,
-so the site costs nothing to run:
+Every configured provider becomes its own **tier**. Spending one tier's
+allowance moves traffic to the next rather than cutting the visitor off, and a
+tier that errors before producing a token hands over too — so a provider having
+a bad afternoon is invisible to the user.
 
-| Provider | Key | Default model | Cost |
-| --- | --- | --- | --- |
-| Google AI Studio | `GEMINI_API_KEY` | `gemini-flash-latest` | free tier |
-| Groq | `GROQ_API_KEY` | `llama-3.3-70b-versatile` | free tier |
-| Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-5` | paid |
+| Tier | Key | Default model | Allowance | Cost |
+| --- | --- | --- | --- | --- |
+| Google AI Studio | `GEMINI_API_KEY` | `gemini-flash-latest` | `CHAT_FREE_LIMIT`, 10 | free |
+| Groq | `GROQ_API_KEY` | `llama-3.3-70b-versatile` | `CHAT_OVERFLOW_LIMIT`, 20 | free |
+| OpenRouter | `OPENROUTER_API_KEY` | three `:free` models, tried in order | `CHAT_OVERFLOW_LIMIT`, 20 | free |
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-5` | `CHAT_OVERFLOW_LIMIT`, 20 | **paid** |
 
-Set more than one and the free tiers win; `LLM_PROVIDER` forces a choice. With
-none set, the tutor, conjugator and dictionary still work and translation falls
-back to MyMemory.
+The tape rolls only when every tier is spent. `LLM_PROVIDER` pins a single one.
+With none set, the tutor, conjugator and dictionary still work and translation
+falls back to MyMemory.
+
+Note that Google's own free tier is roughly **20 requests a day** for the Flash
+models, well below what this site's per-visitor allowance would permit — which
+is exactly why the overflow tier exists.
+
+### Keeping OpenRouter free
+
+Three guards in `server/providers/openrouter.js`, none of which trusts the
+others:
+
+1. **A model id must end in `:free`.** Anything else is refused before a request
+   is built.
+2. **Every request carries `provider.max_price` of zero** on prompt, completion,
+   request and image. OpenRouter enforces this itself — a paid model comes back
+   *"No endpoints found that satisfy the max price for this request"* rather
+   than being billed.
+3. **The advertised price is checked against `/models`** before first use. A
+   `:free` name that actually charges is refused, and so is a model that cannot
+   be verified — a failed lookup closes the gate rather than opening it.
+
+`npm test` covers all three, offline, including a `:free`-suffixed model that
+secretly charges.
+
+Those are the code-side guards. Do these two on the account as well, because
+they hold even if this code is wrong:
+
+- **Do not add a payment method**, and keep the credit balance at zero. With no
+  credits a paid model returns 403 instead of charging.
+- **Set a credit limit on the key** at <https://openrouter.ai/settings/keys>.
+  A key with a limit cannot spend past it, whatever asks it to.
 
 When the allowance runs out, two translucent strips roll in from opposite
 corners and cross into an X over the chat panel, sealing it until the window
@@ -145,10 +178,13 @@ cp .env.example .env      # then put your key in it
 
 | Variable | Effect |
 | -------- | ------ |
-| `GEMINI_API_KEY` | Free. Powers off-topic chat, better translation and real example sentences. |
-| `GROQ_API_KEY` | Free alternative to the above. |
-| `ANTHROPIC_API_KEY` | Paid alternative. Only used if no free provider is set, or `LLM_PROVIDER=anthropic`. |
-| `LLM_PROVIDER` | Force one: `gemini`, `groq` or `anthropic`. |
+| `GEMINI_API_KEY` | Free. The primary tier for off-topic chat, translation and example sentences. |
+| `GROQ_API_KEY` | Free. Another tier. |
+| `OPENROUTER_API_KEY` | Free. The overflow tier — see *Keeping OpenRouter free* above. |
+| `OPENROUTER_MODEL` | Comma-separated `:free` model ids, tried in order. |
+| `ANTHROPIC_API_KEY` | **Paid.** Only reached if it is the only key set, or `LLM_PROVIDER=anthropic`. |
+| `LLM_PROVIDER` | Pin one: `gemini`, `groq`, `openrouter` or `anthropic`. |
+| `CHAT_OVERFLOW_LIMIT` | Allowance for each tier after the first. Default `20`. |
 | `PORT` | Defaults to `4000`. |
 | `CHAT_FREE_LIMIT` | Off-topic chat questions per window. Default `10`; set `0` to seal the chat immediately and see the tape. |
 | `CHAT_WINDOW_MINUTES` | Length of that window. Default `30`. |
@@ -192,7 +228,8 @@ public/
 test/
   conjugator.test.js    204 reference forms checked against RAE paradigms
   tutor.test.js         31 checks on intent routing and the form index
-  quota.test.js         20 checks on the sliding window, refunds and callers
+  quota.test.js         30 checks on the sliding window, tiers, refunds and callers
+  openrouter.test.js    20 checks on the guards that keep OpenRouter free
 ```
 
 ## The conjugation engine

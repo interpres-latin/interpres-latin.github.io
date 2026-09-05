@@ -189,6 +189,7 @@ export function renderChat(main) {
     const controller = new AbortController();
     streaming = controller;
     let reply = '';
+    let servedBy = null;
 
     try {
       const response = await fetch('/api/chat', {
@@ -232,6 +233,8 @@ export function renderChat(main) {
           if (event.type === 'quota') {
             quota = event.quota;
             updateHint();
+          } else if (event.type === 'done' && event.provider) {
+            servedBy = event.provider;
           } else if (event.type === 'delta') {
             reply += event.text;
             renderMarkdown(reply, target);
@@ -244,7 +247,10 @@ export function renderChat(main) {
       }
 
       renderMarkdown(reply, target);
-      if (reply.trim()) history.push({ role: 'assistant', content: reply });
+      if (reply.trim()) {
+        history.push({ role: 'assistant', content: reply });
+        if (servedBy) target.appendChild(el('p', { class: 'msg__source' }, servedBy));
+      }
     } catch (error) {
       if (error.name !== 'AbortError') {
         if (reply.trim()) renderMarkdown(reply, target);
