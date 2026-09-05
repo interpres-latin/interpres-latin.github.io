@@ -32,6 +32,11 @@ five things it can actually ground an answer in:
 | *cómo se dice "I'm tired" en español* | `/api/translate` |
 | *ser y estar*, *por y para*, *el subjuntivo*… | 16 hand-written grammar topics in `public/js/data/grammar.js`, in both languages |
 
+A question that names a verb *and* asks about its forms gets that verb's table,
+not a general essay — "how do you say tener in the past tense" is about tener,
+not about the preterite. An exact topic match still wins, so "el subjuntivo"
+stays an explanation.
+
 Anything it can't ground, it declines — it says so rather than guessing. That's
 the whole point: on a site whose value is being correct about Spanish, a
 confident wrong answer costs more than an honest "outside what I cover".
@@ -235,7 +240,7 @@ public/
     views/              one module per page
 test/
   conjugator.test.js    204 reference forms checked against RAE paradigms
-  tutor.test.js         37 checks on intent routing and the form index
+  tutor.test.js         47 checks on intent routing and the form index
   quota.test.js         21 checks on the sliding window, refunds and callers
   openrouter.test.js    20 checks on the guards that keep OpenRouter free
 ```

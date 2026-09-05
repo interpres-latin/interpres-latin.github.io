@@ -56,6 +56,18 @@ const cases = [
   ['hablar conjugation table', /hablar/i, 'verb-first with trailing words'],
   ['how do you conjugate ir', /\bir\b/i, 'question form'],
   ['conjugate pedir', /pedir/i, 'conjugation in English'],
+  // A verb named anywhere, with a cue about forms, beats a general topic:
+  // "how do you say tener in the past tense" used to answer with the
+  // preterite-vs-imperfect essay instead of tener's table.
+  ['how to say ir present tense', /\bir\b/i, 'verb + tense in a long question'],
+  ['present tense of ir', /\bir\b/i, 'tense before the verb'],
+  ['how do you say tener in the past tense', /tener/i, 'verb beats the past-tense topic'],
+  ['what is hablar in the future', /hablar/i, 'verb beats the future topic'],
+  ['give me the preterite forms of pedir', /pedir/i, 'verb beats the preterite topic'],
+  // …but an exact topic match still wins, articles and all.
+  ['cuándo se usa el subjuntivo', /subjuntivo no es un tiempo|subjunctive isn/i, 'exact topic beats the verb "usar"'],
+  ['el subjuntivo', /subjuntivo no es un tiempo|subjunctive isn/i, 'topic despite the leading article'],
+  ['la tilde', /tilde|accent/i, 'article-prefixed topic'],
   ['qué es «dijeron»', /decir/i, 'form lookup'],
   ['tuve', /tener/i, 'bare form lookup'],
   ['durmiendo', /dormir/i, 'gerund lookup'],
@@ -86,6 +98,18 @@ const article = await answer('conjuga el verbo hablar en presente');
 ok('"el verbo" is not mistaken for the pronoun él',
   article.blocks.some((b) => b.type === 'table' && b.rows.length === 6),
   text(article.blocks).slice(0, 160));
+
+// A named verb only wins when the question is about forms.
+const meaning = await answer('ser y estar');
+ok('"ser y estar" stays a topic, not a conjugation of ser',
+  /ser y estar|ser vs/i.test(text(meaning.blocks)) && !meaning.blocks.some((b) => b.type === 'table'),
+  text(meaning.blocks).slice(0, 120));
+
+// The tense asked for is the tense shown.
+const future = await answer('what is hablar in the future');
+ok('the requested tense is the one returned',
+  future.blocks.some((b) => b.type === 'table' && b.rows.some(([, form]) => form === 'hablaré')),
+  text(future.blocks).slice(0, 200));
 
 // --- honest refusal --------------------------------------------------------
 const outside = await answer('who won the world cup in 1998');

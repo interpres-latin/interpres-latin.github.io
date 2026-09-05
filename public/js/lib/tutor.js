@@ -13,11 +13,34 @@
  */
 
 import { conjugate, PERSONS, PERSON_LABELS } from './conjugator.js';
-import { COMMON_VERBS } from '../data/verbs.js';
+import { COMMON_VERBS, IRREGULARS, STEM_CHANGES } from '../data/verbs.js';
 import { TOPICS, SMALL_TALK, EXCLAMATIONS } from '../data/grammar.js';
 import { fold, getJson, postJson } from './dom.js';
 
 const GLOSSES = new Map(COMMON_VERBS);
+
+/**
+ * Infinitives we will recognise anywhere in a sentence. Deliberately a closed
+ * list rather than "any word ending in -ar/-er/-ir": English is full of words
+ * that end that way ("later", "other", "under") and misreading one as a verb is
+ * worse than missing an unusual verb.
+ */
+const KNOWN_VERBS = new Set([
+  ...COMMON_VERBS.map(([verb]) => fold(verb)),
+  ...Object.keys(IRREGULARS).map(fold),
+  ...Object.keys(STEM_CHANGES).map(fold),
+]);
+
+/** Words that mean the question is about a verb's forms, not about grammar in general. */
+const CONJUGATION_CUE = /\b(conjuga\w*|conjugat\w*|tense|tenses|tiempo|tiempos|forms?|formas?|presente|present|pasado|past|preterit\w*|indefinido|imperfect\w*|futuro|future|subjuntivo|subjunctive|condicional|conditional|imperativo|imperative|gerundio|gerund|participio|participle)\b/;
+
+/** The first known verb named anywhere in the question. */
+function verbNamedIn(words) {
+  for (const word of words) {
+    if (KNOWN_VERBS.has(word)) return word;
+  }
+  return null;
+}
 
 /**
  * The profe's interjections. Used where she would have used them — cheering a
@@ -318,11 +341,15 @@ function findHint(text, table) {
   return null;
 }
 
+/** "el subjuntivo" is the same question as "subjuntivo". */
+const LEADING_ARTICLE = /^(?:el|la|los|las|un|una|the|a)\s+/;
+
 function scoreTopic(topic, folded) {
+  const bare = folded.replace(LEADING_ARTICLE, '');
   let score = 0;
   for (const keyword of topic.keywords) {
     const key = fold(keyword);
-    if (folded === key) return 100;
+    if (folded === key || bare === key) return 100;
     if (new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(folded)) {
       score += key.includes(' ') ? 6 : 3;
     }
@@ -362,19 +389,34 @@ export async function answer(question, { language = null } = {}) {
     if (blocks) return respond(blocks);
   }
 
+  // Tracked so a failed lookup cannot quietly answer a different question: a
+  // translation request that could not be served should not fall through to a
+  // grammar topic that happens to share a word with it.
+  let askedSomethingSpecific = false;
+
   const translateMatch = TRANSLATE_ES.exec(text);
   if (translateMatch && /(?:en espanol|en español|in spanish|al espanol|al español)/i.test(text)) {
+    askedSomethingSpecific = true;
     const blocks = await translationAnswer(translateMatch[1].trim(), 'en', lang).catch(() => null);
     if (blocks) return respond(blocks);
   }
 
   const defineMatch = DEFINE.exec(text);
   if (defineMatch) {
+    askedSomethingSpecific = true;
     const word = defineMatch[1];
     const blocks = await dictionaryAnswer(word, lang).catch(() => null);
     if (blocks) return respond(blocks);
+
     const asForm = formLookupAnswer(word, lang);
     if (asForm) return respond(asForm);
+
+    // The dictionary is unreachable but we do know this verb — its table is a
+    // better answer than nothing.
+    if (KNOWN_VERBS.has(fold(word))) {
+      const table = conjugationAnswer(word, lang);
+      if (table) return respond(table);
+    }
   }
 
   const formMatch = WHAT_FORM.exec(text);
@@ -383,16 +425,33 @@ export async function answer(question, { language = null } = {}) {
     if (blocks) return respond(blocks);
   }
 
-  // 4. grammar topics
+  const words = folded.split(' ').filter(Boolean);
+
   const ranked = TOPICS
     .map((topic) => ({ topic, score: scoreTopic(topic, folded) }))
     .sort((a, b) => b.score - a.score);
-  if (ranked[0]?.score >= 6) return respond(topicAnswer(ranked[0].topic, lang));
 
-  // 5. a bare word or two: a verb form, an infinitive, or a dictionary entry.
+  // 4. A question that names a verb *and* asks about forms wants that verb's
+  //    table, not a general essay: "how do you say tener in the past tense"
+  //    used to land on the preterite-vs-imperfect topic. An exact topic match
+  //    (score 100) still wins, so "cuándo se usa el subjuntivo" stays a topic.
+  if (ranked[0]?.score < 100 && CONJUGATION_CUE.test(folded)) {
+    const named = verbNamedIn(words);
+    if (named) {
+      const blocks = conjugationAnswer(named, lang, {
+        tense: findHint(folded, TENSE_HINTS),
+        person: findHint(accented, PERSON_HINTS),
+      });
+      if (blocks) return respond(blocks);
+    }
+  }
+
+  // 5. grammar topics
+  if (!askedSomethingSpecific && ranked[0]?.score >= 6) return respond(topicAnswer(ranked[0].topic, lang));
+
+  // 6. a bare word or two: a verb form, an infinitive, or a dictionary entry.
   // Every word is a candidate, not just the first long one — "ir conjugation"
   // has its verb in the two-letter word.
-  const words = folded.split(' ').filter(Boolean);
   if (words.length <= 3) {
     // An infinitive anywhere in the phrase wins outright.
     for (const word of words) {
@@ -416,7 +475,7 @@ export async function answer(question, { language = null } = {}) {
     }
   }
 
-  // 6. an explicit "traduce …" that did not name a direction
+  // 7. an explicit "traduce …" that did not name a direction
   const anyTranslate = TRANSLATE_TEXT.exec(text);
   if (anyTranslate) {
     const phrase = anyTranslate[1].trim();
@@ -424,8 +483,8 @@ export async function answer(question, { language = null } = {}) {
     if (blocks) return respond(blocks);
   }
 
-  // 7. a lower-confidence topic match is better than nothing
-  if (ranked[0]?.score >= 3) return respond(topicAnswer(ranked[0].topic, lang));
+  // 8. a lower-confidence topic match is better than nothing
+  if (!askedSomethingSpecific && ranked[0]?.score >= 3) return respond(topicAnswer(ranked[0].topic, lang));
 
   return { blocks: [{ type: 'md', text: outOfScope(lang) }], confident: false, language: lang };
 }
