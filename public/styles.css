@@ -30,6 +30,52 @@
   --nav-h: 62px;
   --shell: 1180px;
   --gap: 20px;
+
+  /* painted on canvas, so they have to be readable from JS */
+  --net-line: 150, 155, 167;
+  --net-line-warm: 217, 116, 62;
+  --net-dot: 180, 186, 198;
+  --net-dot-warm: 217, 116, 62;
+  --hero-scrim: rgba(11, 12, 15, 0.62);
+  --wallpaper-strength: 0.16;
+
+  --tape-fill: rgba(255, 255, 255, 0.1);
+  --tape-edge: rgba(255, 255, 255, 0.32);
+  --tape-shade: rgba(0, 0, 0, 0.28);
+
+  color-scheme: dark;
+}
+
+/* Warm paper rather than plain white — the palette stays the same family. */
+:root[data-theme="light"] {
+  --bg: #f4f1ea;
+  --bg-raised: #ffffff;
+  --panel: #ffffff;
+  --panel-hi: #eae5db;
+  --line: #ddd7ca;
+  --line-hi: #b7ae9c;
+  --text: #14130f;
+  --text-dim: #5e594e;
+  --text-faint: #8a8377;
+
+  --es: #a8501c;
+  --en: #2c5896;
+  --accent: #bf5a24;
+  --good: #3d7f5e;
+  --bad: #b8433e;
+
+  --net-line: 120, 116, 104;
+  --net-line-warm: 191, 90, 36;
+  --net-dot: 96, 92, 82;
+  --net-dot-warm: 191, 90, 36;
+  --hero-scrim: rgba(244, 241, 234, 0.66);
+  --wallpaper-strength: 0.24;
+
+  --tape-fill: rgba(255, 255, 255, 0.34);
+  --tape-edge: rgba(255, 255, 255, 0.8);
+  --tape-shade: rgba(90, 74, 54, 0.16);
+
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -86,6 +132,18 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 .hero, .translator, .finder, .features, .page, .footer { position: relative; z-index: 1; }
 
+:root[data-theme="light"] .btn--primary,
+:root[data-theme="light"] .finder__form button { color: #fff; }
+:root[data-theme="light"] .btn--primary:hover,
+:root[data-theme="light"] .finder__form button:hover { background: #a8501c; }
+:root[data-theme="light"] .msg--bot .msg__who { color: #fff; }
+:root[data-theme="light"] .composer__send { background: var(--text); color: var(--bg-raised); }
+:root[data-theme="light"] .tabs button.is-active { background: var(--text); color: var(--bg-raised); }
+:root[data-theme="light"] .msg__body strong { color: #000; }
+:root[data-theme="light"] .notice { border-color: #c9a94e; background: #fdf6e0; color: #6d5410; }
+:root[data-theme="light"] .notice code { background: #f0e5c4; }
+:root[data-theme="light"] .skip-link { color: #fff; }
+
 /* --- nav ------------------------------------------------------------------ */
 
 .nav {
@@ -112,7 +170,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   letter-spacing: -0.03em;
 }
 
-.nav__links { display: flex; gap: 26px; }
+.nav__links { display: flex; gap: 26px; margin-right: 4px; }
 
 .nav__links a {
   font-family: var(--sans);
@@ -128,6 +186,21 @@ button, input, textarea, select { font: inherit; color: inherit; }
 }
 .nav__links a:hover { color: var(--text); }
 .nav__links a.is-active { color: var(--text); border-bottom-color: var(--accent); }
+
+.nav__theme {
+  border: 1px solid var(--line-hi);
+  background: transparent;
+  color: var(--text-dim);
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  flex: none;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.nav__theme:hover { color: var(--text); border-color: var(--text-dim); background: var(--panel-hi); }
 
 .nav__toggle {
   display: none;
@@ -184,7 +257,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .hero__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
 /* flat scrim, not a gradient — keeps the wordmark legible over the network */
-.hero::after { content: ""; position: absolute; inset: 0; background: rgba(11, 12, 15, 0.62); pointer-events: none; }
+.hero::after { content: ""; position: absolute; inset: 0; background: var(--hero-scrim); pointer-events: none; }
 
 .hero__inner { position: relative; z-index: 2; max-width: 900px; }
 
@@ -475,6 +548,75 @@ table.conj td.is-empty { color: var(--text-faint); }
 .notice code { background: #0f0d08; padding: 1px 6px; }
 
 .error { color: var(--bad); font-size: 12.5px; }
+
+/* --- tape: seals the chat once the free questions run out ----------------- */
+
+.chat { position: relative; }
+
+.tape {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: auto; /* this is the blocking layer */
+}
+
+.tape__strip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--tape-length, 140%);
+  height: 74px;
+  margin: -37px 0 0 calc(var(--tape-length, 140%) / -2);
+}
+.tape__strip--a { transform: rotate(var(--tape-angle-a, 22deg)); }
+.tape__strip--b { transform: rotate(var(--tape-angle-b, -22deg)); }
+
+/* The glass itself. Scaled from 0 so the strip appears to be pulled across. */
+.tape__inner {
+  width: 100%;
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: var(--tape-fill);
+  backdrop-filter: blur(7px) saturate(150%);
+  -webkit-backdrop-filter: blur(7px) saturate(150%);
+  border-top: 1px solid var(--tape-edge);
+  border-bottom: 1px solid var(--tape-edge);
+  box-shadow: 0 10px 26px -12px var(--tape-shade), inset 0 1px 0 var(--tape-edge);
+  transition: transform 1.4s cubic-bezier(0.22, 0.68, 0.3, 1);
+}
+.tape__strip--b .tape__inner { transform-origin: right center; }
+
+.tape.is-rolling .tape__strip--a .tape__inner { transform: scaleX(1); }
+.tape.is-rolling .tape__strip--b .tape__inner { transform: scaleX(1); transition-delay: 0.42s; }
+
+.tape__card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(400px, calc(100% - 48px));
+  padding: 22px 24px;
+  text-align: center;
+  background: var(--bg-raised);
+  border: 1px solid var(--line-hi);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.tape.is-sealed .tape__card { opacity: 1; }
+
+.tape__title { font-family: var(--sans); font-weight: 700; text-transform: uppercase; letter-spacing: -0.02em; font-size: 19px; margin: 0 0 10px; }
+.tape__detail { margin: 0; font-size: 12.5px; color: var(--text-dim); line-height: 1.7; }
+.tape__note { margin: 12px 0 0; font-size: 11px; color: var(--text-faint); }
+
+.quota { font-size: 10.5px; color: var(--text-faint); }
+.quota b { color: var(--text-dim); font-weight: 400; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tape__inner { transition: none; transform: scaleX(1); }
+  .tape__card { transition: none; opacity: 1; }
+}
 
 /* --- responsive ----------------------------------------------------------- */
 

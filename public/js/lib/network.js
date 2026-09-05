@@ -16,6 +16,21 @@ export function startNetwork(canvas) {
   const context = canvas.getContext('2d', { alpha: true });
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // Colours live in CSS so the palette has a single home; they arrive here as
+  // bare "r, g, b" triples that get an alpha appended per line.
+  let palette = readPalette();
+
+  function readPalette() {
+    const style = getComputedStyle(document.documentElement);
+    const read = (name, fallback) => (style.getPropertyValue(name).trim() || fallback);
+    return {
+      line: read('--net-line', '150, 155, 167'),
+      lineWarm: read('--net-line-warm', '217, 116, 62'),
+      dot: read('--net-dot', '180, 186, 198'),
+      dotWarm: read('--net-dot-warm', '217, 116, 62'),
+    };
+  }
+
   let nodes = [];
   let width = 0;
   let height = 0;
@@ -85,8 +100,8 @@ export function startNetwork(canvas) {
         if (distance > LINK_DIST) continue;
         const strength = 1 - distance / LINK_DIST;
         context.strokeStyle = a.warm || b.warm
-          ? `rgba(217, 116, 62, ${strength * 0.26})`
-          : `rgba(150, 155, 167, ${strength * 0.17})`;
+          ? `rgba(${palette.lineWarm}, ${strength * 0.26})`
+          : `rgba(${palette.line}, ${strength * 0.17})`;
         context.lineWidth = strength * 0.8;
         context.beginPath();
         context.moveTo(a.x, a.y);
@@ -98,7 +113,7 @@ export function startNetwork(canvas) {
         const distance = Math.hypot(pointer.x - a.x, pointer.y - a.y);
         if (distance < POINTER_DIST) {
           const strength = 1 - distance / POINTER_DIST;
-          context.strokeStyle = `rgba(217, 116, 62, ${strength * 0.34})`;
+          context.strokeStyle = `rgba(${palette.lineWarm}, ${strength * 0.34})`;
           context.lineWidth = strength * 1.1;
           context.beginPath();
           context.moveTo(a.x, a.y);
@@ -107,7 +122,7 @@ export function startNetwork(canvas) {
         }
       }
 
-      context.fillStyle = a.warm ? 'rgba(217, 116, 62, 0.8)' : 'rgba(180, 186, 198, 0.45)';
+      context.fillStyle = a.warm ? `rgba(${palette.dotWarm}, 0.8)` : `rgba(${palette.dot}, 0.45)`;
       context.beginPath();
       context.arc(a.x, a.y, a.r, 0, Math.PI * 2);
       context.fill();
@@ -147,7 +162,9 @@ export function startNetwork(canvas) {
   observer.observe(canvas);
 
   const onResize = () => { resize(); if (reduced) draw(); };
+  const onThemeChange = () => { palette = readPalette(); draw(); };
   window.addEventListener('resize', onResize, { passive: true });
+  window.addEventListener('themechange', onThemeChange);
   window.addEventListener('pointermove', onPointerMove, { passive: true });
   document.addEventListener('pointerleave', onPointerLeave);
 
@@ -157,6 +174,7 @@ export function startNetwork(canvas) {
     pause();
     observer.disconnect();
     window.removeEventListener('resize', onResize);
+    window.removeEventListener('themechange', onThemeChange);
     window.removeEventListener('pointermove', onPointerMove);
     document.removeEventListener('pointerleave', onPointerLeave);
   };

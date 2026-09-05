@@ -42,7 +42,37 @@ follow-ups that have no language signal of their own.
 If `ANTHROPIC_API_KEY` is set, the questions the tutor declined — and only those
 — are passed to Claude instead. Grounded answers always win.
 
+### The free allowance
+
+Spanish questions are free forever: they never leave the server. Off-topic ones
+are metered at **10 per 30 minutes per visitor**, enforced server-side in
+`server/quota.js` with a sliding window, so the bill stays bounded no matter who
+finds the site. Tune it with `CHAT_FREE_LIMIT` and `CHAT_WINDOW_MINUTES`.
+
+When the allowance runs out, two translucent strips roll in from opposite
+corners and cross into an X over the chat panel, sealing it until the window
+rolls forward. The angle and length are measured from the panel, so the X lands
+on its corners at any size. Spanish questions carry on working throughout.
+
+### The profe's interjections
+
+Three expressions she actually used, spelled as the RAE has them, fired on the
+kind of moment that earned them rather than on every message:
+
+| | When |
+| --- | --- |
+| **¡Olé!** | a word found in the dictionary |
+| **¡Mecachis en todo!** | a question outside what the tutor covers, and on the tape |
+| **¡La madre que me parió!** | a verb that is both irregular *and* stem-changing |
+
 ## Design
+
+**Dark and light.** The choice is stamped onto `<html data-theme>` by an inline
+script in the page head, before the first paint, so the site never flashes the
+wrong palette. It follows the system setting until you press the toggle, then
+remembers. Colours that get painted to canvas — the hero network, the wallpaper
+strength — are CSS custom properties the JS reads back, so the palette has a
+single home.
 
 Headings and the menu are **Inter** — uppercase, weight 700, `letter-spacing: -0.03em`,
 `line-height: 1`. Body copy is **JetBrains Mono**. Flat colour throughout: no
@@ -66,6 +96,8 @@ cp .env.example .env      # then put your key in it
 | -------- | ------ |
 | `ANTHROPIC_API_KEY` | Switches translation and dictionary examples from the fallbacks to Claude, and lets the chat fall through to Claude for questions the tutor can't ground. Everything works without it. |
 | `PORT` | Defaults to `4000`. |
+| `CHAT_FREE_LIMIT` | Off-topic chat questions per window. Default `10`; set `0` to seal the chat immediately and see the tape. |
+| `CHAT_WINDOW_MINUTES` | Length of that window. Default `30`. |
 
 Without a key:
 
@@ -78,6 +110,7 @@ Without a key:
 ```
 server/
   index.js              express app: /api routes, static files, SPA fallback
+  quota.js              sliding-window allowance for off-topic chat questions
   claude.js             Anthropic client — model id, effort, streaming, refusal handling
   routes/
     translate.js        Claude, falling back to MyMemory
@@ -94,12 +127,15 @@ public/
     lib/wallpaper.js    the azulejo wallpaper: SVG tile, parallax, scroll fade
     lib/markdown.js     DOM-building markdown renderer (no innerHTML)
     lib/tutor.js        intent routing for the chat: what can be grounded, and how
+    lib/theme.js        dark/light switching
+    lib/tape.js         the X that seals the chat when the allowance is gone
     data/grammar.js     16 grammar explanations, Spanish and English
     data/verbs.js       stem changes, irregulars, the search index
     views/              one module per page
 test/
   conjugator.test.js    204 reference forms checked against RAE paradigms
   tutor.test.js         31 checks on intent routing and the form index
+  quota.test.js         20 checks on the sliding window, refunds and callers
 ```
 
 ## The conjugation engine

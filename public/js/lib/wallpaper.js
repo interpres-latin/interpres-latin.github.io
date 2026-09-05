@@ -64,6 +64,15 @@ export function startWallpaper(layer, from, to) {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let queued = false;
 
+  // How strongly the tiling reads against the page. Light paper needs a little
+  // more than the dark ground before the pattern is visible at all.
+  let strength = readStrength();
+
+  function readStrength() {
+    const value = getComputedStyle(document.documentElement).getPropertyValue('--wallpaper-strength');
+    return Number(value) || 0.16;
+  }
+
   function update() {
     queued = false;
     const viewport = window.innerHeight;
@@ -73,7 +82,7 @@ export function startWallpaper(layer, from, to) {
     const arriving = clamp((viewport * 0.92 - start) / (viewport * 0.45));
     const leaving = clamp((viewport * 0.8 - end) / (viewport * 0.45));
 
-    layer.style.opacity = (arriving * (1 - leaving)).toFixed(3);
+    layer.style.opacity = (arriving * (1 - leaving) * strength).toFixed(3);
     if (!reduced) layer.style.backgroundPositionY = `${(-window.scrollY * 0.28).toFixed(1)}px`;
   }
 
@@ -83,12 +92,16 @@ export function startWallpaper(layer, from, to) {
     requestAnimationFrame(update);
   }
 
+  const onThemeChange = () => { strength = readStrength(); update(); };
+
   update();
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll, { passive: true });
+  window.addEventListener('themechange', onThemeChange);
 
   return () => {
     window.removeEventListener('scroll', onScroll);
     window.removeEventListener('resize', onScroll);
+    window.removeEventListener('themechange', onThemeChange);
   };
 }

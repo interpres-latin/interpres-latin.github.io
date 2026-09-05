@@ -1,6 +1,8 @@
 import { el, icon, ICONS, clear, getJson } from '../lib/dom.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import { answer as askTutor } from '../lib/tutor.js';
+import { sealWithTape } from '../lib/tape.js';
+import { EXCLAMATIONS } from '../data/grammar.js';
 
 const STARTERS = [
   'ser y estar',
@@ -16,6 +18,8 @@ export function renderChat(main) {
   let busy = false;
   let streaming = null;
   let language = null; // whichever language the conversation has settled into
+  let quota = null;    // free off-topic questions left, from the server
+  let unseal = null;   // removes the tape, if it is up
 
   const log = el('div', { class: 'chat__log' });
   const input = el('textarea', { rows: 1, placeholder: 'Pregunta lo que quieras…', 'aria-label': 'Mensaje' });
@@ -25,22 +29,56 @@ export function renderChat(main) {
 
   const composer = el('form', { class: 'composer' }, input, send);
   const hint = el('p', { class: 'composer__hint' }, 'Enter para enviar · Shift + Enter para un salto de línea');
+  const chat = el('div', { class: 'chat' }, log, composer, hint);
 
-  main.append(el('div', { class: 'page shell', style: { paddingBottom: '24px' } },
-    el('div', { class: 'chat' }, log, composer, hint)));
+  main.append(el('div', { class: 'page shell', style: { paddingBottom: '24px' } }, chat));
 
   greet();
 
   // The tutor works with no key at all. Claude, when configured, only picks up
   // the questions the tutor decided it could not answer from the site's data.
   getJson('/api/chat/status')
-    .then((status) => { claudeEnabled = Boolean(status.enabled); updateHint(); })
+    .then((status) => {
+      claudeEnabled = Boolean(status.enabled);
+      quota = status.quota || null;
+      updateHint();
+      if (claudeEnabled && quota && quota.remaining <= 0) rollTape();
+    })
     .catch(() => updateHint());
 
   function updateHint() {
-    hint.textContent = claudeEnabled
-      ? 'Respuestas del propio sitio; lo que no cubra pasa a Claude'
-      : 'Respuestas del conjugador, la RAE y las fichas de gramática — sin conexión a ninguna IA';
+    clear(hint);
+    if (!claudeEnabled) {
+      hint.textContent = 'Respuestas del conjugador, la RAE y las fichas de gramática — sin conexión a ninguna IA';
+      return;
+    }
+    hint.append('Preguntas de español, ilimitadas · ');
+    hint.appendChild(el('span', { class: 'quota' },
+      'otros temas: ',
+      el('b', {}, `${quota ? quota.remaining : '—'} / ${quota ? quota.limit : '—'}`),
+      ` cada ${quota ? quota.windowMinutes : 30} min`));
+  }
+
+  function pick(kind) {
+    const options = EXCLAMATIONS[kind];
+    return options[Math.floor(Math.random() * options.length)];
+  }
+
+  /** Seal the chat: the free off-topic questions are gone until the window rolls. */
+  function rollTape() {
+    if (unseal) return;
+    const minutes = quota?.resetAt
+      ? Math.max(1, Math.ceil((quota.resetAt - Date.now()) / 60000))
+      : (quota?.windowMinutes ?? 30);
+
+    input.disabled = true;
+    send.disabled = true;
+
+    unseal = sealWithTape(chat, {
+      title: pick('bad'),
+      detail: `Se acabaron las preguntas libres sobre otros temas. Vuelven dentro de unos ${minutes} minutos.`,
+      note: 'Las preguntas de español no gastan nada: conjugaciones, definiciones, traducciones y gramática siguen abiertas en el resto del sitio.',
+    });
   }
 
   function greet() {
@@ -125,6 +163,7 @@ export function renderChat(main) {
     if (!result.confident && claudeEnabled) {
       clear(target);
       await streamFromClaude(target);
+      if (quota && quota.remaining <= 0) rollTape();
     } else {
       paint(target, result.blocks);
       history.push({ role: 'assistant', content: blocksToText(result.blocks) });
@@ -154,6 +193,14 @@ export function renderChat(main) {
 
       if (!response.ok || !response.body) {
         const failure = await response.json().catch(() => ({}));
+        if (response.status === 429) {
+          quota = failure.quota || { ...quota, remaining: 0 };
+          updateHint();
+          clear(target);
+          target.appendChild(el('p', {}, failure.error));
+          rollTape();
+          return;
+        }
         throw new Error(failure.error || `El servidor respondió ${response.status}.`);
       }
 
@@ -175,7 +222,10 @@ export function renderChat(main) {
           let event;
           try { event = JSON.parse(chunk.slice(5).trim()); } catch { continue; }
 
-          if (event.type === 'delta') {
+          if (event.type === 'quota') {
+            quota = event.quota;
+            updateHint();
+          } else if (event.type === 'delta') {
             reply += event.text;
             renderMarkdown(reply, target);
             target.appendChild(caret);
@@ -208,7 +258,7 @@ export function renderChat(main) {
   resize();
   input.focus();
 
-  return () => streaming?.abort();
+  return () => { streaming?.abort(); unseal?.(); };
 }
 
 /** Flatten an answer so it can go back to Claude as conversation history. */

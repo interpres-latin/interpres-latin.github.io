@@ -14,10 +14,23 @@
 
 import { conjugate, PERSONS, PERSON_LABELS } from './conjugator.js';
 import { COMMON_VERBS } from '../data/verbs.js';
-import { TOPICS, SMALL_TALK } from '../data/grammar.js';
+import { TOPICS, SMALL_TALK, EXCLAMATIONS } from '../data/grammar.js';
 import { fold, getJson, postJson } from './dom.js';
 
 const GLOSSES = new Map(COMMON_VERBS);
+
+/**
+ * The profe's interjections. Used where she would have used them — cheering a
+ * find, tutting at a miss — and rationed, because a catchphrase on every single
+ * message stops being a catchphrase.
+ */
+const EXCLAIM_ODDS = { good: 0.4, bad: 1, wow: 1 };
+
+function exclaim(kind) {
+  const options = EXCLAMATIONS[kind];
+  if (!options || Math.random() > (EXCLAIM_ODDS[kind] ?? 1)) return '';
+  return `${options[Math.floor(Math.random() * options.length)]} `;
+}
 
 const TENSE_LABELS = {
   'indicativo.presente': { es: 'presente de indicativo', en: 'present indicative' },
@@ -147,11 +160,15 @@ function conjugationAnswer(verb, language, { tense = null, person = null } = {})
 
   const tenses = tense ? [tense] : ['indicativo.presente', 'indicativo.preterito', 'subjuntivo.presente'];
 
+  // A verb that is both irregular and stem-changing earns a proper reaction.
+  const hairy = result.flags.irregular && result.flags.stemChange;
+  const lead = hairy ? exclaim('wow') : '';
+
   blocks.push({
     type: 'md',
     text: language === 'es'
-      ? `**${result.verb}**${gloss ? ` — *${gloss}*` : ''}. Verbo terminado en -${result.class}${describeFlags(result, 'es')}.`
-      : `**${result.verb}**${gloss ? ` — *${gloss}*` : ''}. An -${result.class} verb${describeFlags(result, 'en')}.`,
+      ? `${lead}**${result.verb}**${gloss ? ` — *${gloss}*` : ''}. Verbo terminado en -${result.class}${describeFlags(result, 'es')}.`
+      : `${lead}**${result.verb}**${gloss ? ` — *${gloss}*` : ''}. An -${result.class} verb${describeFlags(result, 'en')}.`,
   });
 
   for (const key of tenses) {
@@ -206,7 +223,7 @@ async function dictionaryAnswer(word, language) {
 
   const blocks = [{
     type: 'md',
-    text: `**${data.word}**${data.entries[0]?.origin ? ` — *${data.entries[0].origin}*` : ''}`,
+    text: `${exclaim('good')}**${data.word}**${data.entries[0]?.origin ? ` — *${data.entries[0].origin}*` : ''}`,
   }];
 
   const lines = senses.map((sense, index) => {
@@ -421,10 +438,10 @@ function capabilities(language) {
 
 function outOfScope(language) {
   return language === 'es'
-    ? `Eso se me escapa. Respondo a partir de los datos del sitio —el conjugador, la RAE y un puñado de explicaciones de gramática—, así que no invento respuestas sobre lo que no conozco.
+    ? `${exclaim('bad')}Eso se me escapa. Respondo a partir de los datos del sitio —el conjugador, la RAE y un puñado de explicaciones de gramática—, así que no invento respuestas sobre lo que no conozco.
 
 Prueba con *conjuga salir*, *qué significa madrugar*, *qué es «tuve»* o *ser y estar*. Escribe **ayuda** para ver la lista completa.`
-    : `That one's outside what I cover. I answer from the site's own data — the conjugator, the RAE dictionary and a set of grammar explanations — so I'd rather say nothing than invent an answer.
+    : `${exclaim('bad')}That one's outside what I cover. I answer from the site's own data — the conjugator, the RAE dictionary and a set of grammar explanations — so I'd rather say nothing than invent an answer.
 
 Try *conjugate salir*, *what does madrugar mean*, *what is "tuve"*, or *ser vs estar*. Type **help** for the full list.`;
 }

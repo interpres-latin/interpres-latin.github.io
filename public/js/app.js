@@ -3,6 +3,7 @@ import { renderConjugator } from './views/conjugator.js';
 import { renderDictionary } from './views/dictionary.js';
 import { renderChat } from './views/chat.js';
 import { clear } from './lib/dom.js';
+import { mountThemeToggle } from './lib/theme.js';
 
 const ROUTES = [
   { path: '/', nav: 'traductor', render: renderHome },
@@ -14,6 +15,8 @@ const ROUTES = [
 const main = document.getElementById('main');
 const links = document.querySelector('.nav__links');
 const toggle = document.querySelector('.nav__toggle');
+
+mountThemeToggle(document.querySelector('.nav__theme'));
 
 let teardown = null;
 let currentPath = null;

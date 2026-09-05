@@ -680,6 +680,21 @@ La regla que a todos se les escapa: **detrás de *si* no van ni el condicional n
   },
 ];
 
+/**
+ * The profe's own interjections, used the way she used them. Spellings follow
+ * the RAE: *olé* is the interjection "para animar y aplaudir"; *mecachis* is one
+ * word, "para expresar extrañeza o contrariedad"; *la madre que me parió* is a
+ * set phrase, so it keeps its *que*.
+ *
+ * Keyed by the kind of moment, not by the message — the tutor picks one when
+ * something actually goes right or wrong, and stays quiet the rest of the time.
+ */
+export const EXCLAMATIONS = {
+  good: ['¡Olé!', '¡Olé, olé!', '¡Olé ahí!'],
+  bad: ['¡Mecachis en todo!', '¡Mecachis!', '¡Mecachis en la mar!'],
+  wow: ['¡La madre que me parió!', '¡Ay, la madre que me parió!'],
+};
+
 /** Conversational openers the tutor answers without looking anything up. */
 export const SMALL_TALK = [
   {
