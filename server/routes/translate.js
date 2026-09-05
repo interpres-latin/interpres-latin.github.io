@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ask, hasKey } from '../claude.js';
+import { ask, hasProvider, providerInfo } from '../llm.js';
 
 export const router = Router();
 
@@ -59,7 +59,7 @@ router.post('/', async (req, res) => {
 
   if (!text.trim()) return res.json({ translation: '', engine: null });
 
-  if (hasKey()) {
+  if (hasProvider()) {
     try {
       const translation = await ask({
         system: SYSTEM,
@@ -69,15 +69,15 @@ router.post('/', async (req, res) => {
         }],
         maxTokens: 4000,
       });
-      return res.json({ translation, engine: 'claude' });
+      return res.json({ translation, engine: providerInfo()?.label || 'IA' });
     } catch (error) {
-      console.warn('[translate] Claude failed, falling back to MyMemory:', error.message);
+      console.warn('[translate] model failed, falling back to MyMemory:', error.message);
     }
   }
 
   try {
     const translation = await translateWithMyMemory(text, from, to);
-    return res.json({ translation, engine: 'mymemory' });
+    return res.json({ translation, engine: 'MyMemory' });
   } catch (error) {
     return res.status(502).json({ error: `Translation failed: ${error.message}` });
   }

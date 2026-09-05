@@ -264,8 +264,8 @@ async function translationAnswer(text, from, language) {
     {
       type: 'md',
       text: language === 'es'
-        ? `_«${text}» — traducido con ${data.engine === 'claude' ? 'Claude' : 'MyMemory'}._`
-        : `_"${text}" — translated with ${data.engine === 'claude' ? 'Claude' : 'MyMemory'}._`,
+        ? `_«${text}» — traducido con ${data.engine || 'MyMemory'}._`
+        : `_"${text}" — translated with ${data.engine || 'MyMemory'}._`,
     },
   ];
 }

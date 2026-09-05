@@ -12,7 +12,11 @@ const SAMPLE_WORDS = ['sobremesa', 'madrugar', 'entrañable', 'friolero', 'estre
 
 export function renderHome(main) {
   const canvas = el('canvas', { class: 'hero__canvas', 'aria-hidden': 'true' });
-  const wallpaper = el('div', { class: 'wallpaper', 'aria-hidden': 'true' });
+  // The photo sits in its own child so the parallax transform and the opacity
+  // fade do not fight over the same element.
+  const wallpaper = el('div', { class: 'wallpaper', 'aria-hidden': 'true' },
+    el('div', { class: 'wallpaper__photo' }),
+    el('div', { class: 'wallpaper__scrim' }));
 
   const hero = el('section', { class: 'hero' },
     canvas,
@@ -204,9 +208,7 @@ function buildTranslator(root) {
       const data = await postJson('/api/translate', { text, from: state.from }, { signal: controller.signal });
       if (controller.signal.aborted) return;
       output.textContent = data.translation || '';
-      engine.textContent = data.engine === 'claude'
-        ? 'traducido con Claude'
-        : data.engine === 'mymemory' ? 'traducido con MyMemory' : '';
+      engine.textContent = data.engine ? `traducido con ${data.engine}` : '';
       status.textContent = force ? 'Traducido' : 'Listo';
     } catch (error) {
       if (controller.signal.aborted || error.name === 'AbortError') return;

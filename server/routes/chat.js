@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { askStream, hasKey } from '../claude.js';
+import { askStream, hasProvider, providerInfo } from '../llm.js';
 import { callerOf, consume, peek, refund } from '../quota.js';
 
 export const router = Router();
@@ -21,13 +21,13 @@ general-purpose assistant.
 Keep answers tight. Use markdown only when structure genuinely helps.`;
 
 router.get('/status', (req, res) => {
-  res.json({ enabled: hasKey(), quota: peek(callerOf(req)) });
+  res.json({ enabled: hasProvider(), provider: providerInfo(), quota: peek(callerOf(req)) });
 });
 
 router.post('/', async (req, res) => {
-  if (!hasKey()) {
+  if (!hasProvider()) {
     return res.status(503).json({
-      error: 'El chat necesita una clave de API para las preguntas que no son de español. Añade ANTHROPIC_API_KEY a tu .env y reinicia el servidor.',
+      error: 'Las preguntas que no son de español necesitan un modelo. Añade GEMINI_API_KEY (gratis) a tu .env y reinicia el servidor.',
     });
   }
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ask, hasKey, parseJson } from '../claude.js';
+import { ask, hasProvider, parseJson } from '../llm.js';
 
 export const router = Router();
 
@@ -83,7 +83,7 @@ Rules:
 
 async function generateExamples(word, senses) {
   const wanted = senses.slice(0, EXAMPLES_PER_WORD);
-  if (!wanted.length || !hasKey()) return null;
+  if (!wanted.length || !hasProvider()) return null;
 
   const list = wanted
     .map((sense) => `${sense.number}. (${[sense.category, sense.verbCategory].filter(Boolean).join(', ')}) ${sense.description}`)
@@ -156,7 +156,7 @@ router.get('/', async (req, res) => {
   let exampleSource = null;
   try {
     examples = await generateExamples(lookup.data.word, allSenses);
-    if (examples) exampleSource = 'claude';
+    if (examples) exampleSource = 'model';
   } catch (error) {
     console.warn('[dictionary] example generation failed:', error.message);
   }

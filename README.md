@@ -45,9 +45,22 @@ If `ANTHROPIC_API_KEY` is set, the questions the tutor declined — and only tho
 ### The free allowance
 
 Spanish questions are free forever: they never leave the server. Off-topic ones
-are metered at **10 per 30 minutes per visitor**, enforced server-side in
-`server/quota.js` with a sliding window, so the bill stays bounded no matter who
-finds the site. Tune it with `CHAT_FREE_LIMIT` and `CHAT_WINDOW_MINUTES`.
+go to a language model, and are metered at **10 per 30 minutes per visitor**,
+enforced server-side in `server/quota.js` with a sliding window. Tune it with
+`CHAT_FREE_LIMIT` and `CHAT_WINDOW_MINUTES`.
+
+The model itself comes from whichever provider is configured, free tiers first,
+so the site costs nothing to run:
+
+| Provider | Key | Default model | Cost |
+| --- | --- | --- | --- |
+| Google AI Studio | `GEMINI_API_KEY` | `gemini-3.8-flash` | free tier |
+| Groq | `GROQ_API_KEY` | `llama-3.3-70b-versatile` | free tier |
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-5` | paid |
+
+Set more than one and the free tiers win; `LLM_PROVIDER` forces a choice. With
+none set, the tutor, conjugator and dictionary still work and translation falls
+back to MyMemory.
 
 When the allowance runs out, two translucent strips roll in from opposite
 corners and cross into an X over the chat panel, sealing it until the window
@@ -78,10 +91,20 @@ Headings and the menu are **Inter** — uppercase, weight 700, `letter-spacing: 
 `line-height: 1`. Body copy is **JetBrains Mono**. Flat colour throughout: no
 gradients, no rounded corners.
 
-Between the translator and the dictionary search, a wallpaper fades in behind
-the page and parallaxes against the scroll — an Andalusian azulejo tiling
-(octagons with diamonds in the gaps) generated as a repeating SVG in
-`public/js/lib/wallpaper.js`, so there is no image file to ship.
+Between the translator and the dictionary search, a photograph of the Plaza de
+Cibeles fades in behind the page and parallaxes against the scroll, under a
+theme-coloured scrim that keeps the text in front readable — the photo sits at
+about 38% against the dark palette and 28% against the light one, calibrated by
+rendering the actual composite rather than guessing. It ships as WebP (95 KB)
+with a JPEG fallback (202 KB).
+
+The hero hands over to the translator with a soft dissolve rather than a hard
+edge: the hero is masked out over its last stretch while the wallpaper is
+already fading up underneath it.
+
+The highlight colour is blue — `#4d8dff` on the dark palette, `#1d5fd0` on the
+light one — with teal as the second language's marker so the two stay
+distinguishable.
 
 ## Configuration
 
@@ -94,7 +117,10 @@ cp .env.example .env      # then put your key in it
 
 | Variable | Effect |
 | -------- | ------ |
-| `ANTHROPIC_API_KEY` | Switches translation and dictionary examples from the fallbacks to Claude, and lets the chat fall through to Claude for questions the tutor can't ground. Everything works without it. |
+| `GEMINI_API_KEY` | Free. Powers off-topic chat, better translation and real example sentences. |
+| `GROQ_API_KEY` | Free alternative to the above. |
+| `ANTHROPIC_API_KEY` | Paid alternative. Only used if no free provider is set, or `LLM_PROVIDER=anthropic`. |
+| `LLM_PROVIDER` | Force one: `gemini`, `groq` or `anthropic`. |
 | `PORT` | Defaults to `4000`. |
 | `CHAT_FREE_LIMIT` | Off-topic chat questions per window. Default `10`; set `0` to seal the chat immediately and see the tape. |
 | `CHAT_WINDOW_MINUTES` | Length of that window. Default `30`. |
@@ -111,9 +137,10 @@ Without a key:
 server/
   index.js              express app: /api routes, static files, SPA fallback
   quota.js              sliding-window allowance for off-topic chat questions
-  claude.js             Anthropic client — model id, effort, streaming, refusal handling
+  llm.js                picks a provider — free tiers first
+  providers/            gemini.js, groq.js, anthropic.js
   routes/
-    translate.js        Claude, falling back to MyMemory
+    translate.js        the model, falling back to MyMemory
     dictionary.js       RAE lookup + example-sentence generation
     verbs.js            RAE's own conjugation tables, normalised to our shape
     chat.js             SSE streaming chat
@@ -124,11 +151,11 @@ public/
     app.js              history-API router
     lib/conjugator.js   the conjugation engine
     lib/network.js      the hero node network
-    lib/wallpaper.js    the azulejo wallpaper: SVG tile, parallax, scroll fade
     lib/markdown.js     DOM-building markdown renderer (no innerHTML)
     lib/tutor.js        intent routing for the chat: what can be grounded, and how
     lib/theme.js        dark/light switching
     lib/tape.js         the X that seals the chat when the allowance is gone
+    lib/wallpaper.js    the Cibeles photo: parallax, scrim, scroll fade
     data/grammar.js     16 grammar explanations, Spanish and English
     data/verbs.js       stem changes, irregulars, the search index
     views/              one module per page
@@ -163,7 +190,8 @@ The badge on the verb card tells you which.
 
 - Dictionary data comes from [rae-api.com](https://rae-api.com), which serves
   the RAE's *DLE* as JSON. `dle.rae.es` itself blocks direct requests.
-- The Claude-backed paths (the chat fall-through, Claude translation, generated
-  examples) are written against `claude-opus-5` but have not been exercised
-  against the live API — there was no key available when they were built. Every
-  path that runs without a key has been tested.
+- The model-backed paths (off-topic chat, model translation, generated example
+  sentences) have not been exercised against a live API — no provider key was
+  available when they were built. The Gemini and Groq request shapes come from
+  their current docs; the Anthropic one is verified against the SDK. Every path
+  that runs *without* a key has been tested end to end.

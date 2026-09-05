@@ -18,9 +18,12 @@
   --text-dim: #969ba7;
   --text-faint: #6c7280;
 
-  --es: #d9743e;
-  --en: #5a86c4;
-  --accent: #d9743e;
+  /* Blue is the highlight; the second language gets a teal so the two stay
+     distinguishable without turning the page into a rainbow. */
+  --es: #4d8dff;
+  --en: #4bb3a5;
+  --accent: #4d8dff;
+  --accent-ink: #06101f;
   --good: #4f9e78;
   --bad: #d4645f;
 
@@ -33,11 +36,12 @@
 
   /* painted on canvas, so they have to be readable from JS */
   --net-line: 150, 155, 167;
-  --net-line-warm: 217, 116, 62;
+  --net-line-warm: 77, 141, 255;
   --net-dot: 180, 186, 198;
-  --net-dot-warm: 217, 116, 62;
+  --net-dot-warm: 77, 141, 255;
   --hero-scrim: rgba(11, 12, 15, 0.62);
-  --wallpaper-strength: 0.16;
+  --wallpaper-strength: 1;
+  --wallpaper-scrim: rgba(11, 12, 15, 0.62);
 
   --tape-fill: rgba(255, 255, 255, 0.1);
   --tape-edge: rgba(255, 255, 255, 0.32);
@@ -55,21 +59,23 @@
   --line: #ddd7ca;
   --line-hi: #b7ae9c;
   --text: #14130f;
-  --text-dim: #5e594e;
-  --text-faint: #8a8377;
+  --text-dim: #524d43;
+  --text-faint: #7b7468;
 
-  --es: #a8501c;
-  --en: #2c5896;
-  --accent: #bf5a24;
-  --good: #3d7f5e;
+  --es: #1d5fd0;
+  --en: #1a7a6d;
+  --accent: #1d5fd0;
+  --accent-ink: #ffffff;
+  --good: #2f7256;
   --bad: #b8433e;
 
-  --net-line: 120, 116, 104;
-  --net-line-warm: 191, 90, 36;
-  --net-dot: 96, 92, 82;
-  --net-dot-warm: 191, 90, 36;
+  --net-line: 120, 124, 134;
+  --net-line-warm: 29, 95, 208;
+  --net-dot: 92, 96, 106;
+  --net-dot-warm: 29, 95, 208;
   --hero-scrim: rgba(244, 241, 234, 0.66);
-  --wallpaper-strength: 0.24;
+  --wallpaper-strength: 1;
+  --wallpaper-scrim: rgba(244, 241, 234, 0.72);
 
   --tape-fill: rgba(255, 255, 255, 0.34);
   --tape-edge: rgba(255, 255, 255, 0.8);
@@ -110,9 +116,9 @@ h1, h2, h3, h4 {
 
 a { color: inherit; }
 button, input, textarea, select { font: inherit; color: inherit; }
-::selection { background: rgba(217, 116, 62, 0.35); }
+::selection { background: rgba(77, 141, 255, 0.32); }
 
-.skip-link { position: absolute; left: -9999px; top: 0; background: var(--accent); color: #14090a; padding: 10px 16px; z-index: 100; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--accent); color: var(--accent-ink); padding: 10px 16px; z-index: 100; }
 .skip-link:focus { left: 12px; top: 12px; }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -125,24 +131,34 @@ button, input, textarea, select { font: inherit; color: inherit; }
   z-index: 0;
   opacity: 0;
   pointer-events: none;
-  background-repeat: repeat;
-  background-size: 120px 120px;
-  will-change: background-position, opacity;
+  overflow: hidden;
+  will-change: opacity;
 }
+
+.wallpaper__photo {
+  position: absolute;
+  inset: -8% 0;
+  background-position: center 40%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  will-change: transform;
+}
+
+/* Keeps the text in front readable over the photograph, in either palette. */
+.wallpaper__scrim { position: absolute; inset: 0; background: var(--wallpaper-scrim); }
 
 .hero, .translator, .finder, .features, .page, .footer { position: relative; z-index: 1; }
 
-:root[data-theme="light"] .btn--primary,
-:root[data-theme="light"] .finder__form button { color: #fff; }
 :root[data-theme="light"] .btn--primary:hover,
-:root[data-theme="light"] .finder__form button:hover { background: #a8501c; }
-:root[data-theme="light"] .msg--bot .msg__who { color: #fff; }
+:root[data-theme="light"] .finder__form button:hover { background: #174dab; border-color: #174dab; }
+:root[data-theme="light"] .chip--es { border-color: #b3c7ea; }
+:root[data-theme="light"] .chip--en { border-color: #a9d2cb; }
+:root[data-theme="light"] ::selection { background: rgba(29, 95, 208, 0.2); }
 :root[data-theme="light"] .composer__send { background: var(--text); color: var(--bg-raised); }
 :root[data-theme="light"] .tabs button.is-active { background: var(--text); color: var(--bg-raised); }
 :root[data-theme="light"] .msg__body strong { color: #000; }
 :root[data-theme="light"] .notice { border-color: #c9a94e; background: #fdf6e0; color: #6d5410; }
 :root[data-theme="light"] .notice code { background: #f0e5c4; }
-:root[data-theme="light"] .skip-link { color: #fff; }
 
 /* --- nav ------------------------------------------------------------------ */
 
@@ -256,6 +272,18 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 .hero__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
+/*
+ * Soft hand-off to the translator: the hero's own background thins out over its
+ * last stretch while the wallpaper is already fading up underneath, so the two
+ * sections dissolve into each other rather than meeting at a line.
+ */
+.hero {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+}
+
+.translator { margin-top: -14vh; padding-top: calc(96px + 14vh); }
+
 /* flat scrim, not a gradient — keeps the wordmark legible over the network */
 .hero::after { content: ""; position: absolute; inset: 0; background: var(--hero-scrim); pointer-events: none; }
 
@@ -300,8 +328,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .btn:hover { background: var(--panel-hi); border-color: var(--text-dim); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.btn--primary { background: var(--accent); border-color: var(--accent); color: #150a05; font-weight: 700; }
-.btn--primary:hover { background: #e88b58; border-color: #e88b58; color: #150a05; }
+.btn--primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.btn--primary:hover { background: #6ba1ff; border-color: #6ba1ff; color: var(--accent-ink); }
 
 .btn--sm { padding: 6px 12px; font-size: 12px; }
 
@@ -316,8 +344,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
   color: var(--text-dim);
   white-space: nowrap;
 }
-.chip--es { color: var(--es); border-color: #57381f; }
-.chip--en { color: var(--en); border-color: #2c4160; }
+.chip--es { color: var(--es); border-color: #24406e; }
+.chip--en { color: var(--en); border-color: #1f4a45; }
 .chip--warn { color: #d9b05c; border-color: #574b26; }
 
 /* --- translator ----------------------------------------------------------- */
@@ -395,8 +423,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .finder__form { display: flex; border: 1px solid var(--line-hi); background: var(--panel); }
 .finder__form input { flex: 1; border: 0; background: none; padding: 16px 18px; outline: none; font-size: 15px; }
 .finder__form input::placeholder { color: var(--text-faint); }
-.finder__form button { border: 0; border-left: 1px solid var(--line-hi); background: var(--accent); color: #150a05; font-family: var(--sans); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: -0.01em; padding: 0 22px; cursor: pointer; }
-.finder__form button:hover { background: #e88b58; }
+.finder__form button { border: 0; border-left: 1px solid var(--line-hi); background: var(--accent); color: var(--accent-ink); font-family: var(--sans); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: -0.01em; padding: 0 22px; cursor: pointer; }
+.finder__form button:hover { background: #6ba1ff; }
 
 .finder__hints { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 16px; font-size: 11px; color: var(--text-faint); }
 .finder__hints button { border: 1px solid var(--line); background: transparent; color: var(--text-dim); padding: 4px 10px; font-size: 11.5px; cursor: pointer; }
@@ -511,7 +539,7 @@ table.conj td.is-empty { color: var(--text-faint); }
 .msg { display: flex; gap: 14px; padding: 14px 0; }
 .msg__who { flex: none; width: 26px; height: 26px; display: grid; place-items: center; font-family: var(--sans); font-size: 10px; font-weight: 700; }
 .msg--user .msg__who { background: var(--panel-hi); color: var(--text-dim); border: 1px solid var(--line); }
-.msg--bot .msg__who { background: var(--accent); color: #150a05; }
+.msg--bot .msg__who { background: var(--accent); color: var(--accent-ink); }
 .msg__body { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.75; }
 .msg__body > *:first-child { margin-top: 0; }
 .msg__body > *:last-child { margin-bottom: 0; }

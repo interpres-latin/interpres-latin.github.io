@@ -1,6 +1,19 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-export const MODEL = 'claude-opus-5';
+const DEFAULT_MODEL = 'claude-opus-5';
+
+export const id = 'anthropic';
+export const label = 'Claude';
+export const free = false;
+export const keyName = 'ANTHROPIC_API_KEY';
+
+export function configured() {
+  return Boolean(process.env.ANTHROPIC_API_KEY);
+}
+
+export function model() {
+  return process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
+}
 
 // Server-side fallback: if a safety classifier declines a request, the API
 // retries it on another model instead of handing back a refusal. Accounts that
@@ -10,12 +23,8 @@ let fallbackSupported = true;
 
 let client = null;
 
-export function hasKey() {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
-}
-
 function getClient() {
-  if (!hasKey()) {
+  if (!configured()) {
     const error = new Error('ANTHROPIC_API_KEY is not set');
     error.status = 503;
     error.code = 'NO_API_KEY';
@@ -27,7 +36,7 @@ function getClient() {
 
 function params({ system, messages, maxTokens, effort }) {
   const request = {
-    model: MODEL,
+    model: model(),
     max_tokens: maxTokens,
     system,
     messages,
@@ -111,35 +120,4 @@ export async function* askStream({ system, messages, maxTokens = 8000, effort = 
     // The consumer hung up (browser closed the connection) — stop the request.
     if (!finished) stream.abort();
   }
-}
-
-/**
- * Models sometimes wrap JSON in prose or a code fence. Pull the first
- * balanced JSON value out of the text and parse it.
- */
-export function parseJson(text) {
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(text);
-  const body = (fenced ? fenced[1] : text).trim();
-  const start = body.search(/[[{]/);
-  if (start === -1) return null;
-  const open = body[start];
-  const close = open === '[' ? ']' : '}';
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let i = start; i < body.length; i += 1) {
-    const char = body[i];
-    if (escaped) { escaped = false; continue; }
-    if (char === '\\') { escaped = true; continue; }
-    if (char === '"') { inString = !inString; continue; }
-    if (inString) continue;
-    if (char === open) depth += 1;
-    else if (char === close) {
-      depth -= 1;
-      if (depth === 0) {
-        try { return JSON.parse(body.slice(start, i + 1)); } catch { return null; }
-      }
-    }
-  }
-  return null;
 }

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import express from 'express';
 import { loadEnv, ROOT } from './env.js';
-import { hasKey } from './claude.js';
+import { hasProvider, providerInfo } from './llm.js';
 import { router as translate } from './routes/translate.js';
 import { router as dictionary } from './routes/dictionary.js';
 import { router as verbs } from './routes/verbs.js';
@@ -22,7 +22,7 @@ app.use('/api/verbs', verbs);
 app.use('/api/chat', chat);
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, ai: hasKey() });
+  res.json({ ok: true, ai: hasProvider(), provider: providerInfo() });
 });
 
 app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
@@ -40,9 +40,11 @@ app.use((error, _req, res, _next) => {
 
 const server = app.listen(PORT, () => {
   console.log(`ProfeGPT → http://localhost:${PORT}`);
-  console.log(hasKey()
-    ? '  Claude: enabled (translation, examples, chat)'
-    : '  Claude: no ANTHROPIC_API_KEY — translation falls back to MyMemory, chat is disabled');
+  const provider = providerInfo();
+  console.log(provider
+    ? `  Model: ${provider.label} (${provider.model})${provider.free ? ' — free tier' : ' — paid'}`
+    : '  Model: none configured — the tutor, conjugator and dictionary still work;'
+      + '\n         translation falls back to MyMemory. Set GEMINI_API_KEY for a free one.');
 });
 
 server.on('error', (error) => {
