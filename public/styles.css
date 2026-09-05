@@ -208,14 +208,32 @@ button, input, textarea, select { font: inherit; color: inherit; }
   height: var(--nav-h);
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 14px;
   padding: 0 var(--gap);
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
 
 .nav__brand { display: flex; align-items: center; gap: 10px; text-decoration: none; margin-right: auto; }
-.nav__mark { width: 16px; height: 16px; background: var(--accent); }
+
+/* Sits where the accent square used to, boxed like the theme and language
+   controls so the header reads as one row of switches. */
+.nav__lock {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line-hi);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.nav__lock:hover { color: var(--text); border-color: var(--text-dim); background: var(--panel-hi); }
+.nav__lock.is-locked { color: var(--accent); border-color: var(--accent); }
 
 .nav__wordmark {
   font-family: var(--sans);
@@ -225,7 +243,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   letter-spacing: -0.03em;
 }
 
-.nav__links { display: flex; gap: 26px; margin-right: 4px; }
+.nav__links { display: flex; gap: 26px; margin: 0 4px 0 10px; }
 
 .nav__links a {
   font-family: var(--sans);
@@ -451,6 +469,9 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .swap:hover { color: var(--text); border-color: var(--accent); background: var(--panel-hi); }
 .swap.is-turning { transform: rotate(180deg); }
 
+/* The panes sit side by side, so the arrows have to point across, not up. */
+.swap svg { transform: rotate(90deg); }
+
 .spinner { width: 11px; height: 11px; border: 1.5px solid var(--line-hi); border-top-color: var(--accent); animation: spin 0.8s linear infinite; display: inline-block; vertical-align: -1px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -667,6 +688,30 @@ table.conj td.is-empty { color: var(--text-faint); }
   color: var(--text);
 }
 
+/* --- transient notice ----------------------------------------------------- */
+
+.toast {
+  position: fixed;
+  top: calc(var(--nav-h) + 14px);
+  left: 50%;
+  z-index: 80;
+  transform: translate(-50%, -14px);
+  padding: 11px 20px;
+  border: 1px solid var(--line-hi);
+  background: var(--bg-raised);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  box-shadow: 0 16px 40px -22px rgba(0, 0, 0, 0.8);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.2, 1, 0.3, 1);
+}
+.toast.is-open { opacity: 1; transform: translate(-50%, 0); }
+.toast--warn { border-color: var(--accent); color: var(--accent); }
+
 /* --- language switch ------------------------------------------------------ */
 
 .langswitch { display: inline-flex; border: 1px solid var(--line-hi); flex: none; }
@@ -692,6 +737,7 @@ table.conj td.is-empty { color: var(--text-faint); }
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
+  left: auto;
   z-index: 60;
   width: 268px;
   padding: 16px;
@@ -705,6 +751,9 @@ table.conj td.is-empty { color: var(--text-faint); }
 .passgate__row { display: flex; gap: 6px; }
 .passgate__row input { flex: 1; min-width: 0; border: 1px solid var(--line-hi); background: var(--panel); padding: 7px 10px; outline: none; font-size: 13px; }
 .passgate__row input:focus { border-color: var(--accent); }
+.passgate--left { right: auto; left: var(--gap); top: var(--nav-h); }
+.passgate__error { margin: 8px 0 0; font-size: 12.5px; color: var(--bad); min-height: 15px; }
+
 .passgate__cancel { display: block; margin-top: 10px; border: 0; background: none; padding: 0; color: var(--text-faint); font-size: 12.5px; cursor: pointer; text-decoration: underline; }
 .passgate__cancel:hover { color: var(--text-dim); }
 
@@ -772,6 +821,8 @@ table.conj td.is-empty { color: var(--text-faint); }
 .tape__detail { margin: 0; font-size: 14px; color: var(--text-dim); line-height: 1.7; }
 .tape__note { margin: 12px 0 0; font-size: 12.5px; color: var(--text-faint); }
 
+.tape__dismiss { margin-top: 18px; width: 100%; justify-content: center; }
+
 .tape__form { display: flex; gap: 6px; margin-top: 14px; }
 .tape__form input { flex: 1; min-width: 0; border: 1px solid var(--line-hi); background: var(--panel); padding: 9px 12px; outline: none; font-size: 15px; text-align: center; letter-spacing: 0.3em; }
 .tape__form input:focus { border-color: var(--accent); }
@@ -800,8 +851,9 @@ html.is-sealed, html.is-sealed body { overflow: hidden; }
   .feature { border-right: 0; border-bottom: 1px solid var(--line); }
   .trio { grid-template-columns: 1fr; }
   .swap { justify-self: center; margin: -1px 0; }
-  .swap.is-turning { transform: rotate(90deg); }
-  .swap svg { transform: rotate(90deg); }
+  .swap.is-turning { transform: rotate(180deg); }
+  /* Stacked on a narrow screen, so the arrows point up and down again. */
+  .swap svg { transform: none; }
 }
 
 @media (max-width: 720px) {

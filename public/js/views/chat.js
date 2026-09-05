@@ -4,7 +4,8 @@ import { sealWithTape } from '../lib/tape.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import { EXCLAMATIONS } from '../data/grammar.js';
 import { t } from '../lib/i18n.js';
-import { ask, getState, isBusy, loadStatus, subscribe } from '../lib/chat-session.js';
+import { acknowledgeQuota, ask, getState, isBusy, loadStatus, subscribe } from '../lib/chat-session.js';
+import { toast } from '../lib/toast.js';
 
 const STARTERS = [
   'ser y estar',
@@ -136,20 +137,25 @@ export function renderChat(main) {
 
   const pick = (kind) => EXCLAMATIONS[kind][Math.floor(Math.random() * EXCLAMATIONS[kind].length)];
 
-  /** Seal the page: the free off-topic questions are gone until the window rolls. */
+  /**
+   * Seal the page once, to say the allowance is gone. It has to be dismissible:
+   * an undismissable tape over the viewport also locks the visitor out of the
+   * conjugator and the dictionary, which cost nothing and still work.
+   */
   function rollTape(state) {
     if (unseal) return;
     const minutes = state.quota?.resetAt
       ? Math.max(1, Math.ceil((state.quota.resetAt - Date.now()) / 60000))
       : (state.quota?.windowMinutes ?? 30);
 
-    input.disabled = true;
-    send.disabled = true;
-
     unseal = sealWithTape(document.body, {
       title: pick('bad'),
       detail: t('tape.quotaDetail', { minutes }),
       note: t('tape.quotaNote'),
+      dismiss: {
+        label: t('quota.understand'),
+        onDismiss: () => { unseal = null; acknowledgeQuota(); input.focus(); },
+      },
     });
   }
 
@@ -165,11 +171,23 @@ export function renderChat(main) {
       scrollDown();
       return;
     }
+
+    // An off-topic question with nothing left behind it. The first time, and
+    // again after a burst of them, that is worth the tape; in between a passing
+    // note is enough.
+    if (kind === 'refused') {
+      paint(state);
+      resize();
+      if (state.refusal === 'tape') rollTape(state);
+      else toast(t('quota.spentShort'), { tone: 'warn' });
+      return;
+    }
+
     paint(state);
     updateHint(state);
     resize();
     scrollDown();
-    if (state.enabled && state.quota && state.quota.remaining <= 0) rollTape(state);
+    if (!state.acknowledged && state.enabled && state.quota && state.quota.remaining <= 0) rollTape(state);
   }
 
   // --- wiring --------------------------------------------------------------
@@ -203,7 +221,7 @@ export function renderChat(main) {
   updateHint(state);
   resize();
   if (!state.loaded) loadStatus();
-  else if (state.enabled && state.quota && state.quota.remaining <= 0) rollTape(state);
+  else if (!state.acknowledged && state.enabled && state.quota && state.quota.remaining <= 0) rollTape(state);
 
   input.focus();
 

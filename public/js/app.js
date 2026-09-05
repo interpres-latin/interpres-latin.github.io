@@ -5,6 +5,7 @@ import { renderChat } from './views/chat.js';
 import { clear } from './lib/dom.js';
 import { mountThemeToggle } from './lib/theme.js';
 import { mountLanguageSwitch, restoreLock } from './lib/language-switch.js';
+import { mountSiteLock } from './lib/site-lock.js';
 import { lang, t } from './lib/i18n.js';
 
 const ROUTES = [
@@ -20,6 +21,7 @@ const toggle = document.querySelector('.nav__toggle');
 
 mountThemeToggle(document.querySelector('.nav__theme'));
 mountLanguageSwitch(document.querySelector('.langswitch'));
+mountSiteLock(document.querySelector('.nav__lock'));
 restoreLock();
 
 function paintChrome() {

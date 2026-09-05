@@ -110,10 +110,27 @@ they hold even if this code is wrong:
   A key with a limit cannot spend past it, whatever asks it to.
 
 When the allowance runs out, two translucent strips roll in from opposite
-corners and cross into an X over the whole viewport, sealing it until the window
-rolls forward. The angle and length are measured from what is being sealed, so
-the X lands on its corners at any size. Spanish questions carry on working
-throughout, on every other page.
+corners and cross into an X over the whole viewport. It carries an **I
+understand** button, because an undismissable tape would also lock the visitor
+out of the conjugator and the dictionary, which cost nothing and still work.
+
+After that it escalates rather than repeating itself. Every message is still
+checked by the tutor first, so Spanish questions answer normally and free. An
+off-topic one with nothing left behind it gets a short notice at the top that
+fades on its own — until five arrive within fifteen seconds, at which point the
+tape returns. Acknowledging it resets the count.
+
+### The teacher's lock
+
+The padlock at the left of the header seals the site **for everyone at once**,
+not just this browser: the switch lives on the server (`server/routes/lock.js`)
+and clients poll it, so a locked room reaches someone already mid-page. Anyone
+holding the passcode can throw it either way, including from the tape itself, so
+nobody is stranded. It is `TEACHER_PASSCODE`, default `AP_Lit`, matched without
+regard to case or surrounding spaces.
+
+The lock is held in memory, so restarting the server clears it — a deliberate
+failsafe against being locked out by a process nobody is watching.
 
 ### Site language
 

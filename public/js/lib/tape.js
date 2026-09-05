@@ -23,8 +23,10 @@ const ROLL_MS = 1500;
  * @param {string} options.detail
  * @param {string} [options.note]
  * @param {object} [options.prompt]  { placeholder, submit, onSubmit(value) -> bool, wrong }
+ * @param {object} [options.dismiss] { label, onDismiss } — a way back out, for
+ *        a tape that should inform rather than imprison
  */
-export function sealWithTape(panel, { title, detail, note, prompt = null }) {
+export function sealWithTape(panel, { title, detail, note, prompt = null, dismiss = null }) {
   panel.querySelector(':scope > .tape')?.remove();
 
   const page = panel === document.body;
@@ -65,6 +67,14 @@ export function sealWithTape(panel, { title, detail, note, prompt = null }) {
   }
 
   if (note) card.appendChild(el('p', { class: 'tape__note' }, note));
+
+  if (dismiss) {
+    card.appendChild(el('button', {
+      class: 'btn btn--primary tape__dismiss',
+      type: 'button',
+      onclick: () => { cleanup?.(); dismiss.onDismiss?.(); },
+    }, dismiss.label));
+  }
 
   const overlay = el('div', { class: `tape${page ? ' tape--page' : ''}`, role: 'alert' },
     el('div', { class: 'tape__strip tape__strip--a' }, el('div', { class: 'tape__inner' })),

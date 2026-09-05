@@ -21,7 +21,36 @@ const state = {
   enabled: false,
   language: null,
   loaded: false,
+  acknowledged: false, // the visitor has dismissed the "allowance spent" tape
+  blocked: [],         // timestamps of off-topic questions refused since then
 };
+
+/** Enough refusals close enough together to mean it is not sinking in. */
+const BURST_COUNT = 5;
+const BURST_MS = 15000;
+
+export function acknowledgeQuota() {
+  state.acknowledged = true;
+  state.blocked = [];
+  emit();
+}
+
+/**
+ * Record an off-topic question that had no allowance behind it.
+ * @returns {'toast'|'tape'} how firmly to say no
+ */
+function recordBlocked() {
+  const now = Date.now();
+  state.blocked = state.blocked.filter((at) => now - at < BURST_MS);
+  state.blocked.push(now);
+
+  if (state.blocked.length >= BURST_COUNT) {
+    state.acknowledged = false;
+    state.blocked = [];
+    return 'tape';
+  }
+  return 'toast';
+}
 
 const listeners = new Set();
 
@@ -88,6 +117,16 @@ export async function ask(text, { needsKeyNote } = {}) {
     state.language = result.language;
   } catch (error) {
     result = { confident: false, blocks: [{ type: 'md', text: String(error.message) }] };
+  }
+
+  // Out of allowance, and the tutor could not ground it. Say no proportionately
+  // rather than sealing the page over and over.
+  if (!result.confident && state.enabled && state.quota && state.quota.remaining <= 0) {
+    state.messages.pop();
+    state.streaming = null;
+    state.refusal = state.acknowledged ? recordBlocked() : 'tape';
+    emit('refused');
+    return;
   }
 
   // Grounded answers land immediately and cost nothing.

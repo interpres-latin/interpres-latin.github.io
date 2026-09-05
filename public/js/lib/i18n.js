@@ -262,6 +262,32 @@ export const STRINGS = {
     wrongAgain: two('Sigue sin ser correcto.', 'Still not right.'),
   },
 
+  lock: {
+    title: two('Bloquear la web', 'Lock the site'),
+    detail: two(
+      'Con el código, la web queda bloqueada para todo el mundo hasta que alguien la desbloquee.',
+      'With the passcode, the site is locked for everyone until someone unlocks it.',
+    ),
+    passcode: two('Código del profe', 'Teacher passcode'),
+    lockNow: two('Bloquear', 'Lock'),
+    wrong: two('Código incorrecto.', 'Wrong passcode.'),
+    lockLabel: two('Bloquear la web', 'Lock the site'),
+    unlockLabel: two('Desbloquear la web', 'Unlock the site'),
+    sealedTitle: two('Clase en marcha', 'Class in session'),
+    sealedDetail: two(
+      'Un profe ha bloqueado la web. Introduce el código para desbloquearla.',
+      'A teacher has locked the site. Enter the passcode to unlock it.',
+    ),
+    sealedNote: two('Se desbloquea para todos a la vez.', 'It unlocks for everyone at once.'),
+  },
+
+  quota: {
+    understand: two('Lo entiendo', 'I understand'),
+    spent: two('No te quedan preguntas', 'No questions left'),
+    spentShort: two('Sin preguntas', 'No usage left'),
+    stillFree: two('El español sigue siendo gratis', 'Spanish is still free'),
+  },
+
   passcode: {
     title: two('Versión en inglés', 'English version'),
     detail: two(
