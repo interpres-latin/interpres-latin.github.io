@@ -17,7 +17,30 @@ No build step. The frontend is plain ES modules served straight out of `public/`
 | `/`            | Hero with an animated node network; the **translator**, whose centre button flips the languages and carries the text across; and a **dictionary search** that opens the dictionary page with your query already applied. |
 | `/conjugacion` | Every tense of the indicative, subjunctive and imperative. Three tabs for the regular **-ar / -er / -ir** models, plus a verb search that conjugates anything you type. Irregular forms are highlighted. |
 | `/diccionario` | Definitions from the *Diccionario de la lengua española*, with senses, synonyms, locutions and an example sentence per sense. |
-| `/chat`        | A general-purpose assistant, streaming. |
+| `/chat`        | A **grounded tutor** that answers from the site's own data — the conjugator, the RAE dictionary, the translator, and hand-written grammar explanations. Needs no API key and invents nothing. |
+
+## The chat page
+
+The tutor is deliberately not a language model. It routes a question to one of
+five things it can actually ground an answer in:
+
+| Ask | Where the answer comes from |
+| --- | --- |
+| *conjuga tener en subjuntivo* | the local conjugation engine |
+| *qué es «dijeron»* | a reverse index of 15,000 conjugated forms, built in ~100 ms on first use |
+| *qué significa sobremesa* | `/api/dictionary` → RAE |
+| *cómo se dice "I'm tired" en español* | `/api/translate` |
+| *ser y estar*, *por y para*, *el subjuntivo*… | 16 hand-written grammar topics in `public/js/data/grammar.js`, in both languages |
+
+Anything it can't ground, it declines — it says so rather than guessing. That's
+the whole point: on a site whose value is being correct about Spanish, a
+confident wrong answer costs more than an honest "outside what I cover".
+
+It replies in the language you asked in, and carries that choice forward for
+follow-ups that have no language signal of their own.
+
+If `ANTHROPIC_API_KEY` is set, the questions the tutor declined — and only those
+— are passed to Claude instead. Grounded answers always win.
 
 ## Design
 
@@ -41,14 +64,14 @@ cp .env.example .env      # then put your key in it
 
 | Variable | Effect |
 | -------- | ------ |
-| `ANTHROPIC_API_KEY` | Enables the chat; switches translation and dictionary examples from the fallbacks to Claude. |
+| `ANTHROPIC_API_KEY` | Switches translation and dictionary examples from the fallbacks to Claude, and lets the chat fall through to Claude for questions the tutor can't ground. Everything works without it. |
 | `PORT` | Defaults to `4000`. |
 
 Without a key:
 
 - **Translation** falls back to [MyMemory](https://mymemory.translated.net/) (free, no key, daily quota).
 - **Example sentences** fall back to a per-part-of-speech template, labelled as such in the UI.
-- **Chat** is disabled and says so.
+- **Chat** answers from the site's own data and declines the rest.
 
 ## Where things live
 
@@ -70,10 +93,13 @@ public/
     lib/network.js      the hero node network
     lib/wallpaper.js    the azulejo wallpaper: SVG tile, parallax, scroll fade
     lib/markdown.js     DOM-building markdown renderer (no innerHTML)
+    lib/tutor.js        intent routing for the chat: what can be grounded, and how
+    data/grammar.js     16 grammar explanations, Spanish and English
     data/verbs.js       stem changes, irregulars, the search index
     views/              one module per page
 test/
   conjugator.test.js    204 reference forms checked against RAE paradigms
+  tutor.test.js         31 checks on intent routing and the form index
 ```
 
 ## The conjugation engine
@@ -101,6 +127,7 @@ The badge on the verb card tells you which.
 
 - Dictionary data comes from [rae-api.com](https://rae-api.com), which serves
   the RAE's *DLE* as JSON. `dle.rae.es` itself blocks direct requests.
-- The Claude-backed paths (chat, Claude translation, generated examples) are
-  written against `claude-opus-5` but have not been exercised against the live
-  API — there was no key available when they were built.
+- The Claude-backed paths (the chat fall-through, Claude translation, generated
+  examples) are written against `claude-opus-5` but have not been exercised
+  against the live API — there was no key available when they were built. Every
+  path that runs without a key has been tested.
