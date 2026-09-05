@@ -15,8 +15,9 @@ import { el } from './dom.js';
 const clamp = (value) => Math.min(Math.max(value, 0), 1);
 
 /** The layer itself, for a view to put at the top of its tree. */
-export function wallpaperLayer({ band = false } = {}) {
-  return el('div', { class: `wallpaper${band ? ' wallpaper--band' : ''}`, 'aria-hidden': 'true' },
+export function wallpaperLayer({ band = false, strong = false } = {}) {
+  const modifiers = `${band ? ' wallpaper--band' : ''}${strong ? ' wallpaper--strong' : ''}`;
+  return el('div', { class: `wallpaper${modifiers}`, 'aria-hidden': 'true' },
     el('div', { class: 'wallpaper__photo' }),
     el('div', { class: 'wallpaper__scrim' }));
 }

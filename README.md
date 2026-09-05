@@ -49,21 +49,24 @@ go to a language model, and are metered at **10 per 30 minutes per visitor**,
 enforced server-side in `server/quota.js` with a sliding window. Tune it with
 `CHAT_FREE_LIMIT` and `CHAT_WINDOW_MINUTES`.
 
-Every configured provider becomes its own **tier**. Spending one tier's
-allowance moves traffic to the next rather than cutting the visitor off, and a
-tier that errors before producing a token hands over too — so a provider having
-a bad afternoon is invisible to the user.
+**Five off-topic questions per visitor, per 30 minutes** (`CHAT_FREE_LIMIT`).
+One question costs one slot whichever model answers it — the provider chain is
+about surviving an outage, not about handing out more questions. When a slot is
+spent the tape rolls.
 
-| Tier | Key | Default model | Allowance | Cost |
-| --- | --- | --- | --- | --- |
-| Google AI Studio | `GEMINI_API_KEY` | `gemini-flash-latest` | `CHAT_FREE_LIMIT`, 10 | free |
-| Groq | `GROQ_API_KEY` | `llama-3.3-70b-versatile` | `CHAT_OVERFLOW_LIMIT`, 20 | free |
-| OpenRouter | `OPENROUTER_API_KEY` | three `:free` models, tried in order | `CHAT_OVERFLOW_LIMIT`, 20 | free |
-| Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-5` | `CHAT_OVERFLOW_LIMIT`, 20 | **paid** |
+Providers are tried in order until one answers. A provider that fails before
+producing a token hands straight over to the next, so a free endpoint having a
+bad afternoon is invisible to the visitor and costs them nothing.
 
-The tape rolls only when every tier is spent. `LLM_PROVIDER` pins a single one.
-With none set, the tutor, conjugator and dictionary still work and translation
-falls back to MyMemory.
+| Order | Key | Default model | Cost |
+| --- | --- | --- | --- |
+| 1 | `GEMINI_API_KEY` | `gemini-flash-latest` | free |
+| 2 | `GROQ_API_KEY` | `llama-3.3-70b-versatile` | free |
+| 3 | `OPENROUTER_API_KEY` | three `:free` models, tried in order | free |
+| 4 | `ANTHROPIC_API_KEY` | `claude-opus-5` | **paid** |
+
+`LLM_PROVIDER` pins a single one. With none set, the tutor, conjugator and
+dictionary still work and translation falls back to MyMemory.
 
 Note that Google's own free tier is roughly **20 requests a day** for the Flash
 models, well below what this site's per-visitor allowance would permit — which
@@ -96,9 +99,10 @@ they hold even if this code is wrong:
   A key with a limit cannot spend past it, whatever asks it to.
 
 When the allowance runs out, two translucent strips roll in from opposite
-corners and cross into an X over the chat panel, sealing it until the window
-rolls forward. The angle and length are measured from the panel, so the X lands
-on its corners at any size. Spanish questions carry on working throughout.
+corners and cross into an X over the whole viewport, sealing it until the window
+rolls forward. The angle and length are measured from what is being sealed, so
+the X lands on its corners at any size. Spanish questions carry on working
+throughout, on every other page.
 
 ### Site language
 
@@ -189,9 +193,8 @@ cp .env.example .env      # then put your key in it
 | `OPENROUTER_MODEL` | Comma-separated `:free` model ids, tried in order. |
 | `ANTHROPIC_API_KEY` | **Paid.** Only reached if it is the only key set, or `LLM_PROVIDER=anthropic`. |
 | `LLM_PROVIDER` | Pin one: `gemini`, `groq`, `openrouter` or `anthropic`. |
-| `CHAT_OVERFLOW_LIMIT` | Allowance for each tier after the first. Default `20`. |
 | `PORT` | Defaults to `4000`. |
-| `CHAT_FREE_LIMIT` | Off-topic chat questions per window. Default `10`; set `0` to seal the chat immediately and see the tape. |
+| `CHAT_FREE_LIMIT` | Off-topic chat questions per window. Default `5`; set `0` to seal the chat immediately and see the tape. |
 | `CHAT_WINDOW_MINUTES` | Length of that window. Default `30`. |
 
 Without a key:
@@ -233,7 +236,7 @@ public/
 test/
   conjugator.test.js    204 reference forms checked against RAE paradigms
   tutor.test.js         37 checks on intent routing and the form index
-  quota.test.js         30 checks on the sliding window, tiers, refunds and callers
+  quota.test.js         21 checks on the sliding window, refunds and callers
   openrouter.test.js    20 checks on the guards that keep OpenRouter free
 ```
 

@@ -42,6 +42,7 @@
   --hero-scrim: rgba(11, 12, 15, 0.62);
   --wallpaper-strength: 1;
   --wallpaper-scrim: rgba(11, 12, 15, 0.55);
+  --wallpaper-scrim-strong: rgba(11, 12, 15, 0.88);
 
   --tape-fill: rgba(255, 255, 255, 0.1);
   --tape-edge: rgba(255, 255, 255, 0.32);
@@ -76,6 +77,7 @@
   --hero-scrim: rgba(244, 241, 234, 0.66);
   --wallpaper-strength: 1;
   --wallpaper-scrim: rgba(244, 241, 234, 0.72);
+  --wallpaper-scrim-strong: rgba(244, 241, 234, 0.92);
 
   --tape-fill: rgba(255, 255, 255, 0.34);
   --tape-edge: rgba(255, 255, 255, 0.8);
@@ -92,6 +94,9 @@ html {
   scroll-behavior: smooth;
   scroll-padding-top: var(--nav-h);
   overscroll-behavior-y: none;
+  /* `clip`, not `hidden`: hidden makes this a scroll container and the page
+     ends up with a second scrollbar beside the document's own. */
+  overflow-x: clip;
 }
 
 body {
@@ -103,7 +108,7 @@ body {
   line-height: 1.65;
   overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /*
@@ -176,6 +181,10 @@ button, input, textarea, select { font: inherit; color: inherit; }
 }
 
 .wallpaper__scrim { position: absolute; inset: 0; background: var(--wallpaper-scrim); }
+
+/* The chat is long-form text over the busiest part of the photograph, so it
+   gets a heavier scrim than a page header does. */
+.wallpaper--strong .wallpaper__scrim { background: var(--wallpaper-scrim-strong); }
 
 .hero, .translator, .finder, .features, .page, .footer { position: relative; z-index: 1; }
 
@@ -566,9 +575,9 @@ table.conj td.is-empty { color: var(--text-faint); }
 
 /* --- chat ----------------------------------------------------------------- */
 
-.chat { display: flex; flex-direction: column; height: calc(100svh - var(--nav-h) - 76px); }
+.chat { display: flex; flex-direction: column; min-height: calc(100svh - var(--nav-h) - 190px); }
 
-.chat__log { flex: 1; overflow-y: auto; padding: 26px 0 16px; scroll-behavior: smooth; }
+.chat__log { flex: 1; padding: 26px 0 20px; }
 
 .msg { display: flex; gap: 14px; padding: 14px 0; }
 .msg__who { flex: none; width: 26px; height: 26px; display: grid; place-items: center; font-family: var(--sans); font-size: 10px; font-weight: 700; }
@@ -598,7 +607,7 @@ table.conj td.is-empty { color: var(--text-faint); }
 .composer textarea::placeholder { color: var(--text-faint); }
 .composer__send { flex: none; width: 36px; height: 36px; border: 0; background: var(--text); color: var(--bg); cursor: pointer; display: grid; place-items: center; }
 .composer__send:disabled { background: var(--panel-hi); color: var(--text-faint); cursor: not-allowed; }
-.composer__hint { font-size: 12px; color: var(--text-faint); text-align: center; padding: 12px 0 0; }
+.composer__hint { font-size: 12px; color: var(--text-faint); text-align: center; padding: 14px 0 4px; }
 
 .starters { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
 .starters button { border: 1px solid var(--line); background: transparent; padding: 9px 15px; font-size: 13px; color: var(--text-dim); cursor: pointer; }
@@ -769,7 +778,7 @@ table.conj td.is-empty { color: var(--text-faint); }
 .tape__error { margin: 8px 0 0; font-size: 13px; color: var(--bad); min-height: 16px; }
 
 /* Sealing the whole page, rather than one panel. */
-.tape--page { position: fixed; z-index: 90; }
+.tape--page { position: fixed; inset: 0; z-index: 90; }
 html.is-sealed, html.is-sealed body { overflow: hidden; }
 
 .quota { font-size: 12px; color: var(--text-faint); }

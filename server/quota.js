@@ -17,24 +17,18 @@ function envNumber(name, fallback) {
   return Number.isFinite(value) && value >= 0 ? value : fallback;
 }
 
-const LIMIT = envNumber('CHAT_FREE_LIMIT', 10);
-const OVERFLOW_LIMIT = envNumber('CHAT_OVERFLOW_LIMIT', 20);
+const LIMIT = envNumber('CHAT_FREE_LIMIT', 5);
 const WINDOW_MS = envNumber('CHAT_WINDOW_MINUTES', 30) * 60 * 1000;
 const SWEEP_MS = 10 * 60 * 1000;
 
 /**
- * Each provider in the chain gets its own allowance, so spending the primary's
- * moves traffic to the next one rather than cutting the visitor off. Only the
- * first tier uses the headline limit; the overflow gets its own.
+ * One allowance per visitor, not one per provider. A question costs a slot
+ * whichever model ends up answering it — the provider chain is about surviving
+ * an outage, not about handing out more questions.
+ *
+ * @type {Map<string, number[]>} caller → timestamps of their recent questions
  */
-function limitFor(tier) {
-  return tier === 0 ? LIMIT : OVERFLOW_LIMIT;
-}
-
-/** @type {Map<string, number[]>} "caller|tier" → timestamps of recent questions */
 const hits = new Map();
-
-const slot = (caller, tier) => `${caller}|${tier}`;
 
 function prune(timestamps, now) {
   const cutoff = now - WINDOW_MS;
@@ -51,61 +45,40 @@ export function callerOf(req) {
 }
 
 /** Read-only: pruning is left to consume() and the sweep, so this has no side effects. */
-export function peek(caller, tier = 0, now = Date.now()) {
-  const timestamps = prune(hits.get(slot(caller, tier)) || [], now);
-  const limit = limitFor(tier);
+export function peek(caller, now = Date.now()) {
+  const timestamps = prune(hits.get(caller) || [], now);
 
   return {
-    tier,
-    limit,
+    limit: LIMIT,
     used: timestamps.length,
-    remaining: Math.max(0, limit - timestamps.length),
+    remaining: Math.max(0, LIMIT - timestamps.length),
     // When the oldest question ages out, one slot comes back.
-    resetAt: timestamps.length >= limit ? timestamps[0] + WINDOW_MS : null,
+    resetAt: timestamps.length >= LIMIT ? timestamps[0] + WINDOW_MS : null,
     windowMinutes: WINDOW_MS / 60000,
   };
 }
 
-/** Take one slot in a tier. Returns the state after the attempt. */
-export function consume(caller, tier = 0, now = Date.now()) {
-  const key = slot(caller, tier);
-  const timestamps = prune(hits.get(key) || [], now);
+/** Take one slot. Returns the state after the attempt, and whether it was allowed. */
+export function consume(caller, now = Date.now()) {
+  const timestamps = prune(hits.get(caller) || [], now);
 
-  if (timestamps.length >= limitFor(tier)) {
-    hits.set(key, timestamps);
-    return { ...peek(caller, tier, now), allowed: false };
+  if (timestamps.length >= LIMIT) {
+    hits.set(caller, timestamps);
+    return { ...peek(caller, now), allowed: false };
   }
 
   timestamps.push(now);
-  hits.set(key, timestamps);
-  return { ...peek(caller, tier, now), allowed: true };
+  hits.set(caller, timestamps);
+  return { ...peek(caller, now), allowed: true };
 }
 
 /** Give a slot back when a request fails before it costs anything. */
-export function refund(caller, tier = 0) {
-  const key = slot(caller, tier);
-  const timestamps = hits.get(key);
+export function refund(caller) {
+  const timestamps = hits.get(caller);
   if (!timestamps?.length) return;
   timestamps.pop();
-  if (timestamps.length) hits.set(key, timestamps);
-  else hits.delete(key);
-}
-
-/** What the visitor has left across every tier — what the UI counts down. */
-export function overall(caller, tiers, now = Date.now()) {
-  const perTier = Array.from({ length: Math.max(tiers, 1) }, (_, tier) => peek(caller, tier, now));
-  const remaining = perTier.reduce((total, item) => total + item.remaining, 0);
-  const limit = perTier.reduce((total, item) => total + item.limit, 0);
-  const resets = perTier.map((item) => item.resetAt).filter(Boolean);
-
-  return {
-    limit,
-    remaining,
-    used: limit - remaining,
-    resetAt: remaining === 0 && resets.length ? Math.min(...resets) : null,
-    windowMinutes: WINDOW_MS / 60000,
-    tiers: perTier,
-  };
+  if (timestamps.length) hits.set(caller, timestamps);
+  else hits.delete(caller);
 }
 
 // Callers who never come back would otherwise sit in the map forever.
@@ -119,4 +92,4 @@ const sweep = setInterval(() => {
 }, SWEEP_MS);
 sweep.unref?.();
 
-export const QUOTA = { LIMIT, OVERFLOW_LIMIT, WINDOW_MS };
+export const QUOTA = { LIMIT, WINDOW_MS };

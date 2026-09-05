@@ -32,7 +32,8 @@ export function renderChat(main) {
   const composer = el('form', { class: 'composer' }, input, send);
   const hint = el('p', { class: 'composer__hint' }, t('chat.enterHint'));
   const chat = el('div', { class: 'chat' }, log, composer, hint);
-  const wallpaper = wallpaperLayer({ band: true });
+  // Long-form text over the busiest part of the photo needs a heavier scrim.
+  const wallpaper = wallpaperLayer({ band: true, strong: true });
 
   main.append(wallpaper, el('div', { class: 'page shell', style: { paddingBottom: '24px' } }, chat));
   const stopWallpaper = startWallpaper(wallpaper, composer);
@@ -78,7 +79,7 @@ export function renderChat(main) {
     input.disabled = true;
     send.disabled = true;
 
-    unseal = sealWithTape(chat, {
+    unseal = sealWithTape(document.body, {
       title: pick('bad'),
       detail: t('tape.quotaDetail', { minutes }),
       note: t('tape.quotaNote'),
@@ -105,7 +106,7 @@ export function renderChat(main) {
     return body;
   }
 
-  const scrollDown = () => { log.scrollTop = log.scrollHeight; };
+  const scrollDown = () => { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); };
 
   function resize() {
     input.style.height = 'auto';
@@ -236,7 +237,7 @@ export function renderChat(main) {
           if (event.type === 'quota') {
             quota = event.quota;
             updateHint();
-          } else if (event.type === 'done' && event.provider) {
+          } else if (event.type === 'provider' || (event.type === 'done' && event.provider)) {
             servedBy = event.provider;
           } else if (event.type === 'delta') {
             reply += event.text;

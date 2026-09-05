@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { chainInfo, providerChain } from '../llm.js';
-import { callerOf, consume, overall, refund } from '../quota.js';
+import { callerOf, consume, peek, refund } from '../quota.js';
 
 export const router = Router();
 
@@ -20,13 +20,23 @@ general-purpose assistant.
 
 Keep answers tight. Use markdown only when structure genuinely helps.`;
 
+/**
+ * Providers hand back whole paragraphs of billing advice. Keep the first line,
+ * which is the part a visitor can act on, and drop the rest.
+ */
+function describe(failures) {
+  if (!failures.length) return 'Ningún modelo pudo responder.';
+  const first = failures[0].split(/[.\n]/)[0].trim();
+  return `Ningún modelo pudo responder ahora mismo (${first}). Inténtalo de nuevo en un momento.`;
+}
+
 router.get('/status', (req, res) => {
   const chain = chainInfo();
   res.json({
     enabled: chain.length > 0,
     provider: chain[0] || null,
     chain,
-    quota: overall(callerOf(req), chain.length),
+    quota: peek(callerOf(req)),
   });
 });
 
@@ -50,13 +60,13 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Se esperaba un mensaje del usuario.' });
   }
 
-  // Nothing left in any tier: refuse before opening a stream, so the client
-  // gets a plain 429 to roll the tape from.
-  const before = overall(caller, chain.length);
-  if (before.remaining <= 0) {
+  // One slot per question, whichever model ends up answering it. Refuse before
+  // opening a stream, so the client gets a plain 429 to roll the tape from.
+  const quota = consume(caller);
+  if (!quota.allowed) {
     return res.status(429).json({
-      error: `Se acabaron las preguntas libres. Vuelven ${before.windowMinutes} minutos después de la primera.`,
-      quota: before,
+      error: `Se acabaron las preguntas libres. Vuelven ${quota.windowMinutes} minutos después de la primera.`,
+      quota,
     });
   }
 
@@ -75,19 +85,17 @@ router.post('/', async (req, res) => {
   res.on('close', () => { aborted = true; });
 
   const failures = [];
+  send({ type: 'quota', quota });
 
-  // Walk the chain. A tier whose allowance is spent, or which fails before
-  // producing anything, hands straight over to the next one.
-  for (let tier = 0; tier < chain.length; tier += 1) {
+  // Walk the chain until one provider answers. A provider that fails before
+  // producing anything hands straight over to the next; the question still
+  // only costs the one slot taken above.
+  for (const provider of chain) {
     if (aborted) return;
-
-    const provider = chain[tier];
-    const quota = consume(caller, tier);
-    if (!quota.allowed) continue;
 
     let produced = false;
     try {
-      send({ type: 'quota', quota: overall(caller, chain.length), provider: provider.label });
+      send({ type: 'provider', provider: provider.label });
 
       for await (const text of provider.askStream({ system: SYSTEM, messages })) {
         if (aborted) return;
@@ -101,11 +109,8 @@ router.post('/', async (req, res) => {
       console.warn(`[chat] ${provider.id} failed:`, error.message);
       failures.push(`${provider.label}: ${error.message}`);
 
-      // Nothing was generated, so the question should not count against them.
-      if (!produced) {
-        refund(caller, tier);
-        continue;
-      }
+      // Another provider may still answer, so do not give up the slot yet.
+      if (!produced) continue;
 
       // Half an answer is already on screen; do not start a second one over it.
       send({ type: 'error', error: error.message });
@@ -113,14 +118,9 @@ router.post('/', async (req, res) => {
     }
   }
 
-  const quota = overall(caller, chain.length);
-  send({ type: 'quota', quota });
-  send({
-    type: 'error',
-    error: failures.length
-      ? `Ningún modelo pudo responder. ${failures.join(' · ')}`
-      : `Se acabaron las preguntas libres. Vuelven ${quota.windowMinutes} minutos después de la primera.`,
-    exhausted: quota.remaining <= 0,
-  });
+  // Every provider failed and nothing was generated — the question was free.
+  refund(caller);
+  send({ type: 'quota', quota: peek(caller) });
+  send({ type: 'error', error: describe(failures) });
   res.end();
 });
