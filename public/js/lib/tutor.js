@@ -304,7 +304,10 @@ function topicAnswer(topic, language) {
 // intent matching
 // ---------------------------------------------------------------------------
 
-const CONJUGATE = /(?:conjuga(?:r|me|cion|ción)?|conjugate|conjugation of|como se conjuga|cómo se conjuga)\s+(?:el\s+verbo\s+|the\s+verb\s+)?([a-záéíóúüñ]+)/i;
+// "conjuga X", "conjugación de X", "how do you conjugate X"
+const CONJUGATE = /(?:conjuga(?:r|me|cion|ción)?|conjugate|conjugation of|como se conjuga|cómo se conjuga)\s+(?:de[l]?\s+|el\s+verbo\s+|the\s+verb\s+)?([a-záéíóúüñ]+)/i;
+// the other word order: "ir conjugation", "tener conjugado"
+const CONJUGATE_TRAILING = /^([a-záéíóúüñ]+)\s+(?:conjugation|conjugated|conjugation table|conjugación|conjugado)\b/i;
 const DEFINE = /(?:que significa|qué significa|significado de|define|definicion de|definición de|what does|what is the meaning of|meaning of)\s+["«'“]?([a-záéíóúüñ]+)["»'”]?/i;
 const TRANSLATE_ES = /(?:como se dice|cómo se dice|how do you say|how do i say|translate)\s+["«'“]?(.+?)["»'”]?\s*(?:en espanol|en español|in spanish|al espanol|al español)?\s*\??$/i;
 const TRANSLATE_TEXT = /(?:traduce|traducir|translate)\s+["«'“]?(.+?)["»'”]?\s*$/i;
@@ -350,7 +353,7 @@ export async function answer(question, { language = null } = {}) {
   }
 
   // 3. explicit commands
-  const conjugateMatch = CONJUGATE.exec(text);
+  const conjugateMatch = CONJUGATE.exec(text) || CONJUGATE_TRAILING.exec(text);
   if (conjugateMatch) {
     const blocks = conjugationAnswer(conjugateMatch[1], lang, {
       tense: findHint(folded, TENSE_HINTS),
@@ -386,20 +389,29 @@ export async function answer(question, { language = null } = {}) {
     .sort((a, b) => b.score - a.score);
   if (ranked[0]?.score >= 6) return respond(topicAnswer(ranked[0].topic, lang));
 
-  // 5. a bare word or two: a verb form, an infinitive, or a dictionary entry
+  // 5. a bare word or two: a verb form, an infinitive, or a dictionary entry.
+  // Every word is a candidate, not just the first long one — "ir conjugation"
+  // has its verb in the two-letter word.
   const words = folded.split(' ').filter(Boolean);
   if (words.length <= 3) {
-    const candidate = words.find((word) => word.length > 2) || words[0];
-    if (candidate) {
-      const asForm = formLookupAnswer(candidate, lang);
+    // An infinitive anywhere in the phrase wins outright.
+    for (const word of words) {
+      if (!/(?:ar|er|ir|ír)$/.test(word)) continue;
+      const blocks = conjugationAnswer(word, lang, {
+        tense: findHint(folded, TENSE_HINTS),
+        person: findHint(accented, PERSON_HINTS),
+      });
+      if (blocks) return respond(blocks);
+    }
+
+    for (const word of words) {
+      const asForm = formLookupAnswer(word, lang);
       if (asForm) return respond(asForm);
+    }
 
-      if (/(?:ar|er|ir|ír)$/.test(candidate)) {
-        const blocks = conjugationAnswer(candidate, lang);
-        if (blocks) return respond(blocks);
-      }
-
-      const blocks = await dictionaryAnswer(candidate, lang).catch(() => null);
+    const headword = words.find((word) => word.length > 2) || words[0];
+    if (headword) {
+      const blocks = await dictionaryAnswer(headword, lang).catch(() => null);
       if (blocks) return respond(blocks);
     }
   }

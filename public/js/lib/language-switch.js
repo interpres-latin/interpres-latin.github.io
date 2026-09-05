@@ -58,18 +58,33 @@ function askForPasscode(anchor) {
     el('div', { class: 'passgate__row' },
       field,
       el('button', { class: 'btn btn--primary btn--sm', type: 'submit' }, t('tape.unlock'))),
-    el('button', { class: 'passgate__cancel', type: 'button', onclick: () => form.remove() }, t('passcode.cancel')));
+    el('button', { class: 'passgate__cancel', type: 'button', onclick: () => close() }, t('passcode.cancel')));
+
+  // Dismiss on a click anywhere else, or on Escape.
+  const close = () => {
+    form.remove();
+    document.removeEventListener('pointerdown', onOutside, true);
+    document.removeEventListener('keydown', onKey);
+  };
+  const onOutside = (event) => { if (!form.contains(event.target)) close(); };
+  const onKey = (event) => { if (event.key === 'Escape') close(); };
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     const value = field.value;
-    form.remove();
+    close();
     if (checkPasscode(value)) setLang('en');
     else lockPage();
   });
 
   anchor.appendChild(form);
   field.focus();
+
+  // Deferred so the click that opened the gate does not immediately shut it.
+  setTimeout(() => {
+    document.addEventListener('pointerdown', onOutside, true);
+    document.addEventListener('keydown', onKey);
+  }, 0);
 }
 
 export function mountLanguageSwitch(container) {

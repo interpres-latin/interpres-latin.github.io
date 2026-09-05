@@ -2,6 +2,7 @@ import { el, icon, ICONS, clear, getJson } from '../lib/dom.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import { answer as askTutor } from '../lib/tutor.js';
 import { sealWithTape } from '../lib/tape.js';
+import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import { EXCLAMATIONS } from '../data/grammar.js';
 import { t } from '../lib/i18n.js';
 
@@ -31,8 +32,10 @@ export function renderChat(main) {
   const composer = el('form', { class: 'composer' }, input, send);
   const hint = el('p', { class: 'composer__hint' }, t('chat.enterHint'));
   const chat = el('div', { class: 'chat' }, log, composer, hint);
+  const wallpaper = wallpaperLayer({ band: true });
 
-  main.append(el('div', { class: 'page shell', style: { paddingBottom: '24px' } }, chat));
+  main.append(wallpaper, el('div', { class: 'page shell', style: { paddingBottom: '24px' } }, chat));
+  const stopWallpaper = startWallpaper(wallpaper, composer);
 
   greet();
 
@@ -271,7 +274,7 @@ export function renderChat(main) {
   resize();
   input.focus();
 
-  return () => { streaming?.abort(); unseal?.(); };
+  return () => { streaming?.abort(); unseal?.(); stopWallpaper(); };
 }
 
 /** Flatten an answer so it can go back to Claude as conversation history. */

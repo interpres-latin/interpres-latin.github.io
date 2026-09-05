@@ -47,6 +47,14 @@ const cases = [
   ['muy vs mucho', /muy/i, 'muy/mucho topic'],
 
   ['conjuga tener', /tener/i, 'conjugation'],
+  // The verb can come first, and can be shorter than the word beside it —
+  // "ir conjugation" once fell through to the model because of both.
+  ['ir conjugation', /\bir\b/i, 'verb-first conjugation'],
+  ['ir', /\bir\b/i, 'a two-letter infinitive alone'],
+  ['tener conjugation', /tener/i, 'verb-first, longer verb'],
+  ['conjugación de ir', /\bir\b/i, 'conjugation with "de"'],
+  ['hablar conjugation table', /hablar/i, 'verb-first with trailing words'],
+  ['how do you conjugate ir', /\bir\b/i, 'question form'],
   ['conjugate pedir', /pedir/i, 'conjugation in English'],
   ['qué es «dijeron»', /decir/i, 'form lookup'],
   ['tuve', /tener/i, 'bare form lookup'],

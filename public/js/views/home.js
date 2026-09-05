@@ -2,6 +2,7 @@ import { el, icon, ICONS, clear, debounce, postJson } from '../lib/dom.js';
 import { startNetwork } from '../lib/network.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import { lang, t } from '../lib/i18n.js';
+import { fireConfetti } from '../lib/confetti.js';
 
 const LANGUAGES = {
   es: { label: 'Español', colour: 'var(--es)', placeholder: 'translator.placeholderEs', out: 'translator.outEs' },
@@ -9,6 +10,9 @@ const LANGUAGES = {
 };
 
 const MAX_CHARS = 5000;
+
+/** Any capitalisation, any spacing. */
+const GRADUATION = /^\s*graduation\s*2028\s*$/i;
 const SAMPLE_WORDS = ['sobremesa', 'madrugar', 'entrañable', 'friolero', 'estrenar'];
 
 export function renderHome(main) {
@@ -97,6 +101,29 @@ function buildFinder() {
 }
 
 // ---------------------------------------------------------------------------
+
+/** The one thing on this site that is not about Spanish grammar. */
+function celebrate() {
+  if (document.querySelector('.ole')) return;
+
+  const canvas = el('canvas', { class: 'ole__confetti', 'aria-hidden': 'true' });
+  const overlay = el('div', { class: 'ole', role: 'dialog', 'aria-label': '¡Olé!' },
+    canvas,
+    el('div', { class: 'ole__inner' },
+      el('p', { class: 'ole__word' }, '¡Olé!'),
+      el('p', { class: 'ole__sub' }, 'Graduación 2028')));
+
+  const close = () => { stop(); overlay.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (event) => { if (event.key === 'Escape') close(); };
+
+  overlay.addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(overlay);
+
+  const stop = fireConfetti(canvas);
+  requestAnimationFrame(() => overlay.classList.add('is-open'));
+  setTimeout(close, 6000);
+}
 
 function buildTranslator(root) {
   const state = { from: 'es', to: 'en', pending: null };
@@ -190,6 +217,14 @@ function buildTranslator(root) {
   async function translate(force = false) {
     const text = input.value.trim();
     if (!text) return;
+
+    if (GRADUATION.test(text)) {
+      celebrate();
+      output.textContent = '¡Olé!';
+      engine.textContent = '';
+      status.textContent = t('translator.done');
+      return;
+    }
 
     state.pending?.abort();
     const controller = new AbortController();

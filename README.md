@@ -112,6 +112,11 @@ headwords, the person pronouns in the conjugation tables. Only the chrome moves.
 In English the conjugation tables lead with the English tense name and keep the
 Spanish one underneath.
 
+### One easter egg
+
+Translating **"graduation 2028"**, in any capitalisation, doesn't translate
+anything — it fires confetti and a full-screen *¡Olé!*. Canvas only, no library.
+
 ### The profe's interjections
 
 Three expressions she actually used, spelled as the RAE has them, fired on the
@@ -227,7 +232,7 @@ public/
     views/              one module per page
 test/
   conjugator.test.js    204 reference forms checked against RAE paradigms
-  tutor.test.js         31 checks on intent routing and the form index
+  tutor.test.js         37 checks on intent routing and the form index
   quota.test.js         30 checks on the sliding window, tiers, refunds and callers
   openrouter.test.js    20 checks on the guards that keep OpenRouter free
 ```
