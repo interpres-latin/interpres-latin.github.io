@@ -90,18 +90,22 @@ router.post('/', async (req, res) => {
   // Walk the chain until one provider answers. A provider that fails before
   // producing anything hands straight over to the next; the question still
   // only costs the one slot taken above.
+  let generated = false;
+
   for (const provider of chain) {
-    if (aborted) return;
+    if (aborted) break;
 
     let produced = false;
     try {
       send({ type: 'provider', provider: provider.label });
 
       for await (const text of provider.askStream({ system: SYSTEM, messages })) {
-        if (aborted) return;
+        if (aborted) break;
         produced = true;
+        generated = true;
         send({ type: 'delta', text });
       }
+      if (aborted) break;
 
       send({ type: 'done', provider: provider.label });
       return res.end();
@@ -118,8 +122,11 @@ router.post('/', async (req, res) => {
     }
   }
 
-  // Every provider failed and nothing was generated — the question was free.
-  refund(caller);
+  // Nothing was ever generated — whether every provider failed or the visitor
+  // left before the first token, the question should not cost them a slot.
+  if (!generated) refund(caller);
+  if (aborted) return res.end();
+
   send({ type: 'quota', quota: peek(caller) });
   send({ type: 'error', error: describe(failures) });
   res.end();

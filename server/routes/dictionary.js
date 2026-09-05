@@ -53,11 +53,44 @@ function normalizeEntry(meaning) {
   };
 }
 
-export async function fetchRae(word) {
+const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+/**
+ * Anonymous access to rae-api.com is 10 requests a minute and 100 a day, which
+ * a real site burns through quickly. A free self-service key raises that to
+ * 60/minute and 5,000/day — set RAE_API_KEY and it is used automatically.
+ * https://rae-api.com/login
+ */
+function raeHeaders() {
+  const headers = { accept: 'application/json' };
+  if (process.env.RAE_API_KEY) headers['X-API-Key'] = process.env.RAE_API_KEY;
+  return headers;
+}
+
+export async function fetchRae(word, attempt = 0) {
   const response = await fetch(`${RAE_API}/${encodeURIComponent(word)}`, {
-    headers: { accept: 'application/json' },
+    headers: raeHeaders(),
     signal: AbortSignal.timeout(15000),
   });
+
+  // A per-minute limit clears on its own; a daily one does not, so only retry
+  // when the wait is short enough to be worth holding the request open for.
+  if (response.status === 429 || response.status >= 500) {
+    const retryAfter = Number(response.headers.get('retry-after')) || 0;
+    if (attempt < 2 && retryAfter <= 5) {
+      await wait(Math.max(600, retryAfter * 1000) * (attempt + 1));
+      return fetchRae(word, attempt + 1);
+    }
+    if (response.status === 429) {
+      const minutes = Math.ceil(retryAfter / 60);
+      const error = new Error(minutes > 1
+        ? `El diccionario está limitando las consultas. Vuelve en unos ${minutes} minutos.`
+        : 'El diccionario está limitando las consultas. Inténtalo de nuevo en un momento.');
+      error.status = 429;
+      throw error;
+    }
+  }
+
   if (response.status === 404) {
     const body = await response.json().catch(() => ({}));
     return { found: false, suggestions: body.suggestions || [] };
@@ -139,7 +172,12 @@ router.get('/', async (req, res) => {
   try {
     lookup = await fetchRae(word);
   } catch (error) {
-    return res.status(502).json({ error: `No se pudo consultar el diccionario: ${error.message}` });
+    // Pass a rate limit through as one, so the client can tell "come back
+    // later" apart from "the dictionary is broken".
+    const status = error.status === 429 ? 429 : 502;
+    return res.status(status).json({
+      error: status === 429 ? error.message : `No se pudo consultar el diccionario: ${error.message}`,
+    });
   }
 
   if (!lookup.found) {

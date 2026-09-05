@@ -451,8 +451,10 @@ export async function answer(question, { language = null } = {}) {
 
   // 6. a bare word or two: a verb form, an infinitive, or a dictionary entry.
   // Every word is a candidate, not just the first long one — "ir conjugation"
-  // has its verb in the two-letter word.
-  if (words.length <= 3) {
+  // has its verb in the two-letter word. Skipped when the question already
+  // named its subject: if "qué significa sobremesa" could not reach the
+  // dictionary, the answer is not "significa is a form of significar".
+  if (!askedSomethingSpecific && words.length <= 3) {
     // An infinitive anywhere in the phrase wins outright.
     for (const word of words) {
       if (!/(?:ar|er|ir|ír)$/.test(word)) continue;

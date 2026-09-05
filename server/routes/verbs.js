@@ -127,7 +127,10 @@ router.get('/conjugations', async (req, res) => {
   try {
     lookup = await fetchRae(verb);
   } catch (error) {
-    return res.status(502).json({ error: `No se pudo consultar la RAE: ${error.message}` });
+    const status = error.status === 429 ? 429 : 502;
+    return res.status(status).json({
+      error: status === 429 ? error.message : `No se pudo consultar la RAE: ${error.message}`,
+    });
   }
 
   if (!lookup.found) {
