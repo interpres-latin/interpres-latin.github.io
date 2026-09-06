@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { chainInfo, providerChain } from '../llm.js';
-import { callerOf, consume, peek, refund } from '../quota.js';
+import { consume, peek, refund } from '../quota.js';
+import { identify } from '../identity.js';
 
 export const router = Router();
 
@@ -36,7 +37,7 @@ router.get('/status', (req, res) => {
     enabled: chain.length > 0,
     provider: chain[0] || null,
     chain,
-    quota: peek(callerOf(req)),
+    quota: peek(identify(req, res)),
   });
 });
 
@@ -48,7 +49,7 @@ router.post('/', async (req, res) => {
     });
   }
 
-  const caller = callerOf(req);
+  const caller = identify(req, res);
   const incoming = Array.isArray(req.body?.messages) ? req.body.messages : [];
   const messages = incoming
     .filter((message) => (message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string')

@@ -54,13 +54,19 @@ go to a language model, and are metered at **10 per 30 minutes per visitor**,
 enforced server-side in `server/quota.js` with a sliding window. Tune it with
 `CHAT_FREE_LIMIT` and `CHAT_WINDOW_MINUTES`.
 
-**Five off-topic questions per visitor, per 30 minutes** (`CHAT_FREE_LIMIT`),
-counted per IP address. Two caveats worth knowing: people behind one router —
-a household, a school, a mobile carrier — share an address and therefore share
-one allowance; and the `X-Forwarded-For` header is only trusted when
-`TRUST_PROXY=1`, because any client can send one and would otherwise mint
-itself a fresh allowance on demand. Set it only when a proxy you control really
-is in front.
+**Five off-topic questions per browser, per 30 minutes** (`CHAT_FREE_LIMIT`).
+
+Per *browser*, not per address: a classroom sits behind one router, so an
+address identifies the room rather than the student, and the first person to ask
+would spend everyone's allowance. Each browser gets a signed opaque id in a
+cookie instead (`server/identity.js`). Clearing cookies earns a fresh allowance,
+which is the right trade here — this is about sharing fairly, not resisting
+attack — but the signature stops anyone simply inventing an identity per
+request. Set `SESSION_SECRET` to keep identities across restarts.
+
+The address is only a fallback for clients that cannot hold a cookie, and
+`X-Forwarded-For` is trusted only when `TRUST_PROXY=1`, since any client can
+send one.
 One question costs one slot whichever model answers it — the provider chain is
 about surviving an outage, not about handing out more questions. When a slot is
 spent the tape rolls.
@@ -272,7 +278,8 @@ public/
 test/
   conjugator.test.js    204 reference forms checked against RAE paradigms
   tutor.test.js         47 checks on intent routing and the form index
-  quota.test.js         23 checks on the sliding window, refunds and caller identity
+  quota.test.js         21 checks on the sliding window and refunds
+  identity.test.js      15 checks on per-browser identity and its signature
   openrouter.test.js    20 checks on the guards that keep OpenRouter free
 ```
 
@@ -321,7 +328,8 @@ and exposes `GET /api/health` for a health check.
 
 | Variable | Why it matters live |
 | --- | --- |
-| `TRUST_PROXY=1` | **Set this.** Behind a load balancer every request arrives from the proxy's address, so without it the whole site shares one allowance of five — verified: with it off, a second visitor is refused because the first spent it. Only set it when a proxy really is in front, since the header it trusts is client-supplied. |
+| `SESSION_SECRET` | Keeps browser identities, and therefore allowances, across restarts. Without it a restart hands everyone a fresh five. |
+| `TRUST_PROXY=1` | Set when behind a load balancer. Only affects the address fallback now that identity is per browser, but still worth getting right. |
 | `GEMINI_API_KEY` | Free tier, ~20 requests a day. Fine as the first tier, not as the only one. |
 | `OPENROUTER_API_KEY` | The overflow, and in practice where most traffic lands. Free models only. |
 | `RAE_API_KEY` | **Get one.** Anonymous dictionary access is 100 lookups a day, which one class will exhaust. Free at <https://rae-api.com/login>. |

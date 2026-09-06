@@ -65,6 +65,10 @@ const cases = [
   ['what is hablar in the future', /hablar/i, 'verb beats the future topic'],
   ['give me the preterite forms of pedir', /pedir/i, 'verb beats the preterite topic'],
   ['give the present tense for ir', /\bir\b/i, 'imperative phrasing, verb last'],
+  // Verbs the site has never heard of still conjugate — the engine is rules,
+  // not a word list — as long as the phrasing marks them as verbs.
+  ['what is the conjugation for the verb checkear', /checkear/i, '"conjugation for the verb X"'],
+  ['conjugate the verb flipar', /flipar/i, 'an unlisted verb behind an explicit marker'],
   ['give me the present tense of ir', /\bir\b/i, 'the same with "of"'],
   // …but an exact topic match still wins, articles and all.
   ['cuándo se usa el subjuntivo', /subjuntivo no es un tiempo|subjunctive isn/i, 'exact topic beats the verb "usar"'],
@@ -112,6 +116,11 @@ const future = await answer('what is hablar in the future');
 ok('the requested tense is the one returned',
   future.blocks.some((b) => b.type === 'table' && b.rows.some(([, form]) => form === 'hablaré')),
   text(future.blocks).slice(0, 200));
+
+// An English word that merely ends in -er must not be mistaken for a verb.
+const notAVerb = await answer('what is the answer for the present tense');
+ok('"answer" is not conjugated as a verb', notAVerb.confident === false,
+  text(notAVerb.blocks).slice(0, 90));
 
 // --- honest refusal --------------------------------------------------------
 const outside = await answer('who won the world cup in 1998');

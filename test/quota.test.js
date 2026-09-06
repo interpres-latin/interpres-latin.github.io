@@ -4,7 +4,7 @@
 process.env.CHAT_FREE_LIMIT = '10'; // the default is 5; pinned here for the arithmetic below
 process.env.CHAT_WINDOW_MINUTES = '30';
 
-const { consume, peek, refund, callerOf } = await import('../server/quota.js');
+const { consume, peek, refund } = await import('../server/quota.js');
 
 let checked = 0;
 const failures = [];
@@ -63,24 +63,6 @@ ok('refunding past empty is harmless', peek('c', T0 + 2).remaining === 10);
 // The chain exists to survive an outage, not to hand out extra questions: a
 // question costs one slot however many providers were tried.
 ok('there is a single allowance, not one per provider', peek('solo').limit === 10);
-
-// --- identifying the caller -----------------------------------------------
-// A client can send any header it likes, so an untrusted X-Forwarded-For would
-// let anyone mint a fresh allowance on demand.
-const spoofed = { headers: { 'x-forwarded-for': '203.0.113.5' }, socket: { remoteAddress: '10.0.0.1' } };
-ok('a forwarded header is ignored by default', callerOf(spoofed) === '10.0.0.1', callerOf(spoofed));
-ok('falls back to the socket',
-  callerOf({ headers: {}, socket: { remoteAddress: '198.51.100.7' } }) === '198.51.100.7');
-ok('survives a request with neither', callerOf({ headers: {}, socket: {} }) === 'unknown');
-
-// …and is honoured only when a proxy is declared.
-process.env.TRUST_PROXY = '1';
-const proxied = await import('../server/quota.js?trusted');
-ok('with TRUST_PROXY it uses the forwarded address',
-  proxied.callerOf(spoofed) === '203.0.113.5', proxied.callerOf(spoofed));
-ok('and takes the first hop, not the proxy chain',
-  proxied.callerOf({ headers: { 'x-forwarded-for': '203.0.113.5, 10.0.0.1' }, socket: {} }) === '203.0.113.5');
-delete process.env.TRUST_PROXY;
 
 // --- report ----------------------------------------------------------------
 if (failures.length) {

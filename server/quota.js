@@ -37,22 +37,6 @@ function prune(timestamps, now) {
   return index ? timestamps.slice(index) : timestamps;
 }
 
-/**
- * Behind a proxy the socket address is the proxy's, so the real client is in
- * X-Forwarded-For — but that header is set by whoever is talking to us. Trusting
- * it unconditionally lets anyone reset their own allowance just by sending one,
- * so it is only honoured when TRUST_PROXY says a proxy is actually in front.
- */
-const TRUST_PROXY = /^(1|true|yes)$/i.test(process.env.TRUST_PROXY || '');
-
-export function callerOf(req) {
-  if (TRUST_PROXY) {
-    const forwarded = req.headers?.['x-forwarded-for'];
-    if (typeof forwarded === 'string' && forwarded.trim()) return forwarded.split(',')[0].trim();
-  }
-  return req.socket?.remoteAddress || 'unknown';
-}
-
 /** Read-only: pruning is left to consume() and the sweep, so this has no side effects. */
 export function peek(caller, now = Date.now()) {
   const timestamps = prune(hits.get(caller) || [], now);

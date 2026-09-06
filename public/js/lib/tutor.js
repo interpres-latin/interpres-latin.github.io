@@ -327,8 +327,12 @@ function topicAnswer(topic, language) {
 // intent matching
 // ---------------------------------------------------------------------------
 
-// "conjuga X", "conjugación de X", "how do you conjugate X"
-const CONJUGATE = /(?:conjuga(?:r|me|cion|ción)?|conjugate|conjugation of|como se conjuga|cómo se conjuga)\s+(?:de[l]?\s+|el\s+verbo\s+|the\s+verb\s+)?([a-záéíóúüñ]+)/i;
+// "conjuga X", "conjugación de X", "the conjugation for X", "how do you conjugate X"
+const CONJUGATE = /(?:conjuga(?:r|me|cion|ción)?|conjugate|conjugation\s+(?:of|for)|como se conjuga|cómo se conjuga)\s+(?:de[l]?\s+|the\s+|el\s+|la\s+)?(?:verbo?\s+)?([a-záéíóúüñ]+)/i;
+// "the verb checkear" — an explicit marker, so an unknown verb is still safe to
+// read as one. Without the marker a stray English word ending in -ar/-er/-ir
+// ("answer", "later") would be conjugated into nonsense.
+const VERB_MARKER = /\b(?:verbo|verb)\s+([a-záéíóúüñ]{3,})\b/i;
 // the other word order: "ir conjugation", "tener conjugado"
 const CONJUGATE_TRAILING = /^([a-záéíóúüñ]+)\s+(?:conjugation|conjugated|conjugation table|conjugación|conjugado)\b/i;
 const DEFINE = /(?:que significa|qué significa|significado de|define|definicion de|definición de|what does|what is the meaning of|meaning of)\s+["«'“]?([a-záéíóúüñ]+)["»'”]?/i;
@@ -380,7 +384,7 @@ export async function answer(question, { language = null } = {}) {
   }
 
   // 3. explicit commands
-  const conjugateMatch = CONJUGATE.exec(text) || CONJUGATE_TRAILING.exec(text);
+  const conjugateMatch = CONJUGATE.exec(text) || CONJUGATE_TRAILING.exec(text) || VERB_MARKER.exec(text);
   if (conjugateMatch) {
     const blocks = conjugationAnswer(conjugateMatch[1], lang, {
       tense: findHint(folded, TENSE_HINTS),
