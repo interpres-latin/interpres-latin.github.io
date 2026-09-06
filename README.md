@@ -297,6 +297,48 @@ is fetched and merged over it when the verb is in the dictionary — so the form
 you see are authoritative where RAE has them, and generated where it doesn't.
 The badge on the verb card tells you which.
 
+## Deploying
+
+This is a Node server, not a static site, so GitHub Pages and Netlify's static
+hosting cannot run it — the chat, dictionary and lock all need the server.
+Anything that runs Node works: Render, Railway, Fly.io, or a VPS.
+
+Whatever you pick, it needs to be **one instance**. The allowance, the teacher's
+lock and the dictionary cache are all held in memory, so a second instance would
+have its own copy of each — a locked site would be unlocked for half the class.
+
+### Render, as an example
+
+1. Push the repo, then *New → Web Service* and point it at it.
+2. Build command `npm install`, start command `npm start`.
+3. Leave instance count at 1.
+4. Set the environment variables below.
+
+The server already reads `PORT` from the environment, binds on all interfaces,
+and exposes `GET /api/health` for a health check.
+
+### Environment variables in production
+
+| Variable | Why it matters live |
+| --- | --- |
+| `TRUST_PROXY=1` | **Set this.** Behind a load balancer every request arrives from the proxy's address, so without it the whole site shares one allowance of five — verified: with it off, a second visitor is refused because the first spent it. Only set it when a proxy really is in front, since the header it trusts is client-supplied. |
+| `GEMINI_API_KEY` | Free tier, ~20 requests a day. Fine as the first tier, not as the only one. |
+| `OPENROUTER_API_KEY` | The overflow, and in practice where most traffic lands. Free models only. |
+| `RAE_API_KEY` | **Get one.** Anonymous dictionary access is 100 lookups a day, which one class will exhaust. Free at <https://rae-api.com/login>. |
+| `TEACHER_PASSCODE` | Change it from the default before anyone else has the URL. |
+| `CHAT_FREE_LIMIT` | Off-topic questions per visitor per window. Default 5. |
+
+### Things that will surprise you otherwise
+
+- **Free tiers sleep.** Render's free plan spins down when idle; the first
+  request afterwards is slow, and the lock and allowances reset. That reset is
+  harmless — arguably a feature for the lock — but the delay is visible.
+- **The lock clears on every deploy and restart**, by design. Nobody should be
+  locked out by a process nobody is watching.
+- **Rotate any key that has ever been pasted into a chat, an issue or a commit.**
+  Keys belong in the host's environment settings, never in the repo; `.env` is
+  gitignored for that reason.
+
 ## Notes
 
 - Dictionary data comes from [rae-api.com](https://rae-api.com), which serves
