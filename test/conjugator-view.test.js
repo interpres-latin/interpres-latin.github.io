@@ -17,15 +17,20 @@ function ok(name, condition, detail = '') {
 for (const [study, engine] of Object.entries(ENGINES)) {
   const { conjugate, MODEL_VERBS, PERSONS, PERSON_LABELS, moods } = engine;
 
+  // Latin's tabs carry principal parts rather than a bare lemma, because a
+  // Latin verb cannot be conjugated without them.
+  const valueOf = (model) => (engine.modelInput ? engine.modelInput(model) : model.verb);
+
   // Every model verb on the tabs has to conjugate, or the page opens empty.
-  for (const [mode, { verb }] of Object.entries(MODEL_VERBS)) {
-    const result = conjugate(verb);
-    ok(`${study}: model verb ${verb} conjugates`, result.ok, result.error);
-    ok(`${study}: model verb ${verb} is an -${mode} verb`, result.class === mode, `got -${result.class}`);
+  for (const [mode, model] of Object.entries(MODEL_VERBS)) {
+    const value = valueOf(model);
+    const result = conjugate(value);
+    ok(`${study}: model verb ${model.verb} conjugates`, result.ok, result.error);
+    ok(`${study}: model verb ${model.verb} belongs to ${mode}`, result.class === mode, `got ${result.class}`);
   }
 
-  const sample = conjugate(Object.values(MODEL_VERBS)[0].verb);
-  const irregular = conjugate(study === 'fr' ? 'être' : 'ser');
+  const sample = conjugate(valueOf(Object.values(MODEL_VERBS)[0]));
+  const irregular = conjugate({ fr: 'être', la: 'sum', es: 'ser' }[study]);
 
   const lists = [
     [moods.indicative, engine.indicativeSimple, 'indicative simple'],
@@ -74,11 +79,13 @@ for (const [study, engine] of Object.entries(ENGINES)) {
     ok(`${study}: non-finite ${key} has a label key`, label.startsWith('conjugator.'));
   }
 
-  // Every stem change the engine can report needs a label, or the chip shows a code.
-  ok(`${study}: irregular model still conjugates`, irregular.ok);
+  // Every verb in the search index has to conjugate — a tab or a suggestion
+  // that leads to an error is worse than one that is not offered.
+  ok(`${study}: irregular model still conjugates`, irregular.ok, irregular.error);
   const changes = new Set();
   for (const [verb] of engine.COMMON_VERBS) {
     const result = conjugate(verb);
+    ok(`${study}: ${String(verb).split(',')[0]} conjugates`, result.ok, result.error);
     if (result.ok && result.flags.stemChange) changes.add(result.flags.stemChange);
   }
   for (const change of changes) {

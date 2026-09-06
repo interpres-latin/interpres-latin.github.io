@@ -2,8 +2,10 @@ import { el, icon, ICONS, clear, debounce, fold, getJson } from '../lib/dom.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import * as spanish from '../lib/conjugator.js';
 import * as french from '../lib/conjugator-fr.js';
+import * as latin from '../lib/conjugator-la.js';
 import * as spanishVerbs from '../data/verbs.js';
 import * as frenchVerbs from '../data/verbs-fr.js';
+import * as latinVerbs from '../data/verbs-la.js';
 import { lang, t } from '../lib/i18n.js';
 import { studyLang } from '../lib/study.js';
 
@@ -117,6 +119,57 @@ export const ENGINES = {
     // server/dictionary-fr.js — so the local engine is the table.
     authoritative: false,
   },
+
+  la: {
+    ...latin,
+    ...latinVerbs,
+    moods: { indicative: 'indicativus', subjunctive: 'coniunctivus', imperative: 'imperativus', forms: 'formae' },
+    imperativeKinds: [['praesens', 'Imperativus', 'do it'], ['negativus', 'Negativus', "don't do it"]],
+    imperativePersons: [['tu', 'tu'], ['vos', 'vos']],
+    // Latin splits each mood by voice where the modern languages split it by
+    // simple and compound, so the two tables a mood is drawn as are active and
+    // passive. The captions come from the string pack.
+    indicativeSimple: [
+      ['praesens', 'Praesens', 'present'],
+      ['imperfectum', 'Imperfectum', 'imperfect'],
+      ['futurum', 'Futurum', 'future'],
+      ['perfectum', 'Perfectum', 'perfect'],
+      ['plusquamperfectum', 'Plusquamperfectum', 'pluperfect'],
+      ['futurumExactum', 'Futurum exactum', 'future perfect'],
+    ],
+    indicativeCompound: [
+      ['praesensPassivum', 'Praesens', 'present'],
+      ['imperfectumPassivum', 'Imperfectum', 'imperfect'],
+      ['futurumPassivum', 'Futurum', 'future'],
+      ['perfectumPassivum', 'Perfectum', 'perfect'],
+      ['plusquamperfectumPassivum', 'Plusquamperfectum', 'pluperfect'],
+      ['futurumExactumPassivum', 'Futurum exactum', 'future perfect'],
+    ],
+    subjunctiveSimple: [
+      ['praesens', 'Praesens', 'present'],
+      ['imperfectum', 'Imperfectum', 'imperfect'],
+      ['perfectum', 'Perfectum', 'perfect'],
+      ['plusquamperfectum', 'Plusquamperfectum', 'pluperfect'],
+    ],
+    subjunctiveCompound: [
+      ['praesensPassivum', 'Praesens', 'present'],
+      ['imperfectumPassivum', 'Imperfectum', 'imperfect'],
+      ['perfectumPassivum', 'Perfectum', 'perfect'],
+      ['plusquamperfectumPassivum', 'Plusquamperfectum', 'pluperfect'],
+    ],
+    nonFinite: [
+      ['conjugator.gerund', 'participiumPraesens'],
+      ['conjugator.participle', 'participiumPerfectum'],
+      ['conjugator.compoundInf', 'gerundivum'],
+      ['conjugator.compoundGer', 'supinum'],
+    ],
+    stemChangeLabels: {},
+    authoritative: false,
+    // A Latin verb is conjugated from its principal parts, so the tabs and the
+    // search index carry all of them rather than just the first.
+    modelInput: (model) => model.parts ?? model.verb,
+    glossKey: (parts) => String(parts).split(',')[0].trim(),
+  },
 };
 
 const engine = () => ENGINES[studyLang()];
@@ -126,9 +179,15 @@ export function renderConjugator(main) {
     conjugate, irregularCells, PERSONS, PERSON_LABELS, COMMON_VERBS, MODEL_VERBS,
   } = engine();
 
-  const glosses = new Map(COMMON_VERBS);
+  // Latin's index is keyed by principal parts, so the gloss is filed under the
+  // lemma the engine will report rather than under the whole quotation.
+  const { glossKey, modelInput } = engine();
+  const glosses = new Map(COMMON_VERBS.map(([key, gloss]) => [glossKey ? glossKey(key) : key, gloss]));
   const [firstMode] = Object.keys(MODEL_VERBS);
   const state = { mode: firstMode, verb: MODEL_VERBS[firstMode].verb, highlight: true, request: 0 };
+  const firstValue = engine().modelInput
+    ? engine().modelInput(MODEL_VERBS[firstMode])
+    : MODEL_VERBS[firstMode].verb;
 
   const results = el('div', {});
   const wallpaper = wallpaperLayer({ band: true });
@@ -142,11 +201,12 @@ export function renderConjugator(main) {
   const suggestions = el('div', { class: 'suggest', role: 'listbox' });
 
   const tabs = el('div', { class: 'tabs', role: 'tablist' });
-  const tabButtons = Object.entries(MODEL_VERBS).map(([mode, { verb }]) => {
+  const tabButtons = Object.entries(MODEL_VERBS).map(([mode, model]) => {
+    const value = modelInput ? modelInput(model) : model.verb;
     const button = el('button', {
       type: 'button',
       role: 'tab',
-      onclick: () => { searchInput.value = ''; clear(suggestions); show(verb, mode); },
+      onclick: () => { searchInput.value = ''; clear(suggestions); show(value, mode); },
     }, t('conjugator.tab', { ending: mode }));
     tabs.appendChild(button);
     return [mode, button];
@@ -240,7 +300,9 @@ export function renderConjugator(main) {
       clear(results);
       results.appendChild(el('div', { class: 'empty' },
         el('h3', {}, t('conjugator.notAVerb')),
-        el('p', {}, result.error)));
+        // A Latin verb needs all its parts, and saying so is more use than
+        // repeating the error code.
+        el('p', {}, result.error === 'needs-principal-parts' ? t('conjugator.needsParts') : result.error)));
       return;
     }
 
@@ -290,7 +352,7 @@ export function renderConjugator(main) {
     searchInput.value = requested;
     show(requested);
   } else {
-    show(state.verb, firstMode);
+    show(firstValue, firstMode);
   }
 
   const stopWallpaper = startWallpaper(wallpaper, results);
@@ -349,6 +411,11 @@ function verbCard(result, glosses) {
   const tags = [];
 
   tags.push(el('span', { class: 'chip' }, t('conjugator.verbClass', { ending: result.class })));
+  // The principal parts are the verb, for a Latin reader — they belong on the card.
+  if (result.principalParts) {
+    tags.push(el('span', { class: 'chip chip--es' }, result.principalParts));
+  }
+  if (result.deponent) tags.push(el('span', { class: 'chip chip--warn' }, t('conjugator.pronominal')));
   if (result.flags.irregular) tags.push(el('span', { class: 'chip chip--warn' }, t('conjugator.irregular')));
   if (result.flags.stemChange) {
     tags.push(el('span', { class: 'chip chip--es' },

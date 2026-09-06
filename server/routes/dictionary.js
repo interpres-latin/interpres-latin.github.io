@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { ask, hasProvider, parseJson } from '../llm.js';
 import { ATTRIBUTION, tatoebaExamples, wiktionaryGloss } from '../corpus.js';
 import { ACADEMIE, fetchWiktionnaire, WIKTIONNAIRE_CREDIT } from '../dictionary-fr.js';
+import { analyse, describeInflection, WHITAKER_CREDIT } from '../latin.js';
 
 export const router = Router();
 
@@ -23,6 +24,11 @@ const MESSAGES = {
     missing: 'Il manque le mot à chercher.',
     notFound: (word) => `« ${word} » ne figure pas dans le dictionnaire.`,
     failed: (detail) => `Impossible de consulter le dictionnaire : ${detail}`,
+  },
+  la: {
+    missing: 'No word to look up.',
+    notFound: (word) => `Whitaker’s Words does not know “${word}”.`,
+    failed: (detail) => `The dictionary could not be reached: ${detail}`,
   },
 };
 
@@ -124,8 +130,12 @@ export async function fetchRae(word, attempt = 0) {
   return { found: true, data: body.data };
 }
 
-const LANGUAGE_NAMES = { es: 'Spanish', fr: 'French' };
-const DICTIONARY_NAMES = { es: 'the Real Academia Española dictionary', fr: 'the Wiktionnaire' };
+const LANGUAGE_NAMES = { es: 'Spanish', fr: 'French', la: 'Latin' };
+const DICTIONARY_NAMES = {
+  es: 'the Real Academia Española dictionary',
+  fr: 'the Wiktionnaire',
+  la: 'Whitaker’s Words',
+};
 
 const EXAMPLE_SYSTEM = (study) => `You work on ProfeGPT, a ${LANGUAGE_NAMES[study]} learning
 site, alongside ${DICTIONARY_NAMES[study]}.
@@ -194,6 +204,9 @@ async function generateExamples(word, senses, english, study) {
  */
 function templateExample(word, sense, study) {
   const feminine = sense.gender === 'feminine';
+  // Latin gets no invented frame: a made-up Latin sentence with the wrong case
+  // on it is worse than no sentence, and the parses are the useful part anyway.
+  if (study === 'la') return null;
   if (study === 'fr') {
     switch (sense.category) {
       case 'verb':
@@ -250,9 +263,10 @@ async function enrich(word, senses, english, study) {
     if (!exampleSource) {
       examples = {};
       for (const sense of senses.slice(0, EXAMPLES_PER_WORD)) {
-        examples[sense.number] = templateExample(word, sense, study);
+        const frame = templateExample(word, sense, study);
+        if (frame) examples[sense.number] = frame;
       }
-      exampleSource = 'template';
+      exampleSource = Object.keys(examples).length ? 'template' : null;
     }
   }
 
@@ -295,6 +309,57 @@ async function lookupFrench(word, english) {
     source: { name: 'Wiktionnaire', url: `https://fr.wiktionary.org/wiki/${encodeURIComponent(lookup.word)}` },
     authority: { name: 'Dictionnaire de l’Académie française', url: ACADEMIE(lookup.word) },
     credit: WIKTIONNAIRE_CREDIT,
+  };
+}
+
+/**
+ * The Latin entry: Whitaker's Words.
+ *
+ * Unlike the other two dictionaries this one is a *parser*, so an entry answers
+ * a different question. It is keyed on the form the reader actually met — the
+ * word as it stands in the text — and each sense carries the headword with its
+ * principal parts and every way the form can be read. Looking up *canem* tells
+ * you it is the accusative singular of *canis, canis*, which is the thing a
+ * Latin reader needs and no ordinary dictionary provides.
+ */
+async function lookupLatin(word, english) {
+  const analyses = await analyse(word);
+  if (!analyses.length) {
+    const error = new Error(MESSAGES.la.notFound(word));
+    error.status = 404;
+    error.suggestions = [];
+    throw error;
+  }
+
+  const senses = analyses.map((analysis, index) => ({
+    number: index + 1,
+    category: analysis.pos,
+    verbCategory: '',
+    gender: analysis.gender,
+    usage: '',
+    description: analysis.definition || '—',
+    // What a Latin dictionary prints, and what a student is expected to learn.
+    headword: analysis.headword,
+    principalParts: analysis.principalParts,
+    declension: analysis.declension,
+    conjugation: analysis.conjugation,
+    // Every reading of the form that was asked about.
+    parses: analysis.inflections.map((infl) => describeInflection(infl)).filter(Boolean),
+    usageNotes: [],
+    synonyms: [],
+    antonyms: [],
+  }));
+
+  const entries = [{ origin: '', senses, locutions: [] }];
+
+  return {
+    word,
+    definitionSource: 'whitaker',
+    entries,
+    ...await enrich(analyses[0].lemma, senses, english, 'la'),
+    suggestions: [],
+    source: { name: WHITAKER_CREDIT.name, url: WHITAKER_CREDIT.url },
+    credit: WHITAKER_CREDIT,
   };
 }
 
@@ -363,7 +428,7 @@ async function lookupSpanish(word, english) {
 
 router.get('/', async (req, res) => {
   // Which language the site is about, which is not the language of the chrome.
-  const study = req.query.study === 'fr' ? 'fr' : 'es';
+  const study = ['fr', 'la'].includes(req.query.study) ? req.query.study : 'es';
   const messages = MESSAGES[study];
 
   const word = normalizeQuery(req.query.word);
@@ -379,9 +444,9 @@ router.get('/', async (req, res) => {
   if (cached && Date.now() - cached.at < CACHE_TTL) return res.json(cached.payload);
 
   try {
-    const payload = study === 'fr'
-      ? await lookupFrench(word, english)
-      : await lookupSpanish(word, english);
+    const payload = study === 'fr' ? await lookupFrench(word, english)
+      : study === 'la' ? await lookupLatin(word, english)
+        : await lookupSpanish(word, english);
     cache.set(key, { at: Date.now(), payload });
     return res.json(payload);
   } catch (error) {

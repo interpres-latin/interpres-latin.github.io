@@ -2,15 +2,26 @@ import { renderHome } from './views/home.js';
 import { renderConjugator } from './views/conjugator.js';
 import { renderDictionary } from './views/dictionary.js';
 import { renderChat } from './views/chat.js';
+import { renderDeclensions } from './views/declensions.js';
+import { renderStages } from './views/stages.js';
 import { clear } from './lib/dom.js';
 import { mountThemeToggle } from './lib/theme.js';
 import { mountLanguageSwitch, restoreLock } from './lib/language-switch.js';
 import { mountSiteLock } from './lib/site-lock.js';
 import { followStudyLanguage, t } from './lib/i18n.js';
+import { studyLang } from './lib/study.js';
 
+/**
+ * `only` marks a page that exists in one study language. Latin grows two the
+ * modern languages have no use for — a declension table, and the course's
+ * vocabulary by stage — and asking for one in Spanish falls back to the home
+ * page rather than rendering something the site is not about.
+ */
 const ROUTES = [
   { path: '/', nav: 'traductor', render: renderHome },
   { path: '/conjugacion', nav: 'conjugacion', render: renderConjugator },
+  { path: '/declinationes', nav: 'declinationes', render: renderDeclensions, only: 'la' },
+  { path: '/stadia', nav: 'stadia', render: renderStages, only: 'la' },
   { path: '/diccionario', nav: 'diccionario', render: renderDictionary },
   { path: '/chat', nav: 'chat', render: renderChat },
 ];
@@ -24,9 +35,23 @@ mountLanguageSwitch(document.querySelector('.langswitch'));
 mountSiteLock(document.querySelector('.nav__lock'));
 restoreLock();
 
+const NAV_KEYS = {
+  traductor: 'translator',
+  conjugacion: 'conjugation',
+  declinationes: 'declension',
+  stadia: 'stages',
+  diccionario: 'dictionary',
+  chat: 'chat',
+};
+
 function paintChrome() {
   for (const link of document.querySelectorAll('[data-nav]')) {
-    link.textContent = t(`nav.${{ traductor: 'translator', conjugacion: 'conjugation', diccionario: 'dictionary', chat: 'chat' }[link.dataset.nav]}`);
+    const only = link.dataset.only;
+    // A link to a page this language does not have is taken out of the nav
+    // entirely rather than left to lead somewhere unhelpful.
+    link.hidden = Boolean(only) && only !== studyLang();
+    if (link.hidden) continue;
+    link.textContent = t(`nav.${NAV_KEYS[link.dataset.nav]}`);
   }
   document.querySelector('.skip-link').textContent = t('meta.skip');
   const footer = document.querySelector('.footer p');
@@ -48,7 +73,9 @@ let teardown = null;
 let currentKey = null;
 
 function match(pathname) {
-  return ROUTES.find((route) => route.path === pathname) || ROUTES[0];
+  const found = ROUTES.find((route) => route.path === pathname);
+  if (!found) return ROUTES[0];
+  return !found.only || found.only === studyLang() ? found : ROUTES[0];
 }
 
 function markActive(nav) {
@@ -74,7 +101,7 @@ async function navigate({ replace = false } = {}) {
     if (typeof teardown === 'function') teardown();
     teardown = null;
     clear(main);
-    document.title = route.path === '/' ? t('meta.home') : `ProfeGPT · ${t(`nav.${route.nav === 'traductor' ? 'translator' : route.nav === 'conjugacion' ? 'conjugation' : route.nav === 'diccionario' ? 'dictionary' : 'chat'}`)}`;
+    document.title = route.path === '/' ? t('meta.home') : `ProfeGPT · ${t(`nav.${NAV_KEYS[route.nav]}`)}`;
     teardown = (await route.render(main)) || null;
     currentKey = key;
     if (!hash) window.scrollTo({ top: 0 });

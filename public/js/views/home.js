@@ -211,6 +211,9 @@ function buildTranslator(root) {
     el('div', { class: 'pane__foot' }, counter, status));
 
   const notes = el('div', { class: 'idioms' });
+  // Latin only: every word of the translation, with its case. See the comment
+  // on paintParses.
+  const parses = el('div', { class: 'parses-pane' });
 
   const targetPane = el('div', { class: 'pane' },
     el('div', { class: 'pane__bar' },
@@ -218,7 +221,47 @@ function buildTranslator(root) {
       copy),
     el('div', { class: 'pane__body' }, output),
     notes,
+    parses,
     el('div', { class: 'pane__foot' }, engine, el('span', {})));
+
+  /**
+   * Every Latin word of the translation, with the case it is in.
+   *
+   * No free engine produces reliably correct Latin — Google renders "the dog of
+   * the girl" as *canem puellae*, with the dog in the accusative — so the
+   * server parses what comes back through Whitaker's Words and corrects the
+   * head noun where the English leaves no doubt. This shows the reader the
+   * result rather than asking them to take it on trust, and flags any word that
+   * is not Latin at all.
+   */
+  function paintParses(latin) {
+    clear(parses);
+    if (!latin?.parses?.length) return;
+
+    for (const note of latin.notes || []) {
+      parses.appendChild(el('p', {
+        class: note.kind === 'case' ? 'parses__fixed' : 'parses__warn',
+      }, note.kind === 'case' ? `${t('translator.caseFixed')}: ${note.from} → ${note.to}. ${note.why}` : note.why));
+    }
+
+    parses.appendChild(el('p', { class: 'parses__head' }, t('translator.parseTitle')));
+
+    for (const word of latin.parses) {
+      const best = word.readings?.[0];
+      // Every reading of the form, not just the first. A Latin ending is
+      // routinely ambiguous — *agricolae* is genitive, dative and nominative
+      // plural at once — and showing one of the three would be telling the
+      // reader something the word does not actually say.
+      const grammar = (best?.parses ?? []).slice(0, 4).join(' · ');
+      parses.appendChild(el('div', { class: 'parses__row' },
+        el('b', {}, word.word),
+        best
+          ? el('span', {},
+            el('i', {}, best.headword),
+            grammar ? el('span', { class: 'parses__grammar' }, grammar) : null)
+          : el('span', { class: 'parses__warn' }, t('translator.parseUnknown'))));
+    }
+  }
 
   /** Idioms are worth pointing at: the pairing is the thing being taught. */
   function paintNotes(list) {
@@ -262,6 +305,7 @@ function buildTranslator(root) {
     if (!input.value.trim()) {
       clear(output);
       clear(notes);
+      clear(parses);
       engine.textContent = '';
       status.textContent = t('translator.ready');
       return;
@@ -304,6 +348,7 @@ function buildTranslator(root) {
       if (controller.signal.aborted) return;
       output.textContent = data.translation || '';
       paintNotes(data.notes);
+      paintParses(data.latin);
       engine.textContent = data.engine ? t('translator.engine', { engine: data.engine }) : '';
       status.textContent = force ? t('translator.done') : t('translator.ready');
     } catch (error) {
@@ -335,7 +380,7 @@ function buildTranslator(root) {
     input.focus();
 
     if (input.value.trim()) translate();
-    else { clear(output); clear(notes); engine.textContent = ''; status.textContent = t('translator.ready'); }
+    else { clear(output); clear(notes); clear(parses); engine.textContent = ''; status.textContent = t('translator.ready'); }
   });
 
   input.addEventListener('input', sync);

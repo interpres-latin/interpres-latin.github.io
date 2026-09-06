@@ -44,6 +44,38 @@ const LABELS = {
       auxiliary: ['auxiliar', 'auxiliary'],
     },
   },
+  la: {
+    categories: {
+      noun: ['nomen', 'noun'],
+      verb: ['verbum', 'verb'],
+      adjective: ['adiectivum', 'adjective'],
+      adverb: ['adverbium', 'adverb'],
+      pronoun: ['pronomen', 'pronoun'],
+      preposition: ['praepositio', 'preposition'],
+      conjunction: ['coniunctio', 'conjunction'],
+      interjection: ['interiectio', 'interjection'],
+      article: ['articulus', 'article'],
+      determiner: ['determinans', 'determiner'],
+      numeral: ['numerus', 'numeral'],
+      contraction: ['contractio', 'contraction'],
+      expression: ['locutio', 'phrase'],
+      'proper noun': ['nomen proprium', 'proper noun'],
+      participle: ['participium', 'participle'],
+      supine: ['supinum', 'supine'],
+    },
+    genders: {
+      masculine: ['m.', 'masc.'],
+      feminine: ['f.', 'fem.'],
+      neuter: ['n.', 'neut.'],
+      common: ['c.', 'common'],
+    },
+    verbKinds: {
+      transitive: ['transitivum', 'transitive'],
+      intransitive: ['intransitivum', 'intransitive'],
+      deponent: ['deponens', 'deponent'],
+      impersonal: ['impersonale', 'impersonal'],
+    },
+  },
   fr: {
     categories: {
       noun: ['nom', 'noun'],
@@ -247,6 +279,9 @@ function renderSense(sense, example, exampleSource, search) {
   const tags = [];
   if (sense.category) tags.push(el('span', { class: 'chip' }, label('categories', sense.category)));
   if (sense.gender) tags.push(el('span', { class: 'chip' }, label('genders', sense.gender)));
+  // Which declension or conjugation a Latin word belongs to is half of knowing it.
+  if (sense.declension) tags.push(el('span', { class: 'chip chip--es' }, `${sense.declension} decl.`));
+  if (sense.conjugation) tags.push(el('span', { class: 'chip chip--es' }, `${sense.conjugation} conj.`));
   for (const kind of String(sense.verbCategory || '').split(',').map((item) => item.trim()).filter(Boolean)) {
     tags.push(el('span', { class: 'chip' }, label('verbKinds', kind)));
   }
@@ -257,9 +292,21 @@ function renderSense(sense, example, exampleSource, search) {
   // the authoritative text.
   const englishDef = example?.def;
   const body = el('div', {},
+    // The principal parts are what a Latin dictionary is *for* — the headword
+    // alone tells you nothing about how the verb or noun will behave.
+    sense.headword
+      ? el('p', { class: 'sense__headword' }, sense.headword)
+      : null,
     tags.length ? el('div', { class: 'sense__tags' }, tags) : null,
     el('p', { class: 'sense__def' }, englishDef || sense.description || '—'),
     englishDef ? el('p', { class: 'sense__original' }, sense.description) : null,
+    // Every way the form the reader typed can be read. *puellae* is three
+    // different cases, and pretending otherwise would be the whole problem.
+    sense.parses?.length
+      ? el('div', { class: 'parses' },
+        el('span', { class: 'parses__label' }, t('dictionary.parses')),
+        ...sense.parses.map((parse) => el('span', { class: 'parses__item' }, parse)))
+      : null,
     ...sense.usageNotes.map((note) => el('p', { class: 'sense__note' }, note)),
   );
 

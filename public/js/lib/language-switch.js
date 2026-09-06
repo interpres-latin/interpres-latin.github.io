@@ -5,10 +5,14 @@
  * The study language is always open. English is behind a passcode, and a wrong
  * one seals the whole page with tape until the right one is entered — the lock
  * survives a reload, so closing the tab is not a way around it.
+ *
+ * Latin is the exception: it reads LA | EN and neither side is gated. English
+ * is the working language of a Latin lesson rather than a way round it, so
+ * there is nothing there to protect.
  */
 
 import { el, clear } from './dom.js';
-import { checkPasscode, isLocked, lang, languageOptions, setLang, setLocked, t } from './i18n.js';
+import { checkPasscode, isLocked, lang, languageOptions, passcodeRequired, setLang, setLocked, t } from './i18n.js';
 import { sealWithTape } from './tape.js';
 
 let unseal = null;
@@ -111,7 +115,7 @@ export function mountLanguageSwitch(container) {
         type: 'button',
         onclick: () => {
           if (lang() === code) return;
-          if (code === study) { setLang(study); return; }
+          if (code === study || !passcodeRequired()) { setLang(code); return; }
           askForPasscode(container);
         },
       }, code.toUpperCase());

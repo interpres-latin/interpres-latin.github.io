@@ -7,8 +7,13 @@
  *   this file     — the language of the *chrome*: the study language, or English.
  *
  * So the header switch reads ES | EN on the Spanish side and FR | EN on the
- * French one, and English is gated behind a passcode either way. Getting the
+ * French one, and English is gated behind a passcode on both. Getting the
  * passcode wrong seals the whole page until the right one is entered.
+ *
+ * Latin is the exception on both counts: it reads LA | EN, it **starts in
+ * English**, and neither side is gated. English is the working language of a
+ * Latin classroom rather than a way round the lesson, so there is nothing to
+ * protect — and a Latin interface is a curiosity to opt into, not the default.
  *
  * Content the site is about never changes language: verb forms, dictionary
  * headwords, the subject pronouns in the tables. Only the chrome moves.
@@ -39,7 +44,27 @@ function write(key, value) {
   }
 }
 
-let current = read(LANG_KEY) === 'en' ? 'en' : studyLang();
+/**
+ * Which half of the switch a language starts on. Spanish and French start in
+ * themselves; Latin starts in English, because that is the language the lesson
+ * is conducted in.
+ */
+const DEFAULT_INTERFACE = { es: 'es', fr: 'fr', la: 'en' };
+
+/** Whether the half that is not the default costs a passcode. */
+const GATED = { es: true, fr: true, la: false };
+
+function defaultFor(study) {
+  return DEFAULT_INTERFACE[study] ?? study;
+}
+
+/** A stored choice only counts if it is one of the two on offer now. */
+function settle(value) {
+  const study = studyLang();
+  return value === 'en' || value === study ? value : defaultFor(study);
+}
+
+let current = settle(read(LANG_KEY));
 
 export function lang() {
   return current;
@@ -50,9 +75,14 @@ export function languageOptions() {
   return [studyLang(), 'en'];
 }
 
+/** Whether switching away from the default needs the passcode. */
+export function passcodeRequired() {
+  return GATED[studyLang()] ?? true;
+}
+
 export function setLang(next) {
-  current = next === 'en' ? 'en' : studyLang();
-  write(LANG_KEY, current === 'en' ? 'en' : null);
+  current = settle(next === 'en' ? 'en' : studyLang());
+  write(LANG_KEY, current);
   document.documentElement.lang = current;
   window.dispatchEvent(new CustomEvent('langchange', { detail: { lang: current } }));
   return current;
@@ -67,8 +97,8 @@ export function setLang(next) {
  */
 export function followStudyLanguage() {
   if (current === 'en') return current;
-  current = studyLang();
-  write(LANG_KEY, null);
+  current = defaultFor(studyLang());
+  write(LANG_KEY, current);
   document.documentElement.lang = current;
   return current;
 }
@@ -614,4 +644,335 @@ const FRENCH = {
   },
 };
 
-export const STRINGS = { es: SPANISH, fr: FRENCH };
+const latine = (la, en) => ({ la, en });
+
+/**
+ * The Latin pack.
+ *
+ * The Latin is real Latin where Latin has a word for the thing, and a
+ * respectable coinage where it does not — *colloquium* for the chat, *stadia*
+ * for the course's stages. It is a curiosity to opt into rather than the
+ * default, which is why nothing important depends on reading it.
+ *
+ * Two sections here have no counterpart in the other packs, because two pages
+ * do not exist elsewhere: the declension tables and the stage vocabulary.
+ */
+const LATIN = {
+  nav: {
+    translator: latine('Interpres', 'Translator'),
+    conjugation: latine('Coniugatio', 'Conjugation'),
+    declension: latine('Declinatio', 'Declension'),
+    stages: latine('Stadia', 'Stages'),
+    dictionary: latine('Lexicon', 'Dictionary'),
+    chat: latine('Colloquium', 'Chat'),
+    theme: latine('Mutare speciem', 'Switch theme'),
+    menu: latine('Aperire indicem', 'Open menu'),
+    langLabel: latine('Lingua paginae', 'Site language'),
+  },
+
+  meta: {
+    home: latine('ProfeGPT', 'ProfeGPT'),
+    skip: latine('Ad contenta', 'Skip to content'),
+    footer: latine('significationes ex', 'definitions from'),
+    copyright: latine('© Yuzhe (Julian) Chen 2026', '© Yuzhe (Julian) Chen 2026'),
+    footerDict: latine('Whitaker’s Words', 'Whitaker’s Words'),
+    footerHref: latine('https://mk270.github.io/whitakers-words/', 'https://mk270.github.io/whitakers-words/'),
+    footerCredit: latine(' (in publico)', ' (public domain)'),
+  },
+
+  hero: {
+    badge: latine('Latine ↔ Anglice', 'Latin ↔ English'),
+    sub: latine(
+      'Verte in utramque partem, coniuga omnia verba, declina omnia nomina, quaere in lexico, et roga quod vis. Omnia in una pagina.',
+      'Translate both ways, conjugate every verb, decline every noun, look words up, and ask whatever you like. All on one page.',
+    ),
+    ctaTranslate: latine('Interpretem probare', 'Try the translator'),
+    ctaChat: latine('Cum ProfeGPT loqui', 'Talk to ProfeGPT'),
+  },
+
+  translator: {
+    eyebrow: latine('Interpres', 'Translator'),
+    title: latine('Utraque pars, unus nodus', 'Both directions, one button'),
+    lead: latine(
+      'Scribe et statim verte. Nodus medius linguas permutat et textum secum fert. Omnia verba Latina per Whitaker’s Words probantur.',
+      'Type and translate instantly. The centre button swaps the languages and carries the text across. Every Latin word is checked against Whitaker’s Words.',
+    ),
+    button: latine('Vertere', 'Translate'),
+    clear: latine('Delere', 'Clear'),
+    copy: latine('Exscribere', 'Copy'),
+    copied: latine('Exscriptum!', 'Copied'),
+    copyFailed: latine('Non potuit', 'Could not copy'),
+    ready: latine('Paratus', 'Ready'),
+    working: latine('vertens…', 'translating…'),
+    done: latine('Versum', 'Translated'),
+    sourceLabel: latine('Textus originalis', 'Source text'),
+    swap: latine('Permutare Latinum et Anglicum', 'Swap Latin and English'),
+    swapTitle: latine('Mutare linguam', 'Swap languages'),
+    studyName: latine('Latine', 'Latin'),
+    englishName: latine('English', 'English'),
+    placeholderStudy: latine('Scribe aliquid Latine…', 'Write something in Latin…'),
+    placeholderEn: latine('Type something in English…', 'Type something in English…'),
+    outStudy: latine('Translatio hic apparebit.', 'The translation will appear here.'),
+    outEn: latine('The translation will appear here.', 'The translation will appear here.'),
+    engine: latine('versum per {engine}', 'translated with {engine}'),
+    parseTitle: latine('Verbum ac verbum', 'Word by word'),
+    parseLead: latine(
+      'Omne verbum Latinum, ut Whitaker’s Words id legit.',
+      'Every Latin word, as Whitaker’s Words reads it.',
+    ),
+    parseUnknown: latine('non agnitum', 'not recognised'),
+    caseFixed: latine('casus correctus', 'case corrected'),
+  },
+
+  finder: {
+    eyebrow: latine('Lexicon', 'Dictionary'),
+    title: latine('Quaere verbum', 'Look up a word'),
+    lead: latine(
+      'Whitaker’s Words dat verbum principale cum partibus principalibus, et quomodo forma quam quaeris legenda sit.',
+      'Whitaker’s Words gives the headword with its principal parts, and how the form you looked up has to be read.',
+    ),
+    button: latine('Quaerere', 'Search'),
+    tryWith: latine('Proba', 'Try'),
+    note: latine('Preme Enter ut paginam lexici aperias.', 'Press Enter to open the dictionary page.'),
+    label: latine('Quaerere verbum in lexico', 'Search for a word in the dictionary'),
+    samples: latine('canem,puellae,rexit,urbium,amavissent', 'canem,puellae,rexit,urbium,amavissent'),
+  },
+
+  features: {
+    conjugation: latine('Coniugatio', 'Conjugation'),
+    conjugationBody: latine(
+      'Omnia tempora indicativi, coniunctivi et imperativi, activa et passiva, cum quinque coniugationibus.',
+      'Every tense of the indicative, subjunctive and imperative, active and passive, across the five conjugations.',
+    ),
+    declension: latine('Declinatio', 'Declension'),
+    declensionBody: latine(
+      'Quinque declinationes nominum et adiectiva, omni casu et numero.',
+      'The five noun declensions and the adjectives, in every case and number.',
+    ),
+    dictionary: latine('Lexicon', 'Dictionary'),
+    dictionaryBody: latine(
+      'Whitaker’s Words: partes principales, genus, declinatio, et omnis lectio formae.',
+      'Whitaker’s Words: principal parts, gender, declension, and every reading of the form.',
+    ),
+    chat: latine('Colloquium', 'Chat'),
+    chatBody: latine(
+      'Adiutor grammaticae, vocabulorum, et ceterorum. Anglice respondet.',
+      'An assistant for grammar, vocabulary and anything else. It answers in English.',
+    ),
+    stages: latine('Stadia', 'Stages'),
+    stagesBody: latine(
+      'Vocabula omnium stadiorum Cambridge Latin Course, libri primi.',
+      'The vocabulary of every stage of the Cambridge Latin Course, Book I.',
+    ),
+  },
+
+  conjugator: {
+    eyebrow: latine('Coniugatio', 'Conjugation'),
+    title: latine('Omnia tempora, omnia verba', 'Every tense, every verb'),
+    lead: latine(
+      'Incipe ab una quinque coniugationum, aut quaere verbum. Verbum Latinum partibus principalibus coniugatur — sine iis coniugari non potest.',
+      'Start from one of the five conjugations, or search for a verb. A Latin verb is conjugated from its principal parts — without them it cannot be conjugated at all.',
+    ),
+    tab: latine('coniugatio {ending}', '{ending} conjugation'),
+    search: latine('Quaerere verbum', 'Search a verb'),
+    searchLabel: latine('Quaerere verbum', 'Search for a verb'),
+    highlight: latine('Notare irregularia', 'Highlight irregulars'),
+    notAVerb: latine('Hoc verbum non agnosco', "I don't recognise that verb"),
+    indicative: latine('Indicativus', 'Indicative'),
+    subjunctive: latine('Coniunctivus', 'Subjunctive'),
+    imperative: latine('Imperativus', 'Imperative'),
+    simple: latine('Activum', 'Active'),
+    compound: latine('Passivum', 'Passive'),
+    affirmative: latine('Affirmativus', 'Affirmative'),
+    negative: latine('Negativus', 'Negative'),
+    gerund: latine('participium praesens', 'present participle'),
+    participle: latine('participium perfectum', 'perfect participle'),
+    compoundInf: latine('gerundivum', 'gerundive'),
+    compoundGer: latine('supinum', 'supine'),
+    fullTable: latine('Tabula plena', 'Full conjugation'),
+    verbClass: latine('coniugatio {ending}', '{ending} conjugation'),
+    irregular: latine('irregulare', 'irregular'),
+    stemChange: latine('{change}', '{change}'),
+    spelling: latine('{change}', '{change}'),
+    likeVerb: latine('compositum ex {verb}', 'compound of {verb}'),
+    pronominal: latine('deponens', 'deponent'),
+    voseo: latine('{form}', '{form}'),
+    fromRae: latine('formae probatae', 'checked forms'),
+    generated: latine('formae generatae', 'generated forms'),
+    auxiliary: latine('{aux}', '{aux}'),
+    principalParts: latine('partes principales', 'principal parts'),
+    needsParts: latine(
+      'Verbum Latinum sine partibus principalibus coniugari non potest. Scribe eas omnes — ut “rego, regere, rexi, rectus”.',
+      'A Latin verb cannot be conjugated without its principal parts. Type them all — like “rego, regere, rexi, rectus”.',
+    ),
+  },
+
+  declension: {
+    eyebrow: latine('Declinatio', 'Declension'),
+    title: latine('Quinque declinationes', 'The five declensions'),
+    lead: latine(
+      'Scribe nomen cum genetivo — ut “rex, regis” — aut adiectivum cum omnibus formis. Genetivus declinationem et stirpem dat, ideo lexica eum semper ponunt.',
+      'Type a noun with its genitive — like “rex, regis” — or an adjective with all its forms. The genitive is what gives you the declension and the stem, which is why a dictionary always quotes it.',
+    ),
+    search: latine('rex, regis', 'rex, regis'),
+    searchLabel: latine('Quaerere nomen aut adiectivum', 'Search a noun or adjective'),
+    button: latine('Declinare', 'Decline'),
+    tab: latine('declinatio {n}', '{n} declension'),
+    adjectives: latine('Adiectiva', 'Adjectives'),
+    singular: latine('singularis', 'singular'),
+    plural: latine('pluralis', 'plural'),
+    notANoun: latine('Hoc declinare non possum', "I can't decline that"),
+    needsGenitive: latine(
+      'Scribe etiam genetivum — “puella, puellae”. Sine eo declinatio ignota est.',
+      'Give the genitive too — “puella, puellae”. Without it the declension is unknowable.',
+    ),
+    iStem: latine('stirps in -i', 'i-stem'),
+    stem: latine('stirps', 'stem'),
+    cases: latine('Casus', 'Cases'),
+    masculine: latine('masculinum', 'masculine'),
+    feminine: latine('femininum', 'feminine'),
+    neuter: latine('neutrum', 'neuter'),
+    nominative: latine('nominativus', 'nominative'),
+    vocative: latine('vocativus', 'vocative'),
+    accusative: latine('accusativus', 'accusative'),
+    genitive: latine('genetivus', 'genitive'),
+    dative: latine('dativus', 'dative'),
+    ablative: latine('ablativus', 'ablative'),
+  },
+
+  stages: {
+    eyebrow: latine('Stadia', 'Stages'),
+    title: latine('Vocabula per stadia', 'Vocabulary by stage'),
+    lead: latine(
+      'Scribe numerum stadii ut omnia eius vocabula videas.',
+      'Type a stage number to see all of its vocabulary.',
+    ),
+    search: latine('numerus stadii', 'stage number'),
+    searchLabel: latine('Quaerere stadium', 'Search a stage'),
+    button: latine('Ostendere', 'Show'),
+    notFound: latine('Hoc stadium non habeo', "I don't have that stage"),
+    wordCount: latine('{n} vocabula', '{n} words'),
+    latinWord: latine('Latine', 'Latin'),
+    englishWord: latine('Anglice', 'English'),
+    provenance: latine(
+      'Manu collecta ex cursu, non ex datis editis — cum libro tuo confer. Omnia verba per Whitaker’s Words probantur.',
+      'Hand-compiled from the course, not from published data — check against your book. Every word is verified against Whitaker’s Words.',
+    ),
+    allStages: latine('Omnia stadia', 'All stages'),
+  },
+
+  dictionary: {
+    eyebrow: latine('Lexicon', 'Dictionary'),
+    title: latine('Quid Whitaker dicit', 'What Whitaker’s says'),
+    lead: latine(
+      'Scribe formam quam in textu invenisti. Lexicon verbum principale cum partibus principalibus dat, et omnem modum quo forma legi potest.',
+      'Type the form you met in the text. The dictionary gives the headword with its principal parts, and every way the form can be read.',
+    ),
+    search: latine('Quaerere verbum', 'Search a word'),
+    button: latine('Quaerere', 'Search'),
+    emptyTitle: latine('Scribe verbum', 'Type a word'),
+    emptyBody: latine(
+      'Proba canem, puellae, rexit, urbium — quamlibet formam, non solum verbum principale.',
+      'Try canem, puellae, rexit, urbium — any form, not just the dictionary headword.',
+    ),
+    looking: latine('Lexicon consulens…', 'Looking it up…'),
+    noResults: latine('Nihil inventum', 'No results'),
+    didYouMean: latine('Fortasse?', 'Did you mean?'),
+    seeOnRae: latine('videre apud Whitaker ↗', 'view Whitaker’s Words ↗'),
+    synonyms: latine('Synonyma', 'Synonyms'),
+    antonyms: latine('Contraria', 'Antonyms'),
+    locutions: latine('Locutiones', 'Phrases'),
+    inUse: latine('In usu', 'In use'),
+    notRae: latine('', ''),
+    notAcademie: latine('', ''),
+    seeAuthority: latine('', ''),
+    templateNote: latine('', ''),
+    parses: latine('Formae lectiones', 'How this form reads'),
+    principalParts: latine('Partes principales', 'Principal parts'),
+  },
+
+  chat: {
+    title: latine('Roga ProfeGPT', 'Ask ProfeGPT'),
+    lead: latine(
+      'Coniugationes, declinationes, lexicon, translationes et grammatica. Anglice respondet.',
+      'Conjugations, declensions, the dictionary, translations and grammar. It answers in English.',
+    ),
+    placeholder: latine('Roga quod vis…', 'Ask whatever you like…'),
+    messageLabel: latine('Nuntius', 'Message'),
+    send: latine('Mittere', 'Send'),
+    you: latine('TU', 'YOU'),
+    enterHint: latine('Enter ut mittas · Shift + Enter ad novam lineam', 'Enter to send · Shift + Enter for a new line'),
+    groundedOnly: latine(
+      'Responsa ex coniugatore, declinatore, Whitaker’s Words et schedis grammaticae — sine ulla IA',
+      'Answers from the conjugator, the decliner, Whitaker’s Words and the grammar notes — no AI involved',
+    ),
+    withModel: latine('Quaestiones Latinae, infinitae · ', 'Latin questions, unlimited · '),
+    otherTopics: latine('alia: ', 'other topics: '),
+    perWindow: latine(' per {minutes} min', ' every {minutes} min'),
+    failed: latine('Respondere non potui: {error}', "I couldn't answer: {error}"),
+    starters: latine(
+      'decline rex, regis|conjugate capio|parse canem|stage 5|the ablative absolute',
+      'decline rex, regis|conjugate capio|parse canem|stage 5|the ablative absolute',
+    ),
+    needsKey: latine(
+      'Quaestiones de aliis rebus modelo egent. Adde clavem gratuitam Google AI Studio ut `GEMINI_API_KEY` in .env et servitorem restitue; tunc {limit} quaestiones liberas per {minutes} minuta habebis.',
+      'Questions on other topics need a model. Add a free Google AI Studio key as `GEMINI_API_KEY` to your `.env` and restart the server; that gives you {limit} free questions every {minutes} minutes.',
+    ),
+  },
+
+  tape: {
+    quotaDetail: latine(
+      'Quaestiones liberae de aliis rebus consumptae sunt. Post {minutes} minuta redibunt.',
+      'The free questions on other topics are used up. They come back in about {minutes} minutes.',
+    ),
+    quotaNote: latine(
+      'Quaestiones Latinae nihil constant: coniugationes, declinationes, lexicon et grammatica per totam paginam patent.',
+      'Latin questions cost nothing: conjugations, declensions, the dictionary and grammar are still open across the rest of the site.',
+    ),
+    lockedTitle: latine('Codex falsus', 'Wrong passcode'),
+    lockedDetail: latine('Codicem scribe ut pergas.', 'Enter the passcode to carry on.'),
+    lockedNote: latine('Roga magistrum tuum.', 'Ask your teacher.'),
+    passcodePlaceholder: latine('Codex', 'Passcode'),
+    unlock: latine('Aperire', 'Unlock'),
+    wrongAgain: latine('Adhuc falsus.', 'Still not right.'),
+  },
+
+  lock: {
+    title: latine('Paginam claudere', 'Lock the site'),
+    detail: latine(
+      'Cum codice pagina omnibus clauditur donec aliquis eam aperiat.',
+      'With the passcode, the site is locked for everyone until someone unlocks it.',
+    ),
+    passcode: latine('Codex magistri', 'Teacher passcode'),
+    lockNow: latine('Claudere', 'Lock'),
+    wrong: latine('Codex falsus.', 'Wrong passcode.'),
+    lockLabel: latine('Paginam claudere', 'Lock the site'),
+    unlockLabel: latine('Paginam aperire', 'Unlock the site'),
+    sealedTitle: latine('Schola agitur', 'Class in session'),
+    sealedDetail: latine('Magister paginam clausit. Codicem scribe ut aperias.', 'A teacher has locked the site. Enter the passcode to unlock it.'),
+    sealedNote: latine('Omnibus simul aperitur.', 'It unlocks for everyone at once.'),
+  },
+
+  quota: {
+    understand: latine('Intellego', 'I understand'),
+    spent: latine('Nullae quaestiones restant', 'No questions left'),
+    spentShort: latine('Nihil restat', 'No usage left'),
+    stillFree: latine('Latina adhuc gratuita', 'Latin is still free'),
+  },
+
+  passcode: {
+    title: latine('Versio Anglica', 'English version'),
+    detail: latine('Codex opus est.', 'A passcode is required.'),
+    cancel: latine('Renuntiare', 'Cancel'),
+  },
+
+  mode: {
+    entered: latine('Modus Latinus', 'Latin mode'),
+    enteredNote: latine(
+      'Pagina nunc de lingua Latina est. Scribe “mode: spanish” ut redeas.',
+      'The site is about Latin now. Type "mode: spanish" to go back.',
+    ),
+  },
+};
+
+export const STRINGS = { es: SPANISH, fr: FRENCH, la: LATIN };

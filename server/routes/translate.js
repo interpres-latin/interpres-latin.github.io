@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { translate } from '../translators.js';
+import { checkLatin } from '../latin-check.js';
 
 export const router = Router();
 
@@ -25,7 +26,7 @@ function remember(key, value) {
  */
 router.post('/', async (req, res) => {
   const text = String(req.body?.text ?? '').slice(0, MAX_INPUT);
-  const study = req.body?.study === 'fr' ? 'fr' : 'es';
+  const study = ['fr', 'la'].includes(req.body?.study) ? req.body.study : 'es';
   const from = req.body?.from === 'en' ? 'en' : study;
   const to = from === 'en' ? study : 'en';
 
@@ -38,14 +39,28 @@ router.post('/', async (req, res) => {
   try {
     const result = await translate(text, from, to);
     const payload = { translation: result.text, engine: result.engine, notes: result.notes || [] };
+
+    // Latin is checked rather than trusted. Every word is parsed, so the page
+    // can show the case of each one, and a head noun in the wrong case is put
+    // right where the English leaves no room for doubt — see latin-check.js.
+    if (to === 'la' && payload.translation.trim()) {
+      const checked = await checkLatin(text, payload.translation).catch(() => null);
+      if (checked) {
+        payload.translation = checked.text;
+        payload.latin = { parses: checked.parses, notes: checked.notes };
+      }
+    }
+
     remember(key, payload);
     return res.json(payload);
   } catch (error) {
     console.warn('[translate]', error.message);
     return res.status(502).json({
-      error: study === 'fr'
-        ? 'Impossible de traduire pour le moment. Réessayez.'
-        : 'No se pudo traducir ahora mismo. Inténtalo de nuevo.',
+      error: {
+        fr: 'Impossible de traduire pour le moment. Réessayez.',
+        la: 'Could not translate just now. Try again.',
+        es: 'No se pudo traducir ahora mismo. Inténtalo de nuevo.',
+      }[study],
     });
   }
 });

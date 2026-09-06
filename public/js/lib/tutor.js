@@ -21,10 +21,11 @@
 
 import { PACK as ES } from './tutor-es.js';
 import { PACK as FR } from './tutor-fr.js';
+import { PACK as LA } from './tutor-la.js';
 import { studyLang } from './study.js';
 import { fold, getJson, postJson } from './dom.js';
 
-const PACKS = { es: ES, fr: FR };
+const PACKS = { es: ES, fr: FR, la: LA };
 
 /** The pack for the language the site is currently about. */
 function activePack(override = null) {
@@ -243,7 +244,12 @@ function formLookupAnswer(pack, word, language) {
 }
 
 function topicAnswer(topic, language) {
-  return [{ type: 'md', text: `### ${topic.title[language]}\n\n${topic.body[language]}` }];
+  // A pack may hold one body for every language it answers in — the Latin notes
+  // are written in English whatever the interface says, because a tutor
+  // replying in Latin would be a joke at the reader's expense.
+  const title = topic.title[language] ?? topic.title.en;
+  const body = topic.body[language] ?? topic.body.en;
+  return [{ type: 'md', text: `### ${title}\n\n${body}` }];
 }
 
 // ---------------------------------------------------------------------------
@@ -277,8 +283,10 @@ export async function answer(question, { language = null, force = false, study =
   const { INTENTS } = pack;
 
   const text = String(question || '').trim();
-  // force: answer in the language given, whatever the question was written in.
-  const lang = force && language ? language : detectLanguage(text, language, pack.code);
+  // A pack may pin the language it answers in whatever it was asked in, which
+  // is how the Latin side stays English.
+  const lang = pack.ANSWER_LANGUAGE
+    ?? (force && language ? language : detectLanguage(text, language, pack.code));
   const folded = fold(text).replace(/[¿?¡!.,;:«»"“”]/g, ' ').replace(/\s+/g, ' ').trim();
   const accented = text.toLowerCase().replace(/[¿?¡!.,;:«»"]/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -303,6 +311,17 @@ export async function answer(question, { language = null, force = false, study =
       tense: findHint(folded, pack.TENSE_HINTS),
       person: findHint(accented, pack.PERSON_HINTS),
     });
+    if (blocks) return respond(blocks);
+  }
+
+  // 3b. intents only one language has — declining a noun, or looking up a
+  //     vocabulary stage. Tried before the general ones so "decline puella"
+  //     is not read as a request to define it.
+  for (const intent of pack.EXTRA_INTENTS ?? []) {
+    const match = intent.pattern.exec(text);
+    if (!match) continue;
+    // eslint-disable-next-line no-await-in-loop
+    const blocks = await Promise.resolve(intent.build(match, lang, pack)).catch(() => null);
     if (blocks) return respond(blocks);
   }
 

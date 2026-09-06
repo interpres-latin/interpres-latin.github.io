@@ -2,10 +2,11 @@
  * The language the site is *about*.
  *
  * ProfeGPT is a Spanish site. Typing `mode: french` into the translator turns
- * it into a French one — the same four pages, the same engines, the same
- * allowance, pointed at a different language. Everything that reads as content
- * (verb forms, dictionary headwords, grammar notes, the tutor's answers) comes
- * from whichever pack this returns.
+ * it into a French one — the same pages, the same engines, the same allowance,
+ * pointed at a different language — and `mode: latin` into a Latin one, which
+ * additionally grows two pages the modern languages have no use for.
+ * Everything that reads as content (verb forms, dictionary headwords, grammar
+ * notes, the tutor's answers) comes from whichever pack this returns.
  *
  * It is deliberately not in the navigation. The French side is behind the
  * Spanish one, found by knowing the phrase rather than by clicking.
@@ -17,7 +18,7 @@
 
 const STUDY_KEY = 'profegpt:study';
 
-export const STUDY_LANGUAGES = ['es', 'fr'];
+export const STUDY_LANGUAGES = ['es', 'fr', 'la'];
 
 function read() {
   try { return localStorage.getItem(STUDY_KEY); } catch { return null; }
@@ -32,15 +33,23 @@ function write(value) {
   }
 }
 
-let current = read() === 'fr' ? 'fr' : 'es';
+function valid(value) {
+  return STUDY_LANGUAGES.includes(value) ? value : 'es';
+}
 
-/** @returns {'es'|'fr'} */
+let current = valid(read());
+
+/** @returns {'es'|'fr'|'la'} */
 export function studyLang() {
   return current;
 }
 
 export function isFrench() {
   return current === 'fr';
+}
+
+export function isLatin() {
+  return current === 'la';
 }
 
 /**
@@ -52,7 +61,7 @@ export function isFrench() {
  * site in English stays in English.
  */
 export function setStudyLang(next) {
-  const value = next === 'fr' ? 'fr' : 'es';
+  const value = valid(next);
   if (value === current) return current;
   current = value;
   write(current);
@@ -69,12 +78,13 @@ export function setStudyLang(next) {
  */
 const MODE_COMMANDS = [
   [/^\s*mode\s*:?\s*(?:french|fran[cç]ais)\s*[.!]?\s*$/i, 'fr'],
+  [/^\s*mode\s*:?\s*(?:latin|latine?|latina)\s*[.!]?\s*$/i, 'la'],
   [/^\s*mode\s*:?\s*(?:spanish|espa[nñ]ol|espagnol)\s*[.!]?\s*$/i, 'es'],
 ];
 
 /**
  * The study language a piece of translator input is asking for, or null.
- * @returns {'es'|'fr'|null}
+ * @returns {'es'|'fr'|'la'|null}
  */
 export function modeCommand(text) {
   for (const [pattern, value] of MODE_COMMANDS) {

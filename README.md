@@ -3,8 +3,9 @@
 A Spanish learning site: a two-way translator, complete conjugation tables, the
 RAE dictionary, and an AI tutor.
 
-There is a French one behind it. Type **`mode: french`** into the translator and
-the whole site changes subject — see *[The French side](#the-french-side)*.
+There are two more behind it. Type **`mode: french`** or **`mode: latin`** into
+the translator and the whole site changes subject — see *[The French
+side](#the-french-side)* and *[The Latin side](#the-latin-side)*.
 
 ```bash
 npm install
@@ -15,6 +16,7 @@ No build step. The frontend is plain ES modules served straight out of `public/`
 
 ## The four pages
 
+
 | Route          | What it does |
 | -------------- | ------------ |
 | `/`            | Hero with an animated node network; the **translator**, whose centre button flips the languages and carries the text across; and a **dictionary search** that opens the dictionary page with your query already applied. |
@@ -22,7 +24,9 @@ No build step. The frontend is plain ES modules served straight out of `public/`
 | `/diccionario` | Definitions from the *Diccionario de la lengua española*, with senses, synonyms and locutions, plus real example sentences and — in English mode — an English gloss. |
 | `/chat`        | A **grounded tutor** that answers from the site's own data — the conjugator, the dictionary, the translator, and hand-written grammar explanations. Needs no API key and invents nothing. |
 
-Every one of them has a French counterpart on the other side of the switch.
+Every one of them has a French and a Latin counterpart on the other side of the
+switch, and Latin adds two more pages that the modern languages have no use
+for: **declension tables** and the **course's vocabulary by stage**.
 
 ## The chat page
 
@@ -61,7 +65,7 @@ Off-topic ones go to a language model, and are metered server-side in
 **Five off-topic questions per browser, per 30 minutes** — `CHAT_FREE_LIMIT`
 and `CHAT_WINDOW_MINUTES`.
 
-**Spanish and French share the one allowance.** The bucket has no language in
+**All three languages share the one allowance.** The bucket has no language in
 it: switching sides is a change of subject, not a second helping.
 
 Per *browser*, not per address: a classroom sits behind one router, so an
@@ -131,7 +135,7 @@ No model, at any point. Four dedicated engines, tried in order:
 | 0 | **Wikipedia** | for names and titles. Machine translation renders them literally: "Cuban Missile Crisis" becomes *"crisis de los misiles cubanos"*, which says the missiles were Cuban when they were Soviet. Wikipedia's cross-language links hold the name each language actually uses — *Crisis de los misiles de Cuba*. |
 | 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES`, and one that fails is rested for a minute rather than re-asked on every translation. |
 | 2 | **MyMemory** | a crowd translation memory, believed only when its candidates agree with each other. |
-| 3 | **Apertium** | open-source rule-based translation. Clumsy, but always up and it never invents content. Spanish only — it has no English–French pair, so the French chain stops at MyMemory. |
+| 3 | **Apertium** | open-source rule-based translation. Clumsy, but always up and it never invents content. Spanish only — it has no English–French or English–Latin pair, so those chains stop at MyMemory. |
 
 The agreement rule on MyMemory exists because its segments can be wrong in ways
 no score exposes: *"Buenos días, ¿cómo estás?"* comes back as *"Good morning
@@ -195,7 +199,8 @@ Hand-written and hand-checked, like the grammar notes, and only the idioms a
 translator actually gets wrong are listed. Matching ignores case and accents,
 works inside a sentence, and is capped at two notes per translation.
 
-There is one table per language — 26 Spanish, 28 French — rather than one table
+There is one table per language — 26 Spanish, 28 French, none for Latin, which
+is not a language anyone is translating idiom for idiom — rather than one table
 with an extra column, because the sets barely overlap: the idioms a translator
 fumbles going into Spanish are not the ones it fumbles going into French, and
 half of each list has no counterpart in the other. French gets *coûter les yeux
@@ -261,6 +266,9 @@ In French mode the same switch reads **FR / EN**, and English sits behind the
 same passcode. Someone who has already paid it stays in English across a change
 of mode — see *[The French side](#the-french-side)*.
 
+Latin is the exception on both counts: **LA / EN**, starting in **English**, and
+neither side gated. See *[The Latin side](#the-latin-side)*.
+
 What the site is *about* stays in its own language either way — verb forms,
 dictionary headwords, the subject pronouns in the conjugation tables. Grammatical labels do
 follow the interface, and so do grounded chat answers: ask in English while the
@@ -290,8 +298,9 @@ kind of moment that earned them rather than on every message:
 
 French has counterparts on the same three moments — *Et voilà !*, *Zut alors !*,
 *Oh là là !* — fired where a verb is both irregular and takes *être*, which is
-about as much as one French verb can ask of a learner. They are stand-ins, not
-her expressions; only the Spanish ones are things she actually said.
+about as much as one French verb can ask of a learner. Latin has *Euge!*, *Eheu!*
+and *Mehercle!*, which are at least things a Roman said. All of them are
+stand-ins; only the Spanish ones are things she actually said.
 
 ## The French side
 
@@ -446,6 +455,157 @@ LINGVA_INSTANCES=http://localhost:3100,lingva.lunar.icu
 Listing a public instance after it keeps the site working while the container
 restarts.
 
+## The Latin side
+
+Typing **`mode: latin`** turns ProfeGPT into a Latin site. Everything the French
+side does, plus the things Latin needs and a modern language does not.
+
+| | |
+| --- | --- |
+| the header switch | **LA \| EN**, starting in **English**, and **neither side is gated** |
+| the conjugator | five conjugations, active and passive, from the principal parts |
+| **a declensions page** | the five noun declensions and the adjectives, in every case |
+| **a stages page** | the Cambridge Latin Course vocabulary, by stage |
+| the dictionary | Whitaker's Words: principal parts, and every reading of the form |
+| the translator | every Latin word parsed, and the case corrected where it is wrong |
+| the tutor | 25 grammar topics, answering **in English** |
+
+**The interface starts in English and the passcode is gone.** English is the
+working language of a Latin lesson rather than a way round it, so there is
+nothing there to protect; Latin is a curiosity to opt into. And the chat answers
+in English whatever the switch says — a Latin tutor replying in Latin would be a
+joke at the reader's expense.
+
+### Whitaker's Words
+
+Everything Latin rests on **WORDS by William Whitaker**, reached through the
+Alpheios morphology service. It is the standard free Latin dictionary and it
+does something no ordinary dictionary does: give it any inflected form and it
+returns the headword with its **principal parts**, the declension or conjugation
+it belongs to, its gender, a definition, and **the exact parse of the form you
+gave it**.
+
+Ask it about *canem* and it says: accusative singular of *canis, canis*, third
+declension. That is the thing a Latin reader actually needs, and it is why the
+dictionary page here is keyed on the form you met in the text rather than on the
+headword you would have to know already.
+
+It is asked for both spellings of a word, since editions differ on i/j and u/v,
+and answers are cached. Two details cost real debugging:
+
+- **`entry.dict` is sometimes an array**, when one form belongs to several
+  headwords that inflect alike. Read as a single object it comes back blank and
+  the whole analysis vanishes — which is how the accusative of "dog" briefly
+  stopped existing.
+- **A failed request must not be cached as "no such word".** Recording an
+  outage for a day is the same bug wearing a hat.
+
+Whitaker's also records how **common** and how **old** each headword is, and
+both are used. *canem* belongs to *canes* (early, rare) and *canis* (very
+frequent); leading with the archaic one is how *the dog of the girl* first came
+back as *canes puellae*.
+
+### Accurate declensions in the translator
+
+This was the requirement, and it is the interesting part.
+
+**No free engine produces reliably correct Latin.** Google is good on simple
+sentences and wrong on ordinary ones. Of eight case-critical phrases it got
+seven right and fumbled the eighth — *the dog of the girl* → **canem puellae**,
+the dog in the accusative when nothing is doing anything to it. A site that
+shows a student that and says nothing has taught them the wrong ending.
+
+So every Latin translation gets two things done to it.
+
+**Every word is parsed**, and the pane shows the result. Not one reading but
+*all* of them, because a Latin ending is routinely ambiguous — *agricolae* is
+genitive, dative and nominative plural at once, and picking one would be telling
+the reader something the word does not say. Anything Whitaker's cannot recognise
+at all is flagged, which is the real check on machine translation.
+
+**A wrong case is corrected where the English leaves no doubt.** An English noun
+phrase with no verb in it has a nominative head, full stop — so a head noun in
+some other case is an error that can be *put right* rather than merely reported.
+The headword gives the dictionary parts, the decliner builds the nominative from
+them, and the pane says what changed and why:
+
+> **canis puellae**
+> *case corrected: canem → canis. "the dog of the girl" has no verb, so its head
+> noun is nominative. canem is accusative singular common.*
+
+Nothing is invented and nothing is guessed. Where the construction is not
+unambiguous the translation is left alone and the parse is shown instead, which
+is the honest half of the same idea.
+
+Apertium has no Latin pair either, so the chain is Wikipedia → Lingva →
+MyMemory, as it is for French. Lingva handles Latin well; MyMemory does not.
+
+### The conjugator
+
+Five tabs — **1st, 2nd, 3rd, 3rd -io, 4th** — and each mood is drawn as two
+tables, **active and passive**, where the modern languages draw simple and
+compound.
+
+A Latin verb is conjugated **from its principal parts**, so that is what the
+engine takes. *rego* alone tells you nothing about *rexi*; the page says so
+rather than guessing, and the search index carries all four parts.
+
+The rules that took the care:
+
+- **The second and third conjugations are spelled identically** without macrons
+  — *monēre* and *regere* — so the infinitive cannot separate them. The first
+  principal part can: *-eo* is second, *-io* is third -io, anything else in *-o*
+  is plain third. The same test a textbook gives.
+- **A compound only counts across a real Latin prefix.** Without that list any
+  verb ending in the letters of a base inherits from it, and *moneo* becomes
+  *mon-* plus *eo* — conjugating as *monis, monit, moneunt*. The same bug the
+  French side had with *percevoir* and *voir*.
+- **Deponents are passive in form and active in meaning**, so the forms carrying
+  their active sense *are* the passive ones. Everything is built both ways and
+  the right set chosen at the end. Their imperfect subjunctive is built on an
+  active infinitive that a dictionary never prints — *sequerer* comes from
+  *sequere* — so it is reconstructed.
+- ***fio* is semi-deponent**: active in the present, *factus sum* in the perfect.
+
+### The decliner
+
+Nouns and adjectives from their dictionary form, because **the genitive is what
+says which declension a noun is and what its stem will be**. That is why a
+dictionary quotes it and why this engine asks for it: given only *rex* there is
+genuinely no answer, and the page says so.
+
+The third declension is the awkward one, as it is for a student. **i-stems**
+differ in four cells and are detected by the three rules a textbook gives —
+parisyllabic (*civis, civis*), two consonants closing the stem (*urbs, urbis*),
+or a neuter in *-al, -ar, -e* (*animal, mare*). That last is gated on the gender,
+because *Caesar* and *consul* end that way too and decline as consonant stems.
+
+Adjectives come with one, two or three terminations and the dictionary form says
+which: *acer, acris, acre* is three, *fortis, forte* is two, and *ingens,
+ingentis* is one — the second part there being the **genitive**, so every gender
+shares the nominative. Read as a two-termination adjective it produces
+*ingente*, which is not a word.
+
+`npm test` checks 121 reference forms against the standard paradigms.
+
+### The stages page
+
+The Cambridge Latin Course teaches in numbered stages and students revise by
+stage, so the page takes a number and gives you the list. Typing a word instead
+tells you which stage it came from.
+
+**Be clear about what this data is.** The course publishes no vocabulary data
+and its stage checklists are not available as a file, so these lists are
+**hand-compiled**. The Latin and the meanings are standard and every word is
+verified against Whitaker's; but *which stage a word first appears in* is
+knowledge of the course rather than a copy of the book. Stages 1–12 — Book I —
+are seeded, because that is where the knowledge is soundest. Later books are
+left out rather than guessed at.
+
+The page says as much, on the page, where a reader revising for a test will see
+it. Adding a stage is adding a key to `public/js/data/stages-la.js`; one entry is
+`['latin', 'english']`.
+
 ## Design
 
 **Dark and light.** The choice is stamped onto `<html data-theme>` by an inline
@@ -514,7 +674,7 @@ cp .env.example .env      # then put your key in it
 | `ANTHROPIC_API_KEY` | **Paid.** Only reached if it is the only key set, or `LLM_PROVIDER=anthropic`. |
 | `LLM_PROVIDER` | Pin one: `gemini`, `groq`, `openrouter` or `anthropic`. |
 | `PORT` | Defaults to `4000`. |
-| `CHAT_FREE_LIMIT` | Off-topic chat questions per window, shared by both languages. Default `5`; set `0` to seal the chat immediately and see the tape. |
+| `CHAT_FREE_LIMIT` | Off-topic chat questions per window, shared by all three languages. Default `5`; set `0` to seal the chat immediately and see the tape. |
 | `LINGVA_INSTANCES` | Comma-separated Lingva hosts, tried in order; an entry may carry a scheme, so a self-hosted instance is `http://localhost:3100`. See *[The French translator](#the-french-translator)*. |
 | `CHAT_WINDOW_MINUTES` | Length of that window. Default `30`. |
 
@@ -526,7 +686,8 @@ Without a key:
 
 ## Where things live
 
-Files marked **·fr** are the French counterpart of the one above them.
+Files marked **·fr** or **·la** are the French or Latin counterpart of the one
+above them.
 
 ```
 server/
@@ -537,6 +698,9 @@ server/
   translators.js        the engine chain; every engine takes the pair as codes
   idioms.js             one idiom table per language
   dictionary-fr.js   ·fr the Wiktionnaire, parsed from wikitext
+  latin.js           ·la Whitaker's Words: principal parts, and the parse of
+                         any form, ranked by how common each headword is
+  latin-check.js     ·la parses a translation and corrects a wrong case
   providers/            gemini.js, groq.js, anthropic.js, openrouter.js
   routes/
     translate.js        dedicated engines, never a model
@@ -552,11 +716,16 @@ public/
     lib/study.js        the language the site is *about*, and the mode command
     lib/conjugator.js   the Spanish conjugation engine
     lib/conjugator-fr.js ·fr the French one: two stems, two auxiliaries
+    lib/conjugator-la.js ·la the Latin one: five conjugations, both voices,
+                             built from the principal parts
+    lib/decliner-la.js ·la the five declensions, and the adjectives
     lib/network.js      the hero node network
     lib/markdown.js     DOM-building markdown renderer (no innerHTML)
     lib/tutor.js        intent routing for the chat — shared by both languages
     lib/tutor-es.js     what the router needs to know about Spanish
     lib/tutor-fr.js  ·fr the same, for French
+    lib/tutor-la.js  ·la the same for Latin, plus the two intents only it has
+                         — declining a noun, and looking up a course stage
     lib/chat-session.js the conversation, held outside the view so navigating
                         away cannot interrupt an answer
     lib/theme.js        dark/light switching
@@ -568,13 +737,21 @@ public/
     data/grammar-fr.js ·fr 20 more, French and English
     data/verbs.js       stem changes, irregulars, the search index
     data/verbs-fr.js ·fr irregulars, the -er spelling exceptions, 232 verbs
+    data/grammar-la.js ·la 25 more, English only — see The Latin side
+    data/verbs-la.js ·la principal parts, irregulars, deponents, 133 verbs
+    data/stages-la.js ·la the course vocabulary, hand-compiled, Book I
     views/              one module per page, driven by the study language
+    views/declensions.js ·la the five declensions
+    views/stages.js  ·la vocabulary by stage
 test/
   conjugator.test.js       204 reference forms checked against RAE paradigms
   conjugator-fr.test.js ·fr 163 checked against the Bescherelle paradigms
-  conjugator-view.test.js  183 that the page's tense lists match both engines
+  latin.test.js         ·la 121 on the declension and conjugation engines
+  conjugator-view.test.js  981 that the page's tense lists match every engine,
+                               and that every verb in every index conjugates
   tutor.test.js             52 checks on intent routing and the form index
   tutor-fr.test.js      ·fr  64 that the French pack drives the same router
+  tutor-la.test.js      ·la  38 on the Latin pack and its two extra intents
   corpus.test.js            13 checks on sentence ranking and gloss extraction
   translators.test.js       42 checks on engine order, names, the agreement rule
                                and the rest a failing Lingva instance is given
@@ -584,13 +761,15 @@ test/
   openrouter.test.js        20 checks on the guards that keep OpenRouter free
 ```
 
-`npm test` runs all 791, offline, in about a second.
+`npm test` runs all 1,748, offline, in a couple of seconds.
 
 ## The conjugation engine
 
-There are two, one per language: `public/js/lib/conjugator.js` for Spanish and
-`conjugator-fr.js` for French — see *[The French conjugator](#the-french-conjugator)*
-for the second. Both build paradigms from rules rather than a form table.
+There are three, one per language: `public/js/lib/conjugator.js` for Spanish,
+`conjugator-fr.js` for French and `conjugator-la.js` for Latin — see *[The French
+conjugator](#the-french-conjugator)* and *[The conjugator](#the-conjugator)* for
+the other two, and `decliner-la.js` for the declensions Latin also needs. All
+build paradigms from rules rather than a form table.
 
 `public/js/lib/conjugator.js` applies its rules in this order:
 
@@ -610,9 +789,10 @@ is fetched and merged over it when the verb is in the dictionary — so the form
 you see are authoritative where RAE has them, and generated where it doesn't.
 The badge on the verb card tells you which.
 
-French has no equivalent to merge, because the Académie française publishes no
-API, so there the local engine *is* the table and the badge is left off rather
-than claiming an authority behind it.
+Neither French nor Latin has an equivalent to merge — the Académie française
+publishes no API, and Whitaker's is a parser rather than a table of paradigms —
+so there the local engine *is* the table and the badge is left off rather than
+claiming an authority behind it.
 
 ## Deploying
 

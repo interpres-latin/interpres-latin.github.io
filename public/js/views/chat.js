@@ -4,13 +4,14 @@ import { sealWithTape } from '../lib/tape.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import { EXCLAMATIONS as SPANISH_EXCLAMATIONS } from '../data/grammar.js';
 import { EXCLAMATIONS as FRENCH_EXCLAMATIONS } from '../data/grammar-fr.js';
+import { EXCLAMATIONS as LATIN_EXCLAMATIONS } from '../data/grammar-la.js';
 import { t } from '../lib/i18n.js';
 import { studyLang } from '../lib/study.js';
 import { acknowledgeQuota, ask, getState, isBusy, loadStatus, subscribe } from '../lib/chat-session.js';
 import { toast } from '../lib/toast.js';
 
 /** The profe's interjections, and their French counterparts. */
-const EXCLAMATIONS = { es: SPANISH_EXCLAMATIONS, fr: FRENCH_EXCLAMATIONS };
+const EXCLAMATIONS = { es: SPANISH_EXCLAMATIONS, fr: FRENCH_EXCLAMATIONS, la: LATIN_EXCLAMATIONS };
 
 /**
  * The chat page is a pure view over lib/chat-session.js. It owns no
