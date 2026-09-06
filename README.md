@@ -89,6 +89,14 @@ Note that Google's own free tier is roughly **20 requests a day** for the Flash
 models, well below what this site's per-visitor allowance would permit — which
 is exactly why the overflow tier exists.
 
+### Where definitions come from
+
+**The RAE, always** — that is the point of the page, and the Spanish wording is
+the authoritative text. Wiktionary appears in two places and neither replaces
+it: as a short English gloss beside the headword in English mode, and as a
+stand-in only when the RAE itself cannot be reached, in which case the entry
+says so plainly rather than letting the authority change silently.
+
 ### Where example sentences come from
 
 Not from a model. Asking a frontier model to write one short sentence is absurd
@@ -100,10 +108,21 @@ class looking words up would have exhausted a day's allowance before lunch.
 | Example sentences | [Tatoeba](https://tatoeba.org) — real sentences by native speakers, already paired with English translations (CC BY) | free, unmetered |
 | English glosses | [Wiktionary](https://en.wiktionary.org) (CC BY-SA) | free, unmetered |
 | Definitions | RAE, via rae-api.com | 5,000/day with a key |
+| Translation | MyMemory when its candidates agree, a model when they do not | see below |
 
 A model is woken only when Tatoeba has nothing for a word, and the template
 frame is the last resort after that. Seven lookups across common and uncommon
 words cost **zero** model calls.
+
+The translator is the exception, and deliberately so. MyMemory is a crowd
+translation memory whose stored segments can simply be wrong: *"Buenos días,
+¿cómo estás?"* comes back as *"Good morning Najlaa how are you?"* — a stranger's
+name, at the top confidence score. Neither the quality score nor the source
+segment separates that from a good answer, because the memory genuinely holds
+three different translations of the same sentence. What does separate them is
+**agreement**: when the candidates concur the answer is free and trustworthy;
+when they contradict each other the request goes to a model instead. Results are
+cached, and the pane names the engine that produced each one.
 
 Corpus sentences are attached to the word rather than to a sense, because a
 sentence merely contains the word — it does not promise to illustrate one

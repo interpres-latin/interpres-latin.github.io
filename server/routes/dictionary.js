@@ -198,6 +198,42 @@ router.get('/', async (req, res) => {
   try {
     lookup = await fetchRae(word);
   } catch (error) {
+    // The RAE is the definition. When it cannot be reached, Wiktionary is
+    // better than nothing — but the entry says plainly that it is not the RAE,
+    // because a dictionary that quietly changes authority is worse than one
+    // that admits it is unavailable.
+    const glosses = await wiktionaryGloss(word, 6);
+    if (glosses?.length) {
+      return res.json({
+        word,
+        definitionSource: 'wiktionary',
+        entries: [{
+          origin: '',
+          senses: glosses.map((definition, index) => ({
+            number: index + 1,
+            category: '',
+            verbCategory: '',
+            gender: '',
+            usage: '',
+            description: definition,
+            usageNotes: [],
+            synonyms: [],
+            antonyms: [],
+          })),
+          locutions: [],
+        }],
+        examples: {},
+        exampleSource: null,
+        usage: (await tatoebaExamples(word))?.length
+          ? { sentences: await tatoebaExamples(word), credit: ATTRIBUTION.tatoeba }
+          : null,
+        gloss: null,
+        suggestions: [],
+        raeError: error.message,
+        source: ATTRIBUTION.wiktionary,
+      });
+    }
+
     // Pass a rate limit through as one, so the client can tell "come back
     // later" apart from "the dictionary is broken".
     const status = error.status === 429 ? 429 : 502;
@@ -247,6 +283,7 @@ router.get('/', async (req, res) => {
 
   const payload = {
     word: lookup.data.word,
+    definitionSource: 'rae',
     entries,
     examples,
     exampleSource,

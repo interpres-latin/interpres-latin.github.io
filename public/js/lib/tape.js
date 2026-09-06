@@ -50,9 +50,24 @@ export function sealWithTape(panel, { title, detail, note, prompt = null, dismis
       field,
       el('button', { class: 'btn btn--primary btn--sm', type: 'submit' }, prompt.submit));
 
-    form.addEventListener('submit', (event) => {
+    const submit = form.querySelector('button');
+
+    // Awaited: a passcode that has to be checked by the server was previously
+    // reported wrong the instant it was typed, then quietly accepted.
+    form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (prompt.onSubmit(field.value)) {
+      if (submit.disabled) return;
+
+      submit.disabled = true;
+      error.textContent = '';
+      let accepted = false;
+      try {
+        accepted = await prompt.onSubmit(field.value);
+      } finally {
+        submit.disabled = false;
+      }
+
+      if (accepted) {
         cleanup?.();
         return;
       }

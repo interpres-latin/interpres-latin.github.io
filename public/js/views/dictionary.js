@@ -130,9 +130,18 @@ function renderMiss(word, error, search) {
 function renderEntry(data, search) {
   const wrap = el('article', { class: 'entry' });
 
+  const fromRae = data.definitionSource !== 'wiktionary';
+
   wrap.appendChild(el('div', { class: 'entry__head' },
     el('h2', {}, data.word),
-    el('a', { class: 'chip', href: data.source.url, target: '_blank', rel: 'noopener' }, t('dictionary.seeOnRae'))));
+    fromRae
+      ? el('a', { class: 'chip', href: data.source.url, target: '_blank', rel: 'noopener' }, t('dictionary.seeOnRae'))
+      : el('a', { class: 'chip chip--warn', href: data.source.url, target: '_blank', rel: 'noopener' }, data.source.name)));
+
+  // Never let the authority change silently.
+  if (!fromRae) {
+    wrap.appendChild(el('p', { class: 'notice' }, t('dictionary.notRae')));
+  }
 
   // A short English gloss, where the RAE gives only Spanish.
   if (data.gloss?.senses?.length) {

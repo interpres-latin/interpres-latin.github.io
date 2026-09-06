@@ -214,6 +214,10 @@ export const STRINGS = {
     antonyms: two('Antónimos', 'Antonyms'),
     locutions: two('Locuciones y expresiones', 'Phrases and expressions'),
     inUse: two('En uso', 'In use'),
+    notRae: two(
+      'El diccionario de la RAE no está disponible ahora mismo, así que estas definiciones vienen de Wiktionary, no de la RAE.',
+      'The RAE dictionary is unavailable right now, so these definitions come from Wiktionary, not the RAE.',
+    ),
     templateNote: two(
       'Ejemplo de plantilla — configura una clave gratuita para generar frases reales.',
       'Template example — add a free API key to generate real sentences.',

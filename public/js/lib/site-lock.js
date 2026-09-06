@@ -49,13 +49,16 @@ function applyState(next) {
       placeholder: t('lock.passcode'),
       submit: t('tape.unlock'),
       wrong: t('lock.wrong'),
-      onSubmit: (value) => {
-        // Fire and forget: the poll below takes the tape down once the server
-        // agrees, so a wrong code simply leaves it up.
-        postJson('/api/lock', { passcode: value, locked: false })
-          .then((state) => applyState(Boolean(state.locked)))
-          .catch(() => {});
-        return false;
+      onSubmit: async (value) => {
+        try {
+          const state = await postJson('/api/lock', { passcode: value, locked: false });
+          locked = Boolean(state.locked);
+          paintButton();
+          if (!locked) unseal = null;
+          return !locked;
+        } catch {
+          return false;
+        }
       },
     },
   });
