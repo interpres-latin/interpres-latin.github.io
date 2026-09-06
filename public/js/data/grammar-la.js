@@ -227,6 +227,54 @@ Adjectives in *-er* form the superlative in *-rimus* (*celer → celerrimus*), a
 
 Second and third look identical without macrons, so the **first** part separates them: a second conjugation verb ends *-eo* (*moneo*), a third *-io* verb ends *-io* (*capio*), and everything else in *-o* is plain third.`),
 
+  topic('conjugations', ['conjugations', 'five conjugations', 'which conjugation', '3rd io', 'third io',
+    'io verbs', 'capio', 'mixed conjugation', 'how to conjugate 3rd-io', 'how do you conjugate'],
+    'Coniugationes', 'The five conjugations', `Every Latin verb belongs to one of five patterns, and the **second principal part** says which.
+
+| | infinitive | example | present stem |
+| --- | --- | --- | --- |
+| 1st | **-are** | amo, amare | ama- |
+| 2nd | **-ere** (long e) | moneo, monere | mone- |
+| 3rd | **-ere** (short e) | rego, regere | reg- |
+| 3rd **-io** | **-ere** | capio, capere | cap- |
+| 4th | **-ire** | audio, audire | audi- |
+
+Three of them end *-ere* and macrons are not printed, so the infinitive alone cannot tell them apart. The **first** principal part can, and this is the test to memorise:
+
+- ends **-eo** → second conjugation (*moneo, video, habeo, teneo*)
+- ends **-io** *with* an *-ere* infinitive → third **-io** (*capio, facio, fugio*)
+- ends **-o** otherwise → plain third (*rego, dico, mitto*)
+
+### The third -io conjugation
+
+It is the awkward one, and the awkwardness is worth stating plainly: **it looks like the fourth in some forms and the third in others.** The rule is that the *i* survives wherever the fourth conjugation would have one, and disappears where the third conjugation has a short vowel.
+
+| | 3rd *rego* | 3rd -io *capio* | 4th *audio* |
+| --- | --- | --- | --- |
+| I | reg**o** | cap**io** | aud**io** |
+| you | reg**is** | cap**is** | aud**is** |
+| he | reg**it** | cap**it** | aud**it** |
+| we | reg**imus** | cap**imus** | aud**imus** |
+| you (pl.) | reg**itis** | cap**itis** | aud**itis** |
+| they | reg**unt** | cap**iunt** | aud**iunt** |
+
+So *capio* is **exactly like *rego*** except in the first person singular and the third person plural, where the *i* comes back.
+
+Everywhere else the *i* stays:
+- imperfect — *capiebam* (like *audiebam*, not *regebam*)
+- future — *capiam, capies* (like *audiam*, not *regam, reges*… which happens to look the same in the first person and different after)
+- present subjunctive — *capiam, capias*
+- present participle — *capiens*
+- gerundive — *capiendus*
+
+And it drops out in the two places the third conjugation is bare:
+- imperfect subjunctive — *caperem*, from the infinitive *capere*
+- imperative — *cape*, *capite*
+
+**The verbs worth knowing** are common enough that you will meet them constantly: *capio* (take), *facio* (make, do), *fugio* (flee), *iacio* (throw), *rapio* (seize), *cupio* (desire), *accipio* (receive), *conspicio* (catch sight of), *incipio* (begin), *interficio* (kill).
+
+Note that most compounds of *facio* and *capio* weaken the vowel: *facio → perficio, efficio, reficio*; *capio → accipio, incipio, recipio*.`),
+
   topic('present-tense', ['present', 'present tense', 'praesens'],
     'Tempus praesens', 'The present tense', `Formed on the present stem, which is the infinitive minus its ending.
 

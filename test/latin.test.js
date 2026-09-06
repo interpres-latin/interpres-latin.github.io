@@ -208,6 +208,48 @@ ok('and says why', conjugate('canis').error === 'needs-principal-parts', conjuga
 ok('a non-verb is refused', !conjugate('puella, puellae').ok);
 ok('empty input is refused', !conjugate('').ok);
 
+// === THE TRANSLATOR'S NUMBER TEST =========================================
+// A verbless phrase has a nominative head — but in the number the English is
+// in. Without this "boy" comes back as *pueri*: nominative, and plural.
+const { expectedNumber } = await import('../server/latin-check.js');
+for (const [source, expected] of [
+  ['boy', 'singular'],
+  ['the boy', 'singular'],
+  ['boys', 'plural'],
+  ['the boys', 'plural'],
+  ['the dog of the girl', 'singular'],
+  ['the dogs of the girl', 'plural'],
+  ['the dog of the girls', 'singular'],
+  ['the king', 'singular'],
+  ['the kings', 'plural'],
+  ['the children', 'plural'],
+  ['the men', 'plural'],
+  ['the glass', 'singular'],
+  ['the city', 'singular'],
+]) {
+  ok(`"${source}" is ${expected}`, expectedNumber(source) === expected, expectedNumber(source));
+}
+
+// === THE COURSE VOCABULARY ================================================
+const { STAGES, STAGE_NUMBERS, allWords, findStage } = await import('../public/js/data/stages-la.js');
+ok('three books are seeded', STAGE_NUMBERS.length === 28, `${STAGE_NUMBERS.length} stages`);
+ok('they run 1 to 28 with no gaps',
+  STAGE_NUMBERS.every((n, i) => n === i + 1), STAGE_NUMBERS.join(','));
+ok('every stage has a title', STAGE_NUMBERS.every((n) => Boolean(STAGES[n].title)));
+ok('every stage has a setting', STAGE_NUMBERS.every((n) => Boolean(STAGES[n].setting)));
+ok('every stage has at least fifteen words', STAGE_NUMBERS.every((n) => STAGES[n].words.length >= 15));
+ok('every entry is a Latin/English pair',
+  STAGE_NUMBERS.every((n) => STAGES[n].words.every((w) => w.length === 2 && w[0].trim() && w[1].trim())));
+for (const number of STAGE_NUMBERS) {
+  const latin = STAGES[number].words.map(([word]) => word);
+  ok(`stage ${number} has no repeats`, new Set(latin).size === latin.length,
+    latin.filter((w, i) => latin.indexOf(w) !== i).join(', '));
+}
+ok('the whole course is searchable', allWords().length > 500, `${allWords().length} entries`);
+ok('a book II stage is there', findStage('17')?.title === 'Alexandria');
+ok('a book III stage is there', findStage('26')?.title === 'Agricola');
+ok('and nothing beyond', findStage('29') === null);
+
 // --- report ----------------------------------------------------------------
 if (failures.length) {
   console.error(`\n✗ ${failures.length} of ${checked} Latin engine checks failed:\n`);

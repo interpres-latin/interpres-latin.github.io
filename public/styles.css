@@ -582,6 +582,58 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .mood { margin-bottom: 38px; }
 .mood__title { font-family: var(--sans); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-faint); font-weight: 500; padding-bottom: 10px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
 
+/* --- a control that opens a menu when it is already the active one --------
+   Used by the declension tabs (a second click offers the neuter paradigm) and
+   by the language switch (a second click offers the other subjects). Flat,
+   hairline, square — it is a menu, not a popover. */
+.tabmenu { position: relative; display: inline-flex; }
+.tabmenu__caret { margin-left: 6px; opacity: 0.55; }
+.tabmenu__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  min-width: 208px;
+  border: 1px solid var(--line-hi);
+  background: var(--bg-raised);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tabmenu__title { margin: 2px 6px 6px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
+.tabmenu__list button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13.5px;
+  padding: 7px 8px;
+  cursor: pointer;
+}
+.tabmenu__list button:hover { background: var(--panel-hi); }
+.tabmenu__list button em { font-style: normal; font-size: 11.5px; color: var(--text-faint); }
+.tabmenu__list button.is-active { color: var(--accent); }
+/* The language switch is at the right of the header, so its menu hangs from
+   that edge rather than running off the page. */
+.tabmenu__list--right { left: auto; right: 0; }
+.langswitch .tabmenu { display: inline-flex; }
+
+/* Tables inside a grammar note or a chat reply. Lighter than the conjugation
+   tables — no sticky column, no minimum width — because they sit inside prose
+   and are usually three columns of endings rather than a whole paradigm. */
+table.md-table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+table.md-table th, table.md-table td { padding: 7px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.md-table tr:last-child td { border-bottom: 0; }
+table.md-table thead th { background: var(--bg-raised); font-family: var(--sans); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.02em; color: var(--text-dim); white-space: nowrap; }
+table.md-table tbody td:first-child { color: var(--text-dim); white-space: nowrap; }
+.msg__body .tablewrap, .chat .tablewrap { margin: 10px 0 14px; }
+
 .tablewrap { overflow-x: auto; border: 1px solid var(--line); background: var(--panel); }
 
 table.conj { border-collapse: collapse; width: 100%; min-width: 940px; font-size: 14px; }

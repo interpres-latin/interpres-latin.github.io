@@ -15,6 +15,7 @@
 
 import { conjugate, PERSONS, PERSON_LABELS } from './conjugator-la.js';
 import { declineNoun, declineAdjective, parseParts, CASE_ORDER } from './decliner-la.js';
+import { resolveLatinWord } from './latin-lookup.js';
 import { COMMON_VERBS, IRREGULARS, MODEL_VERBS } from '../data/verbs-la.js';
 import { TOPICS, SMALL_TALK, EXCLAMATIONS } from '../data/grammar-la.js';
 import { findStage, PROVENANCE, STAGE_NUMBERS } from '../data/stages-la.js';
@@ -62,39 +63,41 @@ const TENSE_LABELS = {
 // ---------------------------------------------------------------------------
 
 /**
- * Whether a word is a noun or an adjective, and its gender.
+ * A declension table, as blocks the chat can render.
  *
- * Their dictionary forms are not distinguishable: *rex, regis* is a noun and
- * *ingens, ingentis* is an adjective, and nothing in the shape says which. So
- * the tutor asks Whitaker's rather than guessing, and only falls back on the
- * shape when the lookup cannot be reached.
+ * The dictionary settles three things the shape of the input cannot: whether a
+ * word is a noun or an adjective (*rex, regis* and *ingens, ingentis* look
+ * alike), what its gender is, and — when only the nominative was given — what
+ * its genitive is. It also refuses a wrong one: *puer, pueris* would otherwise
+ * decline as a third declension noun and produce a table of forms that do not
+ * exist. See lib/latin-lookup.js.
  */
-async function identify(lemma) {
-  const data = await getJson(`/api/dictionary?word=${encodeURIComponent(lemma)}&study=la`).catch(() => null);
-  const senses = data?.entries?.[0]?.senses ?? [];
-  const noun = senses.find((sense) => sense.category === 'noun');
-  const adjective = senses.find((sense) => sense.category === 'adjective');
-  if (noun) return { kind: 'noun', gender: noun.gender || '' };
-  if (adjective) return { kind: 'adjective', gender: '' };
-  return null;
-}
-
-/** A declension table, as blocks the chat can render. */
 async function declensionBlocks(word, { asked = '' } = {}) {
-  const parts = parseParts(word);
-  if (parts.length < 2) return null;
+  const resolved = await resolveLatinWord(word);
 
-  // Three parts can only be an adjective; otherwise the reader may have said
-  // which, and failing that the dictionary is asked.
-  let kind = parts.length >= 3 ? 'adjective' : '';
-  let gender = '';
-  if (!kind && /adjective/i.test(asked)) kind = 'adjective';
-  if (!kind && /noun/i.test(asked)) kind = 'noun';
-  if (!kind) {
-    const identified = await identify(parts[0]);
-    kind = identified?.kind ?? '';
-    gender = identified?.gender ?? '';
+  if (!resolved.ok) {
+    if (resolved.error === 'wrong-genitive') {
+      return [{
+        type: 'md',
+        text: `The genitive of **${resolved.lemma}** is **${resolved.expected}**, not what you typed — so I can't decline that. Try *${resolved.lemma}, ${resolved.expected}*.`,
+      }];
+    }
+    if (resolved.error === 'unknown') {
+      // Answer the question that was asked. Falling through here sent
+      // "decline boy" to the dictionary, which looked up *decline*.
+      return [{
+        type: 'md',
+        text: `I don't know the Latin word **${parseParts(word)[0] ?? word}**. If it is a noun, give the genitive too — *puella, puellae* — and I can decline it from that.`,
+      }];
+    }
+    return null;
   }
+
+  const { parts } = resolved;
+  const gender = resolved.gender || '';
+  let kind = resolved.kind;
+  if (/adjective/i.test(asked)) kind = 'adjective';
+  if (/noun/i.test(asked)) kind = 'noun';
 
   const asNoun = () => {
     const noun = declineNoun(parts[0], parts[1], gender);
@@ -105,18 +108,21 @@ async function declensionBlocks(word, { asked = '' } = {}) {
     return adjective.ok ? { result: adjective, kind: 'adjective' } : null;
   };
 
-  // Two dictionary parts are a noun far more often than an adjective, so that
-  // is the order when the lookup could not settle it.
   const order = kind === 'adjective' ? [asAdjective, asNoun] : [asNoun, asAdjective];
   const found = order.reduce((carry, attempt) => carry ?? attempt(), null);
   if (!found) return null;
   const { result } = found;
   kind = found.kind;
 
+  // Say so when the genitive came from the dictionary rather than the reader.
+  const completed = resolved.completed
+    ? ` *(genitive filled in: ${parts.join(', ')})*`
+    : '';
+
   if (kind === 'adjective') {
     const blocks = [{
       type: 'md',
-      text: `**${parts.join(', ')}** — ${result.family} declension adjective.`,
+      text: `**${parts.join(', ')}** — ${result.family} declension adjective${result.terminations ? `, ${result.terminations}-termination` : ''}.${completed}`,
     }];
     for (const genderName of ['masculine', 'feminine', 'neuter']) {
       const table = result.table[genderName];
@@ -127,13 +133,18 @@ async function declensionBlocks(word, { asked = '' } = {}) {
         rows: CASE_ORDER.map((c) => [c, `${table.singular[c] || '—'} · ${table.plural[c] || '—'}`]),
       });
     }
+    blocks.push({
+      type: 'links',
+      label: 'Full table',
+      items: [{ label: parts[0], href: `/declinationes?n=${encodeURIComponent(parts.join(', '))}` }],
+    });
     return blocks;
   }
 
   return [
     {
       type: 'md',
-      text: `**${result.lemma}, ${result.genitive}** — ${ordinal(result.declension)} declension${result.gender ? `, ${result.gender}` : ''}${result.iStem ? ', i-stem' : ''}. Stem **${result.stem}-**.`,
+      text: `**${result.lemma}, ${result.genitive}** — ${ordinal(result.declension)} declension${result.gender ? `, ${result.gender}` : ''}${result.iStem ? ', i-stem' : ''}. Stem **${result.stem}-**.${completed}`,
     },
     {
       type: 'table',

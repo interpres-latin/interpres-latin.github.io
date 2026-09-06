@@ -14,13 +14,39 @@ import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import {
   CASE_ORDER, declineAdjective, declineNoun, parseParts,
 } from '../lib/decliner-la.js';
+import { resolveLatinWord } from '../lib/latin-lookup.js';
 import { lang, t } from '../lib/i18n.js';
 
-/** One model noun per declension, so the page opens on something. */
+/**
+ * One model per declension.
+ *
+ * The second and third have `variants`, because a neuter of either declines
+ * differently enough to need its own table — nominative, accusative and
+ * vocative fall together, and the nominative plural is -a. Clicking a tab that
+ * is already open offers the choice rather than hiding it behind a search.
+ */
 const MODELS = [
   { key: '1st', parts: 'puella, puellae', gender: 'feminine', gloss: 'girl' },
-  { key: '2nd', parts: 'dominus, domini', gender: 'masculine', gloss: 'master' },
-  { key: '3rd', parts: 'rex, regis', gender: 'masculine', gloss: 'king' },
+  {
+    key: '2nd',
+    parts: 'dominus, domini',
+    gender: 'masculine',
+    gloss: 'master',
+    variants: [
+      { label: 'gendered', parts: 'dominus, domini', gender: 'masculine' },
+      { label: 'neuter', parts: 'bellum, belli', gender: 'neuter' },
+    ],
+  },
+  {
+    key: '3rd',
+    parts: 'rex, regis',
+    gender: 'masculine',
+    gloss: 'king',
+    variants: [
+      { label: 'gendered', parts: 'rex, regis', gender: 'masculine' },
+      { label: 'neuter', parts: 'nomen, nominis', gender: 'neuter' },
+    ],
+  },
   { key: '4th', parts: 'manus, manus', gender: 'feminine', gloss: 'hand' },
   { key: '5th', parts: 'dies, diei', gender: 'masculine', gloss: 'day' },
 ];
@@ -55,18 +81,64 @@ export function renderDeclensions(main) {
   });
 
   const tabs = el('div', { class: 'tabs', role: 'tablist' });
-  const tabButtons = [...MODELS, ADJECTIVE_MODEL].map((model) => {
+  const tabButtons = [];
+
+  for (const model of [...MODELS, ADJECTIVE_MODEL]) {
     const label = model.key === 'adj'
       ? t('declension.adjectives')
       : t('declension.tab', { n: model.key });
+
+    const holder = el('div', { class: 'tabmenu' });
     const button = el('button', {
       type: 'button',
       role: 'tab',
-      onclick: () => { input.value = model.parts; show(model.parts, model.gender); },
-    }, label);
-    tabs.appendChild(button);
-    return [model.parts, button];
-  });
+      onclick: () => {
+        // Clicking a tab that is already open offers its genders rather than
+        // doing nothing — which is the only way to reach a neuter paradigm
+        // without knowing a neuter noun to type.
+        if (model.variants && button.classList.contains('is-active')) {
+          openVariants(holder, model);
+          return;
+        }
+        closeMenus();
+        input.value = model.parts;
+        show(model.parts, model.gender);
+      },
+    }, label, model.variants ? el('span', { class: 'tabmenu__caret' }, '·') : null);
+
+    holder.appendChild(button);
+    tabs.appendChild(holder);
+    tabButtons.push([model.parts, button, model]);
+  }
+
+  function closeMenus() {
+    for (const menu of tabs.querySelectorAll('.tabmenu__list')) menu.remove();
+  }
+
+  function openVariants(holder, model) {
+    if (holder.querySelector('.tabmenu__list')) { closeMenus(); return; }
+    closeMenus();
+
+    const list = el('div', { class: 'tabmenu__list', role: 'menu' },
+      el('p', { class: 'tabmenu__title' }, t('declension.pickGender')),
+      ...model.variants.map((variant) => el('button', {
+        type: 'button',
+        role: 'menuitem',
+        onclick: () => {
+          closeMenus();
+          input.value = variant.parts;
+          show(variant.parts, variant.gender);
+        },
+      }, variant.label === 'neuter' ? t('declension.neuter') : t('declension.gendered'),
+      el('em', {}, variant.parts))));
+
+    holder.appendChild(list);
+  }
+
+  const onOutsideTab = (event) => {
+    if (!event.target.closest('.tabmenu')) closeMenus();
+  };
+  document.addEventListener('click', onOutsideTab);
 
   main.append(wallpaper, el('div', { class: 'page shell' },
     el('div', { class: 'page__head' },
@@ -88,41 +160,40 @@ export function renderDeclensions(main) {
    * ingentis* — so where two parts could be either, the dictionary is asked.
    */
   async function show(raw, knownGender = '') {
-    const parts = parseParts(raw);
-    if (parts.length < 2) {
+    const ticket = (state.request += 1);
+    // The dictionary fills in a missing genitive and refuses a wrong one —
+    // *puer, pueris* is not a word, and declining it would produce a whole
+    // table of forms that do not exist. See lib/latin-lookup.js.
+    const resolved = await resolveLatinWord(raw);
+    if (ticket !== state.request) return;
+
+    if (!resolved.ok) {
       clear(results);
       results.appendChild(el('div', { class: 'empty' },
         el('h3', {}, t('declension.notANoun')),
-        el('p', {}, t('declension.needsGenitive'))));
+        el('p', {}, resolved.error === 'wrong-genitive'
+          ? t('declension.wrongGenitive', { lemma: resolved.lemma, expected: resolved.expected })
+          : resolved.error === 'unknown'
+            ? t('declension.unknown')
+            : t('declension.needsGenitive'))));
       return;
     }
 
-    for (const [parts_, button] of tabButtons) {
-      button.classList.toggle('is-active', parseParts(parts_).join() === parts.join());
+    const { parts } = resolved;
+    const gender = knownGender || resolved.gender || '';
+
+    for (const [parts_, button, model] of tabButtons) {
+      const own = [parts_, ...(model.variants ?? []).map((variant) => variant.parts)];
+      button.classList.toggle('is-active', own.some((candidate) => parseParts(candidate).join() === parts.join()));
     }
 
     const url = new URL(window.location.href);
     url.searchParams.set('n', parts.join(', '));
     history.replaceState({}, '', url.pathname + url.search);
 
-    let gender = knownGender;
-    let kind = parts.length >= 3 ? 'adjective' : '';
-
-    if (!kind || !gender) {
-      const ticket = (state.request += 1);
-      const data = await getJson(`/api/dictionary?word=${encodeURIComponent(parts[0])}&study=la`)
-        .catch(() => null);
-      if (ticket !== state.request) return;
-      const senses = data?.entries?.[0]?.senses ?? [];
-      const noun = senses.find((sense) => sense.category === 'noun');
-      const adjective = senses.find((sense) => sense.category === 'adjective');
-      if (!kind) kind = noun ? 'noun' : adjective ? 'adjective' : '';
-      if (!gender && noun) gender = noun.gender || '';
-    }
-
     const asNoun = () => { const r = declineNoun(parts[0], parts[1], gender); return r.ok ? r : null; };
     const asAdjective = () => { const r = declineAdjective(parts); return r.ok ? r : null; };
-    const order = kind === 'adjective' ? [asAdjective, asNoun] : [asNoun, asAdjective];
+    const order = resolved.kind === 'adjective' ? [asAdjective, asNoun] : [asNoun, asAdjective];
     const result = order.reduce((carry, attempt) => carry ?? attempt(), null);
 
     clear(results);
@@ -133,6 +204,13 @@ export function renderDeclensions(main) {
       return;
     }
 
+    // Say so when the genitive was supplied rather than typed, so nobody is
+    // left wondering where the second word came from.
+    if (resolved.completed) {
+      results.appendChild(el('p', { class: 'notice' },
+        t('declension.completed', { parts: parts.join(', ') })));
+    }
+
     results.appendChild(result.family ? adjectiveCard(result, parts) : nounCard(result, gender));
   }
 
@@ -140,7 +218,10 @@ export function renderDeclensions(main) {
   show(requested || MODELS[0].parts, requested ? '' : MODELS[0].gender);
 
   const stopWallpaper = startWallpaper(wallpaper, results);
-  return () => stopWallpaper();
+  return () => {
+    document.removeEventListener('click', onOutsideTab);
+    stopWallpaper();
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -3,7 +3,11 @@
  * reaches innerHTML, so model output cannot inject markup.
  *
  * Blocks: fenced code, ATX headings, blockquotes, unordered and ordered lists,
- * paragraphs. Inline: **bold**, *italic*, `code`, [text](url).
+ * tables, paragraphs. Inline: **bold**, *italic*, `code`, [text](url).
+ *
+ * Tables earn their place: the grammar notes are half endings, and a table of
+ * them collapsed into a paragraph — which is what happened before this
+ * understood them — is unreadable in exactly the place a reader needs it most.
  */
 
 const INLINE = /(\*\*[^*]+\*\*|\*[^*\n]+\*|_[^_\n]+_|`[^`]+`|\[[^\]]+\]\([^)\s]+\))/g;
@@ -85,6 +89,41 @@ export function renderMarkdown(source, target) {
       continue;
     }
 
+    // | case | sg. | pl. |
+    // | --- | --- | --- |
+    // A table is a header row followed by a row of dashes; without the second
+    // it is just a line with pipes in it and stays a paragraph.
+    if (line.trim().startsWith('|') && /^\s*\|[\s:|-]*-[\s:|-]*\|\s*$/.test(lines[index + 1] ?? '')) {
+      closeList();
+      const cells = (row) => row.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim());
+
+      const table = node('table');
+      table.className = 'md-table';
+      const head = node('thead');
+      const headRow = node('tr');
+      for (const cell of cells(line)) headRow.appendChild(inline(cell, node('th')));
+      head.appendChild(headRow);
+      table.appendChild(head);
+
+      index += 2;
+      const body = node('tbody');
+      while (index < lines.length && lines[index].trim().startsWith('|')) {
+        const row = node('tr');
+        for (const cell of cells(lines[index])) row.appendChild(inline(cell, node('td')));
+        body.appendChild(row);
+        index += 1;
+      }
+      table.appendChild(body);
+
+      // Wrapped so a wide table scrolls inside itself rather than pushing the
+      // page sideways — the same wrapper the conjugation tables use.
+      const wrap = node('div');
+      wrap.className = 'tablewrap';
+      wrap.appendChild(table);
+      target.appendChild(wrap);
+      continue;
+    }
+
     const bullet = /^\s*[-*+]\s+(.*)$/.exec(line);
     const ordered = /^\s*\d+[.)]\s+(.*)$/.exec(line);
     if (bullet || ordered) {
@@ -109,6 +148,7 @@ export function renderMarkdown(source, target) {
     const buffer = [];
     while (index < lines.length && lines[index].trim()
       && !/^(#{1,6}\s|>|\s*[-*+]\s|\s*\d+[.)]\s)/.test(lines[index])
+      && !lines[index].trim().startsWith('|')
       && !lines[index].trimStart().startsWith('```')) {
       buffer.push(lines[index]);
       index += 1;

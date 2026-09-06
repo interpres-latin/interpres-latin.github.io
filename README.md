@@ -255,6 +255,19 @@ regard to case or surrounding spaces.
 The lock is held in memory, so restarting the server clears it — a deliberate
 failsafe against being locked out by a process nobody is watching.
 
+### Switching subject
+
+Two ways, and both stay.
+
+**`mode: latin`** in the translator, which is how the other languages are
+reached too and how they were meant to be found — by knowing the phrase.
+
+**Clicking the language button when it is already the active one**, which opens
+a menu of the three subjects. The same gesture the declension tabs use for their
+genders: a control that is already on does something else rather than nothing.
+The typed command is the hidden way in; this is the way back out for anyone who
+found it by accident.
+
 ### Site language
 
 The interface is Spanish. The **ES / EN** switch in the header offers English
@@ -465,10 +478,10 @@ side does, plus the things Latin needs and a modern language does not.
 | the header switch | **LA \| EN**, starting in **English**, and **neither side is gated** |
 | the conjugator | five conjugations, active and passive, from the principal parts |
 | **a declensions page** | the five noun declensions and the adjectives, in every case |
-| **a stages page** | the Cambridge Latin Course vocabulary, by stage |
+| **a stages page** | the Cambridge Latin Course vocabulary, stages 1–28 |
 | the dictionary | Whitaker's Words: principal parts, and every reading of the form |
 | the translator | every Latin word parsed, and the case corrected where it is wrong |
-| the tutor | 25 grammar topics, answering **in English** |
+| the tutor | 26 grammar topics, answering **in English** |
 
 **The interface starts in English and the passcode is gone.** English is the
 working language of a Latin lesson rather than a way round it, so there is
@@ -537,6 +550,15 @@ Nothing is invented and nothing is guessed. Where the construction is not
 unambiguous the translation is left alone and the parse is shown instead, which
 is the honest half of the same idea.
 
+**The number has to match too.** A nominative is not enough: *boy* came back as
+*pueri*, which is nominative — and plural. So the English head noun's number is
+read first, and the correction is to the nominative *singular* or *plural* as
+the source requires. *boy* → **puer**, *boys* → **pueri**.
+
+Whitaker's does not analyse most of the personal pronouns — *ego*, *tu*, *nos*,
+*vos* all come back empty — so those are allowed through by name rather than
+flagged as not being Latin.
+
 Apertium has no Latin pair either, so the chain is Wikipedia → Lingva →
 MyMemory, as it is for French. Lingva handles Latin well; MyMemory does not.
 
@@ -571,8 +593,19 @@ The rules that took the care:
 
 Nouns and adjectives from their dictionary form, because **the genitive is what
 says which declension a noun is and what its stem will be**. That is why a
-dictionary quotes it and why this engine asks for it: given only *rex* there is
-genuinely no answer, and the page says so.
+dictionary quotes it and why the engine needs it.
+
+You do not have to know it, though. Give the nominative alone and the dictionary
+supplies the rest — *rex* becomes *rex, regis* and the page says where the second
+word came from. Give a **wrong** one and it refuses: *puer, pueris* is not a
+word, puer's genitive is *pueri*, and declining it as a third declension noun
+would produce a whole table of forms that do not exist. See
+`public/js/lib/latin-lookup.js`.
+
+The tabs cover the five declensions and the adjectives. **Clicking a tab that is
+already open offers its genders** — a second and third declension neuter decline
+differently enough to need their own table, and there is otherwise no way to
+reach one without knowing a neuter noun to type.
 
 The third declension is the awkward one, as it is for a student. **i-stems**
 differ in four cells and are detected by the three rules a textbook gives —
@@ -596,10 +629,14 @@ tells you which stage it came from.
 
 **Be clear about what this data is.** The course publishes no vocabulary data
 and its stage checklists are not available as a file, so these lists are
-**hand-compiled**. The Latin and the meanings are standard and every word is
-verified against Whitaker's; but *which stage a word first appears in* is
-knowledge of the course rather than a copy of the book. Stages 1–12 — Book I —
-are seeded, because that is where the knowledge is soundest. Later books are
+**hand-compiled**. The Latin and the meanings are standard — 499 of the 503
+distinct words are verified against Whitaker's, the four exceptions being
+pronouns it does not analyse — but *which stage a word first appears in* is
+knowledge of the course rather than a copy of the book.
+
+**Stages 1–28 are seeded: Books I, II and III.** Confidence falls as the numbers
+rise. Book I is soundest; the later lists are drawn from the stories rather than
+from a checklist, so a word may sit a stage early or late. Books IV and V are
 left out rather than guessed at.
 
 The page says as much, on the page, where a reader revising for a test will see
@@ -719,6 +756,7 @@ public/
     lib/conjugator-la.js ·la the Latin one: five conjugations, both voices,
                              built from the principal parts
     lib/decliner-la.js ·la the five declensions, and the adjectives
+    lib/latin-lookup.js ·la fills in a missing genitive, refuses a wrong one
     lib/network.js      the hero node network
     lib/markdown.js     DOM-building markdown renderer (no innerHTML)
     lib/tutor.js        intent routing for the chat — shared by both languages
@@ -737,16 +775,18 @@ public/
     data/grammar-fr.js ·fr 20 more, French and English
     data/verbs.js       stem changes, irregulars, the search index
     data/verbs-fr.js ·fr irregulars, the -er spelling exceptions, 232 verbs
-    data/grammar-la.js ·la 25 more, English only — see The Latin side
+    data/grammar-la.js ·la 26 more, English only — see The Latin side
     data/verbs-la.js ·la principal parts, irregulars, deponents, 133 verbs
-    data/stages-la.js ·la the course vocabulary, hand-compiled, Book I
+    data/stages-la.js ·la the course vocabulary, hand-compiled, Books I–III
     views/              one module per page, driven by the study language
     views/declensions.js ·la the five declensions
     views/stages.js  ·la vocabulary by stage
 test/
   conjugator.test.js       204 reference forms checked against RAE paradigms
   conjugator-fr.test.js ·fr 163 checked against the Bescherelle paradigms
-  latin.test.js         ·la 121 on the declension and conjugation engines
+  latin.test.js         ·la 172 on the declension and conjugation engines, the
+                                number a corrected case takes, and the course data
+  markdown.test.js          20 on the renderer, mostly that tables are tables
   conjugator-view.test.js  981 that the page's tense lists match every engine,
                                and that every verb in every index conjugates
   tutor.test.js             52 checks on intent routing and the form index
@@ -761,7 +801,7 @@ test/
   openrouter.test.js        20 checks on the guards that keep OpenRouter free
 ```
 
-`npm test` runs all 1,748, offline, in a couple of seconds.
+`npm test` runs all 1,819, offline, in a couple of seconds.
 
 ## The conjugation engine
 

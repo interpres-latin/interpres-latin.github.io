@@ -826,6 +826,20 @@ const LATIN = {
       'Scribe etiam genetivum — “puella, puellae”. Sine eo declinatio ignota est.',
       'Give the genitive too — “puella, puellae”. Without it the declension is unknowable.',
     ),
+    wrongGenitive: latine(
+      'Genetivus verbi “{lemma}” est “{expected}”, non id quod scripsisti.',
+      'The genitive of “{lemma}” is “{expected}”, not what you typed.',
+    ),
+    unknown: latine(
+      'Hoc verbum in lexico non est. Scribe et nominativum et genetivum.',
+      'The dictionary does not have that word. Give both the nominative and the genitive.',
+    ),
+    completed: latine(
+      'Genetivum ex lexico addidi: {parts}.',
+      'Genitive filled in from the dictionary: {parts}.',
+    ),
+    gendered: latine('masculinum / femininum', 'masculine / feminine'),
+    pickGender: latine('Elige genus', 'Choose a gender'),
     iStem: latine('stirps in -i', 'i-stem'),
     stem: latine('stirps', 'stem'),
     cases: latine('Casus', 'Cases'),
