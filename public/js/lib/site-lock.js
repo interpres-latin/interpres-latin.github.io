@@ -9,7 +9,7 @@
  * student who knows it is not stranded.
  */
 
-import { el, clear, getJson, postJson } from './dom.js';
+import { el, clear, icon, ICONS, getJson, postJson } from './dom.js';
 import { t } from './i18n.js';
 import { sealWithTape } from './tape.js';
 
@@ -21,7 +21,8 @@ let button = null;
 
 function paintButton() {
   if (!button) return;
-  button.textContent = locked ? '🔒' : '🔓';
+  clear(button);
+  button.appendChild(icon(locked ? ICONS.lock : ICONS.unlock, { size: 17 }));
   button.classList.toggle('is-locked', locked);
   button.setAttribute('aria-label', locked ? t('lock.unlockLabel') : t('lock.lockLabel'));
   button.title = locked ? t('lock.unlockLabel') : t('lock.lockLabel');

@@ -169,6 +169,12 @@ remembers. Colours that get painted to canvas — the hero network, the wallpape
 strength — are CSS custom properties the JS reads back, so the palette has a
 single home.
 
+Icons are drawn sprites in `public/js/lib/dom.js`, not emoji or text glyphs:
+those render differently on every platform and the hairline ☀/☾ characters
+disappeared against the header. Solid bodies with stroked details, because an
+all-outline padlock turns to mush at the 16px they run at. Each was rendered at
+real size in both palettes before being wired in.
+
 **Inter** throughout — headings uppercase at weight 700 with `letter-spacing:
 -0.03em`. A system monospace is kept only for literal code inside chat replies.
 Flat colour: no gradients, no rounded corners.

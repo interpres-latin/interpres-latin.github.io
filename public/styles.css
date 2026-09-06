@@ -227,8 +227,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
   border: 1px solid var(--line-hi);
   background: transparent;
   color: var(--text-dim);
-  font-size: 15px;
-  line-height: 1;
+  display: grid;
+  place-items: center;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
@@ -268,8 +268,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
   height: 34px;
   padding: 0;
   cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
+  display: grid;
+  place-items: center;
   flex: none;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }

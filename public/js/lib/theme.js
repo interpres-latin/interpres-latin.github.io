@@ -9,6 +9,8 @@
  * `themechange` event and re-reads its colours.
  */
 
+import { clear, icon, ICONS } from './dom.js';
+
 const KEY = 'profegpt:theme';
 
 export function currentTheme() {
@@ -43,7 +45,9 @@ export function mountThemeToggle(button) {
     const dark = currentTheme() === 'dark';
     button.setAttribute('aria-label', dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
     button.title = dark ? 'Modo claro' : 'Modo oscuro';
-    button.textContent = dark ? '☾' : '☀';
+    // The icon shows where the button takes you, matching its label.
+    clear(button);
+    button.appendChild(icon(dark ? ICONS.sun : ICONS.moon, { size: 17 }));
   };
 
   button.addEventListener('click', () => { toggleTheme(); paint(); });
