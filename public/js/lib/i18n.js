@@ -84,7 +84,7 @@ export const STRINGS = {
   },
 
   meta: {
-    home: two('ProfeGPT — español, sin fricción', 'ProfeGPT — Spanish, without the friction'),
+    home: two('ProfeGPT', 'ProfeGPT'),
     skip: two('Saltar al contenido', 'Skip to content'),
     footer: two('definiciones del', 'definitions from the'),
     copyright: two('© Yuzhe (Julian) Chen 2026', '© Yuzhe (Julian) Chen 2026'),
