@@ -213,6 +213,7 @@ export const STRINGS = {
     synonyms: two('Sinónimos', 'Synonyms'),
     antonyms: two('Antónimos', 'Antonyms'),
     locutions: two('Locuciones y expresiones', 'Phrases and expressions'),
+    inUse: two('En uso', 'In use'),
     templateNote: two(
       'Ejemplo de plantilla — configura una clave gratuita para generar frases reales.',
       'Template example — add a free API key to generate real sentences.',

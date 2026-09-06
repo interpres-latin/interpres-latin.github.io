@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node test/conjugator.test.js && node test/tutor.test.js && node test/quota.test.js && node test/identity.test.js && node test/openrouter.test.js"
+    "test": "node test/conjugator.test.js && node test/tutor.test.js && node test/quota.test.js && node test/identity.test.js && node test/corpus.test.js && node test/openrouter.test.js"
   },
   "engines": {
     "node": ">=20"

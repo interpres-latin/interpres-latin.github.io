@@ -575,6 +575,15 @@ table.conj td.is-empty { color: var(--text-faint); }
 .entry__head h2 { font-size: 38px; }
 .entry__origin { color: var(--text-dim); font-size: 13.5px; font-style: italic; margin: 0 0 28px; }
 
+.entry__gloss { margin: 0 0 20px; font-size: 16px; color: var(--text-dim); }
+
+.usage { margin: 4px 0 28px; }
+.usage__item { padding: 12px 14px; border-left: 2px solid var(--es); background: var(--panel); margin-bottom: 8px; }
+.usage__item p { margin: 0; font-size: 15px; }
+.usage__item p + p { margin-top: 5px; color: var(--text-dim); font-size: 13px; }
+.usage__credit { margin: 0; font-size: 11.5px; color: var(--text-faint); }
+.usage__credit a { color: var(--text-dim); }
+
 .sense { display: grid; grid-template-columns: 34px 1fr; gap: 14px; padding: 18px 0; border-top: 1px solid var(--line); }
 .sense__num { font-family: var(--sans); font-weight: 700; font-size: 16px; color: var(--text-faint); }
 .sense__tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }

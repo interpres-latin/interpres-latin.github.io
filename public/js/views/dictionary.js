@@ -134,6 +134,24 @@ function renderEntry(data, search) {
     el('h2', {}, data.word),
     el('a', { class: 'chip', href: data.source.url, target: '_blank', rel: 'noopener' }, t('dictionary.seeOnRae'))));
 
+  // A short English gloss, where the RAE gives only Spanish.
+  if (data.gloss?.senses?.length) {
+    wrap.appendChild(el('p', { class: 'entry__gloss' }, data.gloss.senses.join(' · ')));
+  }
+
+  // Sentences from a corpus belong to the word, not to one sense: they contain
+  // it, they do not promise to illustrate a particular meaning.
+  if (data.usage?.sentences?.length) {
+    wrap.appendChild(el('section', { class: 'usage' },
+      el('h3', { class: 'mood__title' }, t('dictionary.inUse')),
+      ...data.usage.sentences.map((sentence) => el('div', { class: 'usage__item' },
+        el('p', {}, sentence.es),
+        sentence.en ? el('p', {}, sentence.en) : null)),
+      el('p', { class: 'usage__credit' },
+        el('a', { href: data.usage.credit.url, target: '_blank', rel: 'noopener' }, data.usage.credit.name),
+        ` · ${data.usage.credit.licence}`)));
+  }
+
   let senseIndex = 0;
 
   data.entries.forEach((entry, entryIndex) => {

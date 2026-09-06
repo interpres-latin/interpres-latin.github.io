@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { ask, hasProvider, parseJson } from '../llm.js';
+import { ATTRIBUTION, tatoebaExamples, wiktionaryGloss } from '../corpus.js';
 
 export const router = Router();
 
@@ -215,20 +216,33 @@ router.get('/', async (req, res) => {
   const entries = (lookup.data.meanings || []).map(normalizeEntry);
   const allSenses = entries.flatMap((entry) => entry.senses);
 
+  // Corpora first: real sentences and a real gloss, free and unmetered.
+  const [usage, gloss] = await Promise.all([
+    tatoebaExamples(lookup.data.word),
+    language === 'en' ? wiktionaryGloss(lookup.data.word) : Promise.resolve(null),
+  ]);
+
   let examples = null;
   let exampleSource = null;
-  try {
-    examples = await generateExamples(lookup.data.word, allSenses, language);
-    if (examples) exampleSource = 'model';
-  } catch (error) {
-    console.warn('[dictionary] example generation failed:', error.message);
-  }
-  if (!examples) {
-    examples = {};
-    for (const sense of allSenses.slice(0, EXAMPLES_PER_WORD)) {
-      examples[sense.number] = templateExample(lookup.data.word, sense);
+
+  // Only when the corpus has nothing is a model worth waking for one sentence.
+  if (!usage?.length) {
+    try {
+      examples = await generateExamples(lookup.data.word, allSenses, language);
+      if (examples) exampleSource = 'model';
+    } catch (error) {
+      console.warn('[dictionary] example generation failed:', error.message);
     }
-    exampleSource = 'template';
+    if (!examples) {
+      examples = {};
+      for (const sense of allSenses.slice(0, EXAMPLES_PER_WORD)) {
+        examples[sense.number] = templateExample(lookup.data.word, sense);
+      }
+      exampleSource = 'template';
+    }
+  } else {
+    examples = {};
+    exampleSource = 'tatoeba';
   }
 
   const payload = {
@@ -236,6 +250,10 @@ router.get('/', async (req, res) => {
     entries,
     examples,
     exampleSource,
+    // Attached to the word rather than to a sense: a corpus sentence contains
+    // the word, it does not promise to illustrate one particular meaning.
+    usage: usage?.length ? { sentences: usage, credit: ATTRIBUTION.tatoeba } : null,
+    gloss: gloss?.length ? { senses: gloss, credit: ATTRIBUTION.wiktionary } : null,
     suggestions: lookup.data.suggestions || [],
     source: { name: 'Real Academia Española · DLE', url: `https://dle.rae.es/${encodeURIComponent(word)}` },
   };

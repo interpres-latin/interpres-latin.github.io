@@ -16,7 +16,7 @@ No build step. The frontend is plain ES modules served straight out of `public/`
 | -------------- | ------------ |
 | `/`            | Hero with an animated node network; the **translator**, whose centre button flips the languages and carries the text across; and a **dictionary search** that opens the dictionary page with your query already applied. |
 | `/conjugacion` | Every tense of the indicative, subjunctive and imperative. Three tabs for the regular **-ar / -er / -ir** models, plus a verb search that conjugates anything you type. Irregular forms are highlighted. |
-| `/diccionario` | Definitions from the *Diccionario de la lengua española*, with senses, synonyms, locutions and an example sentence per sense. The RAE is Spanish-only, so in English mode each definition is rendered into English with the original kept underneath. |
+| `/diccionario` | Definitions from the *Diccionario de la lengua española*, with senses, synonyms and locutions, plus real example sentences and — in English mode — an English gloss. |
 | `/chat`        | A **grounded tutor** that answers from the site's own data — the conjugator, the RAE dictionary, the translator, and hand-written grammar explanations. Needs no API key and invents nothing. |
 
 ## The chat page
@@ -88,6 +88,28 @@ dictionary still work and translation falls back to MyMemory.
 Note that Google's own free tier is roughly **20 requests a day** for the Flash
 models, well below what this site's per-visitor allowance would permit — which
 is exactly why the overflow tier exists.
+
+### Where example sentences come from
+
+Not from a model. Asking a frontier model to write one short sentence is absurd
+on its face, and on a free tier it is also the thing that drains the quota — a
+class looking words up would have exhausted a day's allowance before lunch.
+
+| | Source | Cost |
+| --- | --- | --- |
+| Example sentences | [Tatoeba](https://tatoeba.org) — real sentences by native speakers, already paired with English translations (CC BY) | free, unmetered |
+| English glosses | [Wiktionary](https://en.wiktionary.org) (CC BY-SA) | free, unmetered |
+| Definitions | RAE, via rae-api.com | 5,000/day with a key |
+
+A model is woken only when Tatoeba has nothing for a word, and the template
+frame is the last resort after that. Seven lookups across common and uncommon
+words cost **zero** model calls.
+
+Corpus sentences are attached to the word rather than to a sense, because a
+sentence merely contains the word — it does not promise to illustrate one
+particular meaning. Tatoeba's search also returns relatives, so "madrugar" can
+come back with "madrugador"; sentences containing the word itself are ranked
+first, then the ones short enough for a learner to hold in their head.
 
 ### Keeping OpenRouter free
 
@@ -284,6 +306,7 @@ public/
 test/
   conjugator.test.js    204 reference forms checked against RAE paradigms
   tutor.test.js         47 checks on intent routing and the form index
+  corpus.test.js        10 checks on sentence ranking and gloss extraction
   quota.test.js         21 checks on the sliding window and refunds
   identity.test.js      15 checks on per-browser identity and its signature
   openrouter.test.js    20 checks on the guards that keep OpenRouter free

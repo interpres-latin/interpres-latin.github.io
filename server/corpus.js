@@ -1,0 +1,120 @@
+/**
+ * Example sentences and English glosses, from corpora rather than a model.
+ *
+ * Asking a frontier model to write one short sentence is absurd on its face,
+ * and on a free tier it is also the thing that runs the quota down. Both of
+ * these are free, unmetered, and better suited to the job:
+ *
+ *   Tatoeba    real sentences written by native speakers, already paired with
+ *              English translations. CC BY.
+ *   Wiktionary English definitions of Spanish words. CC BY-SA.
+ *
+ * A model is only asked when both come back empty.
+ */
+
+const TATOEBA = 'https://tatoeba.org/en/api_v0/search';
+const WIKTIONARY = 'https://en.wiktionary.org/api/rest_v1/page/definition';
+
+const fold = (text) => String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+const CACHE_TTL = 1000 * 60 * 60 * 24;
+const cache = new Map();
+
+function cached(key, produce) {
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_TTL) return hit.value;
+  const value = produce().catch(() => null);
+  cache.set(key, { at: Date.now(), value });
+  return value;
+}
+
+/** Sentences a learner can actually read: short, and not all caps or fragments. */
+function usable(text) {
+  return text.length >= 12 && text.length <= 110 && /[.!?…]$/.test(text.trim());
+}
+
+/**
+ * Real sentences using the word, with their English translations.
+ * @returns {Promise<Array<{es: string, en: string}>|null>}
+ */
+export function tatoebaExamples(word, limit = 2) {
+  return cached(`tatoeba:${word}`, async () => {
+    const url = `${TATOEBA}?from=spa&to=eng&query=${encodeURIComponent(word)}&sort=relevance`;
+    const response = await fetch(url, {
+      headers: { accept: 'application/json', 'user-agent': 'ProfeGPT (educational)' },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!response.ok) return null;
+
+    const body = await response.json();
+    const found = [];
+
+    for (const sentence of body.results || []) {
+      const spanish = String(sentence.text || '').trim();
+      if (!spanish) continue;
+
+      const english = (sentence.translations || [])
+        .flat()
+        .find((item) => item.lang === 'eng' && item.text);
+      if (!english) continue;
+
+      found.push({ es: spanish, en: String(english.text).trim() });
+    }
+
+    // Prefer sentences that actually contain the word — Tatoeba's search also
+    // returns relatives, so "madrugar" can come back with "madrugador" — then
+    // the ones a beginner can hold in their head.
+    const needle = fold(word);
+    const contains = (item) => new RegExp(`\\b${needle}`, 'i').test(fold(item.es));
+
+    const ranked = found.sort((a, b) => {
+      const byMatch = Number(contains(b)) - Number(contains(a));
+      if (byMatch) return byMatch;
+      const byReadable = Number(usable(b.es)) - Number(usable(a.es));
+      if (byReadable) return byReadable;
+      return a.es.length - b.es.length;
+    });
+    return ranked.slice(0, limit);
+  });
+}
+
+function stripMarkup(html) {
+  return String(html)
+    .replace(/<[^>]+>/g, '')
+    .replace(/&[a-z]+;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * A short English gloss for a Spanish word.
+ * @returns {Promise<string[]|null>}
+ */
+export function wiktionaryGloss(word, limit = 3) {
+  return cached(`wiktionary:${word}`, async () => {
+    const response = await fetch(`${WIKTIONARY}/${encodeURIComponent(word)}`, {
+      headers: { accept: 'application/json', 'user-agent': 'ProfeGPT (educational)' },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!response.ok) return null;
+
+    const body = await response.json();
+    const glosses = [];
+
+    for (const section of body.es || []) {
+      for (const entry of section.definitions || []) {
+        const text = stripMarkup(entry.definition);
+        // Wiktionary carries bare form-of pointers; they are not definitions.
+        if (!text || text.length < 3) continue;
+        glosses.push(section.partOfSpeech ? `${text}` : text);
+        if (glosses.length >= limit) return glosses;
+      }
+    }
+    return glosses.length ? glosses : null;
+  });
+}
+
+export const ATTRIBUTION = {
+  tatoeba: { name: 'Tatoeba', url: 'https://tatoeba.org', licence: 'CC BY 2.0 FR' },
+  wiktionary: { name: 'Wiktionary', url: 'https://en.wiktionary.org', licence: 'CC BY-SA' },
+};
