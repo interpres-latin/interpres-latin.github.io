@@ -77,52 +77,59 @@ function looksLikeAName(text) {
   return words.length >= 2 && words.length <= 8;
 }
 
-/** Small words that sit inside a name without breaking it. */
-const CONNECTORS = new Set(['of', 'the', 'and', 'de', 'del', 'la', 'las', 'los', 'y', 'en']);
+/** Words a name does not begin or end with. Trims the candidate list sharply. */
+const EDGE_WORDS = new Set([
+  'the', 'a', 'an', 'of', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'from', 'by', 'with',
+  'was', 'were', 'is', 'are', 'be', 'been', 'has', 'have', 'had', 'that', 'this', 'it', 'as',
+  'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'y', 'o', 'en', 'con',
+  'por', 'para', 'que', 'fue', 'era', 'es', 'son', 'ser', 'muy', 'su', 'sus', 'se', 'al', 'lo',
+]);
+
 const LEADING_ARTICLE = /^(?:the|a|an|el|la|los|las|un|una)\s+/i;
 
+const MIN_NAME_WORDS = 2;
+const MAX_NAME_WORDS = 5;
+const MAX_CANDIDATES = 45;   // one Wikipedia request holds 50 titles
+const MAX_NAMES = 3;
+
 /**
- * Runs of capitalised words, which is what a name looks like in running text.
- * A lone capitalised word is ignored: at the start of a sentence every word is
- * capitalised, and one word is rarely a name worth looking up.
+ * Every phrase in the text that could be a name.
+ *
+ * Capitalisation is not required: a student types "the cuban missile crisis"
+ * in lower case and still deserves the real name back. Instead every span of
+ * two to five words is a candidate, minus those starting or ending on a
+ * function word, and the encyclopedia decides which are real — all of them in
+ * a single request.
  */
-function findNameSpans(text) {
+function nameCandidates(text) {
   const words = [...text.matchAll(/[\p{L}\p{N}''-]+/gu)];
   const spans = [];
-  let run = [];
 
-  const flush = () => {
-    if (run.length >= 2) {
-      const start = run[0].index;
-      const last = run[run.length - 1];
-      spans.push(text.slice(start, last.index + last[0].length));
-    }
-    run = [];
-  };
-
-  for (let i = 0; i < words.length; i += 1) {
-    const word = words[i];
-    const capitalised = /^\p{Lu}/u.test(word[0]);
-    const connector = CONNECTORS.has(word[0].toLowerCase());
-
-    if (capitalised) {
-      run.push(word);
-    } else if (connector && run.length && words[i + 1] && /^\p{Lu}/u.test(words[i + 1][0])) {
-      run.push(word); // "United States of America"
-    } else {
-      flush();
+  for (let size = MAX_NAME_WORDS; size >= MIN_NAME_WORDS; size -= 1) {
+    for (let i = 0; i + size <= words.length; i += 1) {
+      const first = words[i];
+      const last = words[i + size - 1];
+      if (EDGE_WORDS.has(first[0].toLowerCase())) continue;
+      if (EDGE_WORDS.has(last[0].toLowerCase())) continue;
+      spans.push(text.slice(first.index, last.index + last[0].length));
     }
   }
-  flush();
 
-  return [...new Set(spans)].slice(0, 3);
+  return [...new Set(spans)].slice(0, MAX_CANDIDATES);
 }
 
-/** Ask Wikipedia what a phrase is called in the other language. */
-async function officialName(phrase, from, to) {
+/**
+ * Ask Wikipedia which of these phrases are articles, and what each is called in
+ * the other language — in one request rather than one per phrase.
+ * @returns {Promise<Map<string, string>>} phrase as written → established name
+ */
+async function officialNames(phrases, from, to) {
+  const found = new Map();
+  if (!phrases.length) return found;
+
   const url = new URL(WIKIPEDIA(from));
   url.searchParams.set('action', 'query');
-  url.searchParams.set('titles', phrase);
+  url.searchParams.set('titles', phrases.join('|'));
   url.searchParams.set('prop', 'langlinks');
   url.searchParams.set('lllang', to);
   url.searchParams.set('redirects', '1');
@@ -131,18 +138,50 @@ async function officialName(phrase, from, to) {
 
   const response = await fetch(url, {
     headers: { accept: 'application/json', 'user-agent': 'ProfeGPT (educational)' },
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(12000),
   });
-  if (!response.ok) return null;
+  if (!response.ok) return found;
 
-  const body = await response.json();
-  const page = Object.values(body?.query?.pages || {})[0];
-  const link = page?.langlinks?.[0]?.['*'];
-  if (!link) return null;
+  const query = (await response.json())?.query;
+  if (!query) return found;
 
-  // The article has to be the phrase itself, not something it resembles.
-  if (normalise(page.title || '') !== normalise(phrase)) return null;
-  return link;
+  // A title travels query -> normalised -> redirect before naming a page, and
+  // the answer has to be traced back to the phrase the reader actually wrote.
+  const step = (pairs) => new Map((pairs || []).map((pair) => [pair.from, pair.to]));
+  const normalised = step(query.normalized);
+  const redirected = step(query.redirects);
+
+  const pages = new Map();
+  for (const page of Object.values(query.pages || {})) {
+    const link = page?.langlinks?.[0]?.['*'];
+    if (link && isProperName(page.title)) pages.set(page.title, link);
+  }
+
+  for (const phrase of phrases) {
+    const resolved = redirected.get(normalised.get(phrase) ?? phrase)
+      ?? normalised.get(phrase) ?? phrase;
+    const link = pages.get(resolved);
+    if (link) found.set(phrase, link);
+  }
+
+  return found;
+}
+
+/**
+ * Wikipedia capitalises a title only where the words are proper nouns, so the
+ * title itself says whether an article names something. "Cuban Missile Crisis"
+ * and "Statue of Liberty" do; "Social studies" and "Train station" do not —
+ * and without this check "history class" is an article too, and a sentence
+ * about one comes back talking about social studies.
+ */
+function isProperName(title) {
+  return (String(title).match(/\b\p{Lu}[\p{L}]*/gu) || []).length >= 2;
+}
+
+/** One phrase, for the whole-input path. */
+async function officialName(phrase, from, to) {
+  const found = await officialNames([phrase], from, to);
+  return found.get(phrase) ?? null;
 }
 
 /** Replace `find` in `text`, keeping the capitalisation that was already there. */
@@ -151,6 +190,17 @@ function substitute(text, find, replacement) {
   return text.replace(pattern, (match) => (/^\p{Ll}/u.test(match)
     ? replacement.charAt(0).toLowerCase() + replacement.slice(1)
     : replacement));
+}
+
+/** Drop names contained inside a longer one that also matched. */
+function longestFirst(names) {
+  const kept = [];
+  for (const phrase of [...names.keys()].sort((a, b) => b.length - a.length)) {
+    if (kept.some((existing) => normalise(existing).includes(normalise(phrase)))) continue;
+    kept.push(phrase);
+    if (kept.length >= MAX_NAMES) break;
+  }
+  return kept;
 }
 
 /**
@@ -164,20 +214,16 @@ function substitute(text, find, replacement) {
  * real name.
  */
 async function restoreNames(source, translated, from, to, translateSpan) {
+  const names = await officialNames(nameCandidates(source), from, to);
+  if (!names.size) return translated;
+
   let result = translated;
-
-  for (const span of findNameSpans(source)) {
-    const bare = span.replace(LEADING_ARTICLE, '');
-    const official = (await officialName(span, from, to))
-      ?? (bare !== span ? await officialName(bare, from, to) : null);
-    if (!official) continue;
-
-    const literal = await translateSpan(bare).catch(() => null);
+  for (const phrase of longestFirst(names)) {
+    const official = names.get(phrase);
+    const literal = await translateSpan(phrase).catch(() => null);
     if (!literal || normalise(literal) === normalise(official)) continue;
-
     result = substitute(result, literal, official);
   }
-
   return result;
 }
 

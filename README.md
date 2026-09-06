@@ -134,9 +134,18 @@ same sentence. Disagreement does.
 
 Names inside a sentence are handled too, and separately: the whole-input lookup
 cannot see them, and a translator renders them literally wherever they appear.
-Each capitalised run in the source is looked up, translated on its own to learn
-how this engine renders it, and that rendering swapped for the real name —
-keeping whatever capitalisation the position called for. "The Cuban Missile
+Every span of two to five words is a candidate — capitalisation is **not**
+required, since a student types "the cuban missile crisis" in lower case and
+still deserves the real name — and all of them are checked in a single
+Wikipedia request. Each match is translated on its own to learn how this engine
+renders it, and that rendering swapped for the real name, keeping whatever
+capitalisation the position called for.
+
+Telling a name from an ordinary phrase is the hard part: "history class" is a
+Wikipedia article too, and translating a sentence about one used to come back
+talking about social studies. Wikipedia capitalises a title only where the words
+are proper nouns, so the title itself decides — *Cuban Missile Crisis* and
+*Statue of Liberty* are names, *Social studies* and *Train station* are not. "The Cuban Missile
 Crisis was a serious event" now comes back as *"La crisis de los misiles de
 Cuba fue un acontecimiento grave."*
 

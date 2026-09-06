@@ -23,6 +23,14 @@ globalThis.fetch = async (url) => {
       : target.includes('mymemory') ? 'mymemory'
         : 'apertium';
   let answer = plan[which];
+
+  // The real API reports how each queried title was normalised. The single-
+  // article stubs cannot know what was asked, so fill it in here from the URL.
+  if (which === 'wikipedia' && answer?.query?.normalized?.[0]?.from === '*') {
+    const asked = decodeURIComponent(new URL(target).searchParams.get('titles') || '').split('|');
+    const to = answer.query.normalized[0].to;
+    answer = { query: { ...answer.query, normalized: asked.map((from) => ({ from, to })) } };
+  }
   // Lingva carries its text in the path, so a stub can answer per phrase —
   // which matters here, since a name is translated on its own to learn how the
   // engine renders it before being swapped for the real one.
@@ -34,8 +42,23 @@ globalThis.fetch = async (url) => {
   return { ok: true, json: async () => answer };
 };
 
-const article = (title, resolved) => ({ query: { pages: { 1: { title: resolved ?? title, langlinks: [{ '*': title }] } } } });
+const article = (title, resolved) => ({
+  query: {
+    // The real API reports how it normalised each queried title; resolution
+    // depends on that, so the stub has to report it too.
+    normalized: [{ from: '*', to: resolved ?? title }],
+    pages: { 1: { title: resolved ?? title, langlinks: [{ '*': title }] } },
+  },
+});
 const noArticle = { query: { pages: { '-1': { missing: '' } } } };
+
+/** A batched answer: which queried phrases are articles, and what they map to. */
+const articles = (entries) => ({
+  query: {
+    normalized: entries.map(([asked, title]) => ({ from: asked, to: title })),
+    pages: Object.fromEntries(entries.map(([, title, link], i) => [i, { title, langlinks: [{ '*': link }] }])),
+  },
+});
 
 const memory = (...translations) => ({
   responseStatus: 200,
@@ -57,12 +80,12 @@ ok('and is the name people actually use', named.text === 'Crisis de los misiles 
 named = await translate('cuban missile crisis', 'en', 'es');
 ok('capitalisation does not matter', named.engine === 'Wikipedia', JSON.stringify(named));
 
-// --- prose is never sent to the encyclopedia ------------------------------
-plan = { wikipedia: article('Should not be used'), lingva: { translation: 'The dog sleeps in the garden' } };
-asked.length = 0;
+// --- prose is translated, not looked up as a title -------------------------
+plan = { wikipedia: noArticle, lingva: { translation: 'The dog sleeps in the garden' } };
 let prose = await translate('El perro duerme en el jardín.', 'es', 'en');
 ok('a sentence is not treated as a title', prose.engine === 'Lingva', JSON.stringify(prose));
-ok('and Wikipedia is not even asked', !asked.some((u) => u.includes('wikipedia')), asked.join(' '));
+ok('and comes back as the translator wrote it',
+  prose.text === 'The dog sleeps in the garden', prose.text);
 
 // --- an article about something else is refused ---------------------------
 // The query resolving to a *different* title means the phrase was not that name.
@@ -72,7 +95,7 @@ ok('a loose article match is refused', loose.engine === 'Lingva', JSON.stringify
 
 // --- a single word is left to the translator ------------------------------
 asked.length = 0;
-plan = { wikipedia: article('Dog'), lingva: { translation: 'dog' } };
+plan = { wikipedia: article('Dog Animal'), lingva: { translation: 'dog' } };
 const single = await translate('perro', 'es', 'en');
 ok('a lone common word skips the encyclopedia', single.engine === 'Lingva', JSON.stringify(single));
 ok('which is not consulted for it', !asked.some((u) => u.includes('wikipedia')));
@@ -85,11 +108,45 @@ ok('a phrase with no article falls through to the translator',
 
 plan = {};
 
+// --- a name in lower case is still a name ---------------------------------
+// Students type "the cuban missile crisis" without capitals, and deserve the
+// real name back. Detection cannot depend on capitalisation.
+plan = {
+  wikipedia: articles([['cuban missile crisis', 'Cuban Missile Crisis', 'Crisis de los misiles de Cuba']]),
+  lingva: {
+    'the cuban missile crisis was serious': 'la crisis de los misiles cubanos fue grave',
+    'cuban missile crisis': 'crisis de los misiles cubanos',
+  },
+};
+let lower = await translate('the cuban missile crisis was serious', 'en', 'es');
+ok('a lower-case name is still corrected',
+  lower.text === 'la crisis de los misiles de Cuba fue grave', lower.text);
+
+// --- a common noun that happens to be an article is left alone ------------
+// "history class" is an article too, redirecting to "Social studies".
+// Wikipedia only capitalises proper nouns, so the title says which is which.
+plan = {
+  wikipedia: articles([['history class', 'Social studies', 'Ciencias sociales']]),
+  lingva: { 'I have a history class': 'Tengo una clase de historia' },
+};
+const common = await translate('I have a history class', 'en', 'es');
+ok('a common-noun article does not rename anything',
+  common.text === 'Tengo una clase de historia', common.text);
+
+// --- one request covers every candidate ----------------------------------
+// A sentence yields dozens of candidate phrases; they go in one query.
+asked.length = 0;
+const longSentence = 'ayer por la tarde mi hermana compró un libro nuevo en la tienda pequeña';
+plan = { wikipedia: noArticle, lingva: { [longSentence]: 'yesterday afternoon my sister bought a new book' } };
+await translate(longSentence, 'es', 'en');
+const wikiCalls = asked.filter((u) => u.includes('wikipedia')).length;
+ok('every candidate is checked in one request, not one each', wikiCalls === 1, `${wikiCalls} requests`);
+
 // --- a name buried in a sentence is put right ------------------------------
 // The whole-input lookup cannot see it, and the translator renders it
 // literally, so it has to be restored afterwards.
 plan = {
-  wikipedia: article('Crisis de los misiles de Cuba', 'Cuban Missile Crisis'),
+  wikipedia: articles([['Cuban Missile Crisis', 'Cuban Missile Crisis', 'Crisis de los misiles de Cuba']]),
   lingva: {
     'The Cuban Missile Crisis was serious.': 'La crisis de los misiles cubanos fue grave.',
     'Cuban Missile Crisis': 'crisis de los misiles cubanos',
@@ -102,7 +159,7 @@ ok('and the sentence still comes from the translator', inSentence.engine === 'Li
 
 // --- the surrounding capitalisation is kept -------------------------------
 plan = {
-  wikipedia: article('Guerra Civil Española', 'Spanish Civil War'),
+  wikipedia: articles([['Spanish Civil War', 'Spanish Civil War', 'Guerra Civil Española']]),
   lingva: {
     'We studied the Spanish Civil War at school.': 'Estudiamos la guerra civil de España en la escuela.',
     'Spanish Civil War': 'guerra civil de España',
