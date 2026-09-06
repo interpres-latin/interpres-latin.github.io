@@ -14,7 +14,7 @@
 import { el, icon, ICONS, clear, fold } from '../lib/dom.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import {
-  allWords, COURSE, findStage, PROVENANCE, STAGE_NUMBERS, STAGES,
+  allWords, BOOKS, bookOf, COURSE, findStage, PROVENANCE, STAGE_NUMBERS, STAGES,
 } from '../data/stages-la.js';
 import { lang, t } from '../lib/i18n.js';
 
@@ -41,13 +41,20 @@ export function renderStages(main) {
     show(input.value);
   });
 
-  // Every stage as a chip, which is faster than typing for the common case.
-  const index = el('div', { class: 'wordlist', style: { marginTop: '4px' } },
-    el('span', {}, t('stages.allStages')),
-    ...STAGE_NUMBERS.map((number) => el('button', {
-      type: 'button',
-      onclick: () => { input.value = String(number); show(number); },
-    }, String(number))));
+  /**
+   * Every stage as a chip, grouped by book — a reader thinks in books before
+   * stages, and 28 numbers in one line says nothing about where Book II starts.
+   */
+  const index = el('div', { class: 'stageindex' },
+    ...BOOKS.map((book) => el('div', { class: 'stageindex__book' },
+      el('span', { class: 'stageindex__label' }, book.label),
+      el('div', { class: 'stageindex__chips' },
+        ...STAGE_NUMBERS.filter((number) => number >= book.from && number <= book.to)
+          .map((number) => el('button', {
+            type: 'button',
+            title: STAGES[number].title,
+            onclick: () => { input.value = String(number); show(number); },
+          }, String(number)))))));
 
   main.append(wallpaper, el('div', { class: 'page shell' },
     el('div', { class: 'page__head' },
@@ -93,6 +100,7 @@ export function renderStages(main) {
           el('h2', {}, `${stage.number}. ${stage.title}`),
           el('p', { class: 'verbcard__gloss' }, stage.setting),
           el('div', { class: 'verbcard__tags' },
+            stage.book ? el('span', { class: 'chip chip--es' }, stage.book.label) : null,
             el('span', { class: 'chip' }, t('stages.wordCount', { n: stage.words.length }))))),
       wordTable(stage.words.map(([latin, english]) => ({ latin, english })), false),
     );
@@ -111,13 +119,13 @@ function wordTable(words, showStage) {
   const head = el('tr', {},
     el('th', { scope: 'col' }, t('stages.latinWord')),
     el('th', { scope: 'col' }, t('stages.englishWord')),
-    showStage ? el('th', { scope: 'col' }, t('stages.eyebrow')) : null);
+    showStage ? el('th', { scope: 'col' }, t('stages.fromStage')) : null);
 
   const body = el('tbody', {}, ...words.map((word) => el('tr', {},
     el('th', { scope: 'row' },
       el('a', { href: `/diccionario?q=${encodeURIComponent(word.latin)}`, 'data-link': '' }, word.latin)),
     el('td', {}, word.english),
-    showStage ? el('td', {}, String(word.stage)) : null)));
+    showStage ? el('td', {}, `${word.book ? `${word.book.label} · ` : ''}${word.stage}`) : null)));
 
   return el('div', { class: 'tablewrap' },
     el('table', { class: 'conj', style: { minWidth: '0' } }, el('thead', {}, head), body));

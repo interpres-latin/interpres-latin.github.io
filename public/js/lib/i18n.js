@@ -145,6 +145,7 @@ const SPANISH = {
     theme: two('Cambiar de tema', 'Switch theme'),
     menu: two('Abrir menú', 'Open menu'),
     langLabel: two('Idioma de la web', 'Site language'),
+    subjectLabel: two('Idioma del sitio', 'Site subject'),
   },
 
   meta: {
@@ -382,6 +383,7 @@ const SPANISH = {
 
   mode: {
     entered: two('Modo español', 'Spanish mode'),
+    restricted: two('Tu profe ha dejado solo el español por ahora.', 'Your teacher has left only Spanish available for now.'),
     enteredNote: two('La web vuelve a ser de español.', 'The site is about Spanish again.'),
   },
 };
@@ -395,6 +397,7 @@ const FRENCH = {
     theme: deux('Changer de thème', 'Switch theme'),
     menu: deux('Ouvrir le menu', 'Open menu'),
     langLabel: deux('Langue du site', 'Site language'),
+    subjectLabel: deux('Sujet du site', 'Site subject'),
   },
 
   meta: {
@@ -637,6 +640,7 @@ const FRENCH = {
 
   mode: {
     entered: deux('Mode français', 'French mode'),
+    restricted: deux('Votre professeur n’a laissé que l’espagnol pour le moment.', 'Your teacher has left only Spanish available for now.'),
     enteredNote: deux(
       'Le site porte maintenant sur le français. Écrivez « mode: spanish » pour revenir.',
       'The site is about French now. Type "mode: spanish" to go back.',
@@ -668,6 +672,7 @@ const LATIN = {
     theme: latine('Mutare speciem', 'Switch theme'),
     menu: latine('Aperire indicem', 'Open menu'),
     langLabel: latine('Lingua paginae', 'Site language'),
+    subjectLabel: latine('Materia paginae', 'Site subject'),
   },
 
   meta: {
@@ -873,6 +878,7 @@ const LATIN = {
       'Hand-compiled from the course, not from published data — check against your book. Every word is verified against Whitaker’s Words.',
     ),
     allStages: latine('Omnia stadia', 'All stages'),
+    fromStage: latine('Unde', 'From'),
   },
 
   dictionary: {
@@ -982,6 +988,7 @@ const LATIN = {
 
   mode: {
     entered: latine('Modus Latinus', 'Latin mode'),
+    restricted: latine('Magister solam Hispanicam reliquit.', 'Your teacher has left only Spanish available for now.'),
     enteredNote: latine(
       'Pagina nunc de lingua Latina est. Scribe “mode: spanish” ut redeas.',
       'The site is about Latin now. Type "mode: spanish" to go back.',

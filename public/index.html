@@ -15,8 +15,14 @@
     // Runs before the first paint so the page never flashes the wrong palette.
     (function () {
       // The chrome is either English or whichever language the site is about.
+      // The subject also goes on the root element, because the wallpaper is
+      // chosen in CSS and has to be right before the first paint.
       var study = 'es';
-      try { study = localStorage.getItem('profegpt:study') === 'fr' ? 'fr' : 'es'; } catch (e) {}
+      try {
+        var subject = localStorage.getItem('profegpt:study');
+        study = subject === 'fr' || subject === 'la' ? subject : 'es';
+      } catch (e) {}
+      document.documentElement.dataset.study = study;
       try {
         var l = localStorage.getItem('profegpt:lang');
         document.documentElement.lang = l === 'en' ? 'en' : study;

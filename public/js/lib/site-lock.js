@@ -7,10 +7,15 @@
  *
  * Anyone with the passcode can unlock — including from the tape itself, so a
  * student who knows it is not stranded.
+ *
+ * The same dialog carries the subject restriction, which is a different switch
+ * with its own passcodes: it narrows the site to Spanish rather than sealing
+ * it. See lib/restriction.js and server/routes/lock.js.
  */
 
 import { el, clear, icon, ICONS, getJson, postJson } from './dom.js';
 import { t } from './i18n.js';
+import { setRestricted } from './restriction.js';
 import { sealWithTape } from './tape.js';
 
 const POLL_MS = 8000;
@@ -68,6 +73,7 @@ async function refresh() {
   try {
     const state = await getJson('/api/lock');
     applyState(Boolean(state.locked));
+    setRestricted(state.restricted);
   } catch {
     // Server unreachable — leave whatever is on screen alone.
   }
@@ -108,6 +114,7 @@ function askForPasscode(anchor) {
       const state = await postJson('/api/lock', { passcode: field.value, locked: !locked });
       close();
       applyState(Boolean(state.locked));
+      setRestricted(state.restricted);
     } catch {
       error.textContent = t('lock.wrong');
       field.value = '';

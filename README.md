@@ -243,6 +243,21 @@ off-topic one with nothing left behind it gets a short notice at the top that
 fades on its own — until five arrive within fifteen seconds, at which point the
 tape returns. Acknowledging it resets the count.
 
+### The teacher's restriction
+
+The same padlock carries a second, softer switch. Typing **`profe`** narrows the
+site to Spanish: French and Latin disappear from the menu, and `mode: french`
+and `mode: latin` stop working. **`walsh`** opens them up again.
+
+Where the lock stops the class working at all, this leaves everything working
+and takes away what is not today's lesson. It lives on the server beside the
+lock, so one teacher throwing it reaches every browser in the room, and it
+clears on restart for the same reason the lock does.
+
+The two switches never reach each other: restricting does not seal the room, and
+unlocking does not quietly open French and Latin back up. `RESTRICT_PASSCODE`
+and `RELEASE_PASSCODE` change the words.
+
 ### The teacher's lock
 
 The padlock at the left of the header seals the site **for everyone at once**,
@@ -262,11 +277,16 @@ Two ways, and both stay.
 **`mode: latin`** in the translator, which is how the other languages are
 reached too and how they were meant to be found — by knowing the phrase.
 
-**Clicking the language button when it is already the active one**, which opens
-a menu of the three subjects. The same gesture the declension tabs use for their
-genders: a control that is already on does something else rather than nothing.
-The typed command is the hidden way in; this is the way back out for anyone who
-found it by accident.
+**The left-hand button of the language switch**, which opens a menu: the three
+subjects, and below them the choice of reading the interface in that language
+rather than in English. Both live in the menu because the button cannot do two
+different things on the same click and stay predictable — an earlier version
+switched the interface on the first click and opened the menu on the second, so
+pressing **LA** in Latin mode turned the interface Latin instead of offering the
+languages.
+
+The typed command is the hidden way in; the menu is the way back out for anyone
+who found it by accident.
 
 ### Site language
 
@@ -634,6 +654,10 @@ distinct words are verified against Whitaker's, the four exceptions being
 pronouns it does not analyse — but *which stage a word first appears in* is
 knowledge of the course rather than a copy of the book.
 
+The index groups the stages **by book**, and a stage says which book it belongs
+to, because a reader thinks in books before stages — twenty-eight numbers in one
+line says nothing about where Book II starts.
+
 **Stages 1–28 are seeded: Books I, II and III.** Confidence falls as the numbers
 rise. Book I is soundest; the later lists are drawn from the stories rather than
 from a checklist, so a word may sit a stage early or late. Books IV and V are
@@ -647,7 +671,9 @@ it. Adding a stage is adding a key to `public/js/data/stages-la.js`; one entry i
 
 **Dark and light.** The choice is stamped onto `<html data-theme>` by an inline
 script in the page head, before the first paint, so the site never flashes the
-wrong palette. It follows the system setting until you press the toggle, then
+wrong palette. The **subject** goes on `<html data-study>` in the same script and
+for the same reason — the wallpaper is chosen in CSS, so it has to be right
+before anything is drawn. It follows the system setting until you press the toggle, then
 remembers. Colours that get painted to canvas — the hero network, the wallpaper
 strength — are CSS custom properties the JS reads back, so the palette has a
 single home.
@@ -662,12 +688,25 @@ real size in both palettes before being wired in.
 -0.03em`. A system monospace is kept only for literal code inside chat replies.
 Flat colour: no gradients, no rounded corners.
 
-Between the translator and the dictionary search, a photograph of Madrid fades
-in behind the page and parallaxes against the scroll — **Gran Vía at night in
-dark mode, the Plaza de Cibeles by day in light mode**, chosen by a per-theme
-`--wallpaper-image` custom property. A theme-coloured scrim keeps the text in
-front readable; the strengths were calibrated by rendering the actual composite
-with text over it rather than guessing.
+Between the translator and the dictionary search, a photograph fades in behind
+the page and parallaxes against the scroll. **One city per subject, at night in
+the dark palette and by day in the light one** — the city the language belongs
+to:
+
+| | dark | light |
+| --- | --- | --- |
+| Spanish | Gran Vía at night | the Plaza de Cibeles by day |
+| French | Paris at night | Notre-Dame by day |
+| Latin | the Colosseum at night | Rome by day |
+
+Six photographs, each a webp with a jpeg fallback. A theme-coloured scrim keeps
+the text in front readable; the strengths were calibrated by rendering the actual
+composite with text over it rather than guessing.
+
+The six rules are ordered rather than fought over with `!important`. A subject
+rule carries the same weight as the light-mode rule it has to beat, so it comes
+after it in the file; each subject's light rule carries one attribute more, so it
+wins over its own dark one wherever it sits.
 
 It runs behind the hero and the translator on the home page, and as a band
 behind the header on the conjugation and dictionary pages, fading out as the
@@ -677,8 +716,8 @@ Both sources are about 1024 px wide, which is well short of a modern display, so
 the photo carries a 1.5 px blur: it turns the upscaling softness into something
 that reads as depth of field instead of as a low-resolution image. **For genuinely
 higher resolution, drop a larger original into `public/assets/` under the same
-names** (`madrid-day.jpg`/`.webp`, `madrid-night.jpg`/`.webp`) — nothing in the
-code assumes the current dimensions.
+names** — nothing in the code assumes the current dimensions. The Paris night
+photograph is the smallest at 706px and leans on the blur hardest.
 
 The image is declared as a plain `url()` followed by an `image-set()`, rather
 than through a custom property. A `var()` whose value a browser cannot parse is
@@ -712,6 +751,8 @@ cp .env.example .env      # then put your key in it
 | `LLM_PROVIDER` | Pin one: `gemini`, `groq`, `openrouter` or `anthropic`. |
 | `PORT` | Defaults to `4000`. |
 | `CHAT_FREE_LIMIT` | Off-topic chat questions per window, shared by all three languages. Default `5`; set `0` to seal the chat immediately and see the tape. |
+| `RESTRICT_PASSCODE` | Narrows the site to Spanish from the padlock. Default `profe`. |
+| `RELEASE_PASSCODE` | Opens the other subjects again. Default `walsh`. |
 | `LINGVA_INSTANCES` | Comma-separated Lingva hosts, tried in order; an entry may carry a scheme, so a self-hosted instance is `http://localhost:3100`. See *[The French translator](#the-french-translator)*. |
 | `CHAT_WINDOW_MINUTES` | Length of that window. Default `30`. |
 
@@ -757,6 +798,7 @@ public/
                              built from the principal parts
     lib/decliner-la.js ·la the five declensions, and the adjectives
     lib/latin-lookup.js ·la fills in a missing genitive, refuses a wrong one
+    lib/restriction.js  the subjects a teacher has left available
     lib/network.js      the hero node network
     lib/markdown.js     DOM-building markdown renderer (no innerHTML)
     lib/tutor.js        intent routing for the chat — shared by both languages
@@ -798,10 +840,12 @@ test/
   idioms.test.js            17 checks on idiom pairing in both directions
   quota.test.js             18 checks on the sliding window and refunds
   identity.test.js          15 checks on per-browser identity and its signature
+  lock.test.js              20 on the padlock's two switches, against a real
+                               express app, and that neither reaches the other
   openrouter.test.js        20 checks on the guards that keep OpenRouter free
 ```
 
-`npm test` runs all 1,819, offline, in a couple of seconds.
+`npm test` runs all 1,856, offline, in a couple of seconds.
 
 ## The conjugation engine
 

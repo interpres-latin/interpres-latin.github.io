@@ -10,14 +10,20 @@
  * is the working language of a Latin lesson rather than a way round it, so
  * there is nothing there to protect.
  *
- * The left-hand button does double duty. Click it when it is not the active
- * language and it switches the interface; click it when it already is, and it
- * offers the other subjects the site can be about.
+ * The left-hand button always opens a menu: the subjects the site can be about,
+ * and — below them — the choice of reading the interface in that language
+ * rather than in English. Both jobs are in one place because the button cannot
+ * do two different things on the same click and stay predictable.
+ *
+ * A teacher can narrow the list to Spanish alone; see lib/restriction.js. When
+ * only one subject is on offer the menu still opens, since the interface choice
+ * lives there too.
  */
 
 import { el, clear } from './dom.js';
 import { checkPasscode, isLocked, lang, languageOptions, passcodeRequired, setLang, setLocked, t } from './i18n.js';
 import { setStudyLang, studyLang, STUDY_LANGUAGES } from './study.js';
+import { allowedSubjects, onRestrictionChange } from './restriction.js';
 import { sealWithTape } from './tape.js';
 import { toast } from './toast.js';
 
@@ -123,29 +129,61 @@ export function mountLanguageSwitch(container) {
     for (const menu of container.querySelectorAll('.tabmenu__list')) menu.remove();
   };
 
-  /** The other subjects the site can be about. */
+  /**
+   * The subjects on offer, and the interface choice.
+   *
+   * Both live here because the button opens the menu on every click. Making it
+   * switch the interface on one click and open a menu on the next meant that
+   * pressing LA in Latin mode turned the interface Latin instead of offering
+   * the languages, which is not what anyone expected of it.
+   */
   function openSubjects(holder) {
     if (holder.querySelector('.tabmenu__list')) { closeSubjects(); return; }
     closeSubjects();
 
-    holder.appendChild(el('div', { class: 'tabmenu__list tabmenu__list--right', role: 'menu' },
-      el('p', { class: 'tabmenu__title' }, t('nav.langLabel')),
-      ...STUDY_LANGUAGES.map((code) => {
+    const study = studyLang();
+    const subjects = allowedSubjects();
+
+    const list = el('div', { class: 'tabmenu__list tabmenu__list--right', role: 'menu' },
+      el('p', { class: 'tabmenu__title' }, t('nav.subjectLabel')),
+      ...subjects.map((code) => {
         const button = el('button', {
           type: 'button',
           role: 'menuitem',
           onclick: () => {
             closeSubjects();
-            if (code === studyLang()) return;
+            if (code === study) return;
             setStudyLang(code);
             // The view is rebuilt from under us, so the notice has to outlive
             // it — and by now t() is answering in the new language.
             toast(`${t('mode.entered')} · ${t('mode.enteredNote')}`);
           },
         }, SUBJECTS[code], el('em', {}, code.toUpperCase()));
-        if (code === studyLang()) button.classList.add('is-active');
+        if (code === study) button.classList.add('is-active');
         return button;
-      })));
+      }));
+
+    // Reading the site in the study language, which is what the button used to
+    // do on its own.
+    list.append(
+      el('p', { class: 'tabmenu__title tabmenu__title--rule' }, t('nav.langLabel')),
+      (() => {
+        const button = el('button', {
+          type: 'button',
+          role: 'menuitem',
+          onclick: () => {
+            closeSubjects();
+            if (lang() === study) return;
+            if (!passcodeRequired()) { setLang(study); return; }
+            setLang(study);
+          },
+        }, SUBJECTS[study], el('em', {}, study.toUpperCase()));
+        if (lang() === study) button.classList.add('is-active');
+        return button;
+      })(),
+    );
+
+    holder.appendChild(list);
   }
 
   /** Rebuilt rather than repainted when the study language changes: ES becomes FR. */
@@ -162,10 +200,11 @@ export function mountLanguageSwitch(container) {
         type: 'button',
         title: code === study ? t('nav.langLabel') : null,
         onclick: () => {
-          // The study button offers the other subjects once it is already on.
-          if (code === study && lang() === code) { openSubjects(holder); return; }
+          // The study button always opens the menu; the English one switches
+          // the interface, behind the passcode where there is one.
+          if (code === study) { openSubjects(holder); return; }
           if (lang() === code) return;
-          if (code === study || !passcodeRequired()) { setLang(code); return; }
+          if (!passcodeRequired()) { setLang(code); return; }
           askForPasscode(container);
         },
       }, code.toUpperCase());
@@ -186,5 +225,8 @@ export function mountLanguageSwitch(container) {
   build();
   window.addEventListener('langchange', paint);
   window.addEventListener('studychange', build);
+  // A teacher narrowing the subjects has to reach a page that is already open.
+  const stopWatching = onRestrictionChange(build);
+  window.addEventListener('beforeunload', stopWatching);
   return paint;
 }

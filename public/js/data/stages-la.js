@@ -770,6 +770,21 @@ export const STAGES = {
   },
 };
 
+/**
+ * Which book a stage belongs to. The course is published as five books and a
+ * reader thinks in books before stages — "we're halfway through Book II" — so
+ * the page groups by them rather than running 1 to 28 in one line.
+ */
+export const BOOKS = [
+  { number: 'I', label: 'Book I', from: 1, to: 12 },
+  { number: 'II', label: 'Book II', from: 13, to: 20 },
+  { number: 'III', label: 'Book III', from: 21, to: 28 },
+];
+
+export function bookOf(stage) {
+  return BOOKS.find((book) => stage >= book.from && stage <= book.to) ?? null;
+}
+
 /** Stage numbers in order, for the page's index. */
 export const STAGE_NUMBERS = Object.keys(STAGES).map(Number).sort((a, b) => a - b);
 
@@ -782,11 +797,14 @@ export function findStage(input) {
   const text = String(input ?? '').trim().toLowerCase().replace(/^stage\s*/, '');
   if (!text) return null;
   const number = /^\d+$/.test(text) ? Number(text) : ROMAN[text];
-  return number && STAGES[number] ? { number, ...STAGES[number] } : null;
+  if (!number || !STAGES[number]) return null;
+  return { number, book: bookOf(number), ...STAGES[number] };
 }
 
 /** Every word in the course, for the search on the stages page. */
 export function allWords() {
   return STAGE_NUMBERS.flatMap((number) =>
-    STAGES[number].words.map(([latin, english]) => ({ latin, english, stage: number })));
+    STAGES[number].words.map(([latin, english]) => ({
+      latin, english, stage: number, book: bookOf(number),
+    })));
 }

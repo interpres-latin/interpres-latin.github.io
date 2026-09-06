@@ -180,6 +180,34 @@ button, input, textarea, select { font: inherit; color: inherit; }
   background-image: image-set(url("/assets/madrid-day.webp") type("image/webp"), url("/assets/madrid-day.jpg") type("image/jpeg"));
 }
 
+/*
+ * One photograph per subject, per palette. Madrid for Spanish, Paris for
+ * French, Rome for Latin — the city the language belongs to, at night in the
+ * dark palette and by day in the light one.
+ *
+ * Order matters as much as specificity here. A subject rule has the same weight
+ * as the light-mode rule above, so it has to come after it; and each subject's
+ * light rule carries one attribute more, so it wins over its own dark one
+ * whichever way round they are written.
+ */
+:root[data-study="fr"] .wallpaper__photo {
+  background-image: url("/assets/paris-night.jpg");
+  background-image: image-set(url("/assets/paris-night.webp") type("image/webp"), url("/assets/paris-night.jpg") type("image/jpeg"));
+}
+:root[data-study="fr"][data-theme="light"] .wallpaper__photo {
+  background-image: url("/assets/paris-day.jpg");
+  background-image: image-set(url("/assets/paris-day.webp") type("image/webp"), url("/assets/paris-day.jpg") type("image/jpeg"));
+}
+
+:root[data-study="la"] .wallpaper__photo {
+  background-image: url("/assets/rome-night.jpg");
+  background-image: image-set(url("/assets/rome-night.webp") type("image/webp"), url("/assets/rome-night.jpg") type("image/jpeg"));
+}
+:root[data-study="la"][data-theme="light"] .wallpaper__photo {
+  background-image: url("/assets/rome-day.jpg");
+  background-image: image-set(url("/assets/rome-day.webp") type("image/webp"), url("/assets/rome-day.jpg") type("image/jpeg"));
+}
+
 .wallpaper__scrim { position: absolute; inset: 0; background: var(--wallpaper-scrim); }
 
 /* The chat is long-form text over the busiest part of the photograph, so it
@@ -602,6 +630,16 @@ button, input, textarea, select { font: inherit; color: inherit; }
   gap: 2px;
 }
 .tabmenu__title { margin: 2px 6px 6px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
+.tabmenu__title--rule { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+
+/* The stage index, grouped by book. Twenty-eight numbers in one line says
+   nothing about where a book begins; a reader revising thinks in books. */
+.stageindex { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 14px; }
+.stageindex__book { display: flex; flex-direction: column; gap: 6px; }
+.stageindex__label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
+.stageindex__chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.stageindex__chips button { border: 1px solid var(--line); background: transparent; padding: 4px 10px; font-size: 13px; color: var(--text-dim); cursor: pointer; min-width: 34px; }
+.stageindex__chips button:hover { color: var(--text); border-color: var(--accent); }
 .tabmenu__list button {
   display: flex;
   flex-direction: column;

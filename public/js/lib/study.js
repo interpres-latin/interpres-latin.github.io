@@ -65,6 +65,9 @@ export function setStudyLang(next) {
   if (value === current) return current;
   current = value;
   write(current);
+  // The wallpaper is chosen in CSS off this attribute, so it has to move with
+  // the subject rather than waiting for a view to re-render.
+  document.documentElement.dataset.study = current;
   window.dispatchEvent(new CustomEvent('studychange', { detail: { study: current } }));
   return current;
 }

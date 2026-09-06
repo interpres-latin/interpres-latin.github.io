@@ -3,6 +3,7 @@ import { startNetwork } from '../lib/network.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import { pick, t } from '../lib/i18n.js';
 import { modeCommand, setStudyLang, studyLang } from '../lib/study.js';
+import { subjectAllowed } from '../lib/restriction.js';
 import { fireConfetti } from '../lib/confetti.js';
 import { toast } from '../lib/toast.js';
 
@@ -319,11 +320,12 @@ function buildTranslator(root) {
 
     const mode = modeCommand(text);
     if (mode) {
-      if (mode === studyLang()) {
-        output.textContent = '';
-        status.textContent = t('translator.ready');
-        return;
-      }
+      output.textContent = '';
+      status.textContent = t('translator.ready');
+      if (mode === studyLang()) return;
+      // A teacher may have narrowed the site to one subject, and the typed
+      // command is not a way round that.
+      if (!subjectAllowed(mode)) { toast(t('mode.restricted')); return; }
       switchMode(mode, state, output, status);
       return;
     }

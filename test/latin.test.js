@@ -231,7 +231,7 @@ for (const [source, expected] of [
 }
 
 // === THE COURSE VOCABULARY ================================================
-const { STAGES, STAGE_NUMBERS, allWords, findStage } = await import('../public/js/data/stages-la.js');
+const { STAGES, STAGE_NUMBERS, allWords, findStage, BOOKS, bookOf } = await import('../public/js/data/stages-la.js');
 ok('three books are seeded', STAGE_NUMBERS.length === 28, `${STAGE_NUMBERS.length} stages`);
 ok('they run 1 to 28 with no gaps',
   STAGE_NUMBERS.every((n, i) => n === i + 1), STAGE_NUMBERS.join(','));
@@ -249,6 +249,32 @@ ok('the whole course is searchable', allWords().length > 500, `${allWords().leng
 ok('a book II stage is there', findStage('17')?.title === 'Alexandria');
 ok('a book III stage is there', findStage('26')?.title === 'Agricola');
 ok('and nothing beyond', findStage('29') === null);
+
+// --- grouped by book, which is how a reader thinks of the course ----------
+ok('three books', BOOKS.length === 3);
+ok('the books are contiguous', BOOKS.every((book, i) => i === 0 || book.from === BOOKS[i - 1].to + 1));
+ok('and cover every stage', BOOKS[0].from === STAGE_NUMBERS[0] && BOOKS.at(-1).to === STAGE_NUMBERS.at(-1));
+ok('every stage belongs to one', STAGE_NUMBERS.every((n) => bookOf(n) !== null));
+ok('stage 1 is Book I', bookOf(1).label === 'Book I');
+ok('stage 13 is Book II', bookOf(13).label === 'Book II', bookOf(13).label);
+ok('stage 21 is Book III', bookOf(21).label === 'Book III', bookOf(21).label);
+ok('nothing outside the course has a book', bookOf(99) === null);
+ok('a found stage carries its book', findStage('17').book.label === 'Book II');
+ok('and so does every word', allWords().every((word) => word.book !== null));
+
+// --- the subject restriction, which is a browser-side gate ----------------
+const { allowedSubjects, subjectAllowed, setRestricted, isRestricted } = await import('../public/js/lib/restriction.js');
+globalThis.window = { dispatchEvent() {} };
+globalThis.CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init?.detail; } };
+ok('everything is on offer by default', allowedSubjects().join(',') === 'es,fr,la');
+setRestricted(true);
+ok('restricting leaves only Spanish', allowedSubjects().join(',') === 'es');
+ok('and says so', isRestricted() === true);
+ok('French is refused', subjectAllowed('fr') === false);
+ok('Latin is refused', subjectAllowed('la') === false);
+ok('Spanish is not', subjectAllowed('es') === true);
+setRestricted(false);
+ok('lifting it restores the three', allowedSubjects().join(',') === 'es,fr,la');
 
 // --- report ----------------------------------------------------------------
 if (failures.length) {

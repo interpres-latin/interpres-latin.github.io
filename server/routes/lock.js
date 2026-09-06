@@ -7,6 +7,12 @@
  *
  * It lives in memory, so a server restart clears it. That is a deliberate
  * failsafe: nobody can be locked out by a process nobody is watching.
+ *
+ * The same dialog carries a second, softer switch: a **subject restriction**
+ * that narrows the site to Spanish and takes the French and Latin sides away.
+ * Where the lock stops the class working, this leaves everything working and
+ * removes what is not today's lesson. It has its own pair of passcodes, and
+ * clears on restart for the same reason.
  */
 
 import { Router } from 'express';
@@ -14,22 +20,35 @@ import { Router } from 'express';
 export const router = Router();
 
 const PASSCODE = process.env.TEACHER_PASSCODE || 'AP_Lit';
+const RESTRICT_PASSCODE = process.env.RESTRICT_PASSCODE || 'profe';
+const RELEASE_PASSCODE = process.env.RELEASE_PASSCODE || 'walsh';
 
-const lock = { locked: false, since: null };
+const lock = { locked: false, since: null, restricted: false };
 
 /** Case-insensitive, and tolerant of the spaces a phone keyboard adds. */
-function matches(value) {
-  return String(value ?? '').trim().toLowerCase() === PASSCODE.trim().toLowerCase();
-}
+const same = (value, passcode) =>
+  String(value ?? '').trim().toLowerCase() === String(passcode).trim().toLowerCase();
+
+const state = () => ({ locked: lock.locked, since: lock.since, restricted: lock.restricted });
 
 router.get('/', (_req, res) => {
-  res.json({ locked: lock.locked, since: lock.since });
+  res.json(state());
 });
 
 router.post('/', (req, res) => {
-  if (!matches(req.body?.passcode)) {
-    // Deliberately vague, and no hint about which half was wrong.
-    return res.status(403).json({ error: 'Código incorrecto.', locked: lock.locked });
+  const passcode = req.body?.passcode;
+
+  // The restriction has its own two words, checked before the lock's, so a
+  // teacher can narrow the site without sealing it.
+  if (same(passcode, RESTRICT_PASSCODE) || same(passcode, RELEASE_PASSCODE)) {
+    lock.restricted = same(passcode, RESTRICT_PASSCODE);
+    console.log(`[lock] subjects ${lock.restricted ? 'restricted to Spanish' : 'opened'}`);
+    return res.json(state());
+  }
+
+  if (!same(passcode, PASSCODE)) {
+    // Deliberately vague, and no hint about which of the three was wrong.
+    return res.status(403).json({ error: 'Código incorrecto.', ...state() });
   }
 
   const next = typeof req.body?.locked === 'boolean' ? req.body.locked : !lock.locked;
@@ -37,5 +56,5 @@ router.post('/', (req, res) => {
   lock.since = next ? Date.now() : null;
 
   console.log(`[lock] site ${next ? 'locked' : 'unlocked'}`);
-  res.json({ locked: lock.locked, since: lock.since });
+  res.json(state());
 });
