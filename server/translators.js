@@ -26,8 +26,43 @@
  * whichever language the site is currently about.
  */
 
+/**
+ * Lingva instances, tried in order.
+ *
+ * Volunteer-run, so this list ages: several of the once-standard hosts now sit
+ * behind a Cloudflare challenge and answer 403 to everything. An entry may
+ * carry a scheme, which is how a self-hosted instance is pointed at —
+ * `LINGVA_INSTANCES=http://localhost:3100`.
+ */
 const LINGVA_HOSTS = (process.env.LINGVA_INSTANCES || 'lingva.lunar.icu,lingva.ml,lingva.garudalinux.org')
-  .split(',').map((host) => host.trim()).filter(Boolean);
+  .split(',').map((host) => host.trim()).filter(Boolean)
+  .map((host) => (/^https?:\/\//.test(host) ? host : `https://${host}`));
+
+/**
+ * How long a host that just failed is passed over.
+ *
+ * Without this a dead instance is re-tried on every translation, and the
+ * translator box fires on a debounce as you type — so one host being down cost
+ * a timeout per keystroke-pause, several seconds each, before anything else was
+ * even asked. Short enough that an instance having a bad minute is back in the
+ * rotation quickly; long enough that a real outage costs one request, not one
+ * per translation.
+ */
+const LINGVA_COOLDOWN_MS = 60_000;
+const restingUntil = new Map();
+
+/**
+ * Hosts worth asking now.
+ *
+ * Can be empty, and that is the point: when every instance is down — which is
+ * the common case, not the rare one — Lingva steps aside immediately and the
+ * chain falls through to the engines beneath it. Nothing is disabled
+ * permanently; the cooldown expiring is what puts a host back.
+ */
+function hostsToTry() {
+  const now = Date.now();
+  return LINGVA_HOSTS.filter((host) => (restingUntil.get(host) ?? 0) <= now);
+}
 
 import { findIdioms } from './idioms.js';
 
@@ -250,31 +285,40 @@ async function namedEntity(text, from, to) {
 }
 
 async function lingva(text, from, to) {
+  const hosts = hostsToTry();
+  if (!hosts.length) throw new Error('Every Lingva instance is resting after a recent failure');
+
   let lastError = null;
 
-  for (const host of LINGVA_HOSTS) {
+  for (const host of hosts) {
     try {
-      return {
-        text: await translateChunks(text, LINGVA_CHUNK, async (part) => {
-          const url = `https://${host}/api/v1/${from}/${to}/${encodeURIComponent(part)}`;
-          const response = await fetch(url, {
-            headers: { accept: 'application/json' },
-            signal: AbortSignal.timeout(12000),
-          });
-          if (!response.ok) throw new Error(`${host} responded ${response.status}`);
+      const translated = await translateChunks(text, LINGVA_CHUNK, async (part) => {
+        const url = `${host}/api/v1/${from}/${to}/${encodeURIComponent(part)}`;
+        const response = await fetch(url, {
+          headers: { accept: 'application/json' },
+          signal: AbortSignal.timeout(12000),
+        });
+        if (!response.ok) throw new Error(`${host} responded ${response.status}`);
 
-          const body = await response.json();
-          if (!body.translation) throw new Error(`${host} returned no translation`);
-          return String(body.translation);
-        }),
-        engine: 'Lingva',
-      };
+        const body = await response.json();
+        if (!body.translation) throw new Error(`${host} returned no translation`);
+        return String(body.translation);
+      });
+
+      restingUntil.delete(host);
+      return { text: translated, engine: 'Lingva' };
     } catch (error) {
+      restingUntil.set(host, Date.now() + LINGVA_COOLDOWN_MS);
       lastError = error;
     }
   }
 
   throw lastError || new Error('No Lingva instance answered.');
+}
+
+/** Exposed for the tests, which need each case to start from a clean slate. */
+export function resetLingvaCooldowns() {
+  restingUntil.clear();
 }
 
 /**

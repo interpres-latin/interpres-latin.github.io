@@ -129,7 +129,7 @@ No model, at any point. Four dedicated engines, tried in order:
 | | | |
 | --- | --- | --- |
 | 0 | **Wikipedia** | for names and titles. Machine translation renders them literally: "Cuban Missile Crisis" becomes *"crisis de los misiles cubanos"*, which says the missiles were Cuban when they were Soviet. Wikipedia's cross-language links hold the name each language actually uses — *Crisis de los misiles de Cuba*. |
-| 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES` and a dead one is skipped. |
+| 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES`, and one that fails is rested for a minute rather than re-asked on every translation. |
 | 2 | **MyMemory** | a crowd translation memory, believed only when its candidates agree with each other. |
 | 3 | **Apertium** | open-source rule-based translation. Clumsy, but always up and it never invents content. Spanish only — it has no English–French pair, so the French chain stops at MyMemory. |
 
@@ -420,16 +420,31 @@ floor rather than a choice", and a double hop turns *Where is the library?* into
 *Où Il est la bibliothèque ?*, which is worse than no answer on a site whose
 value is being correct.
 
-That matters more than it should right now, because **every public Lingva
-instance is behind a Cloudflare challenge**, which affects the Spanish side too
-— Spanish just lands on Apertium instead. Until an instance comes back, French
-translation runs on MyMemory alone, and MyMemory's agreement rule declines
-roughly half of what it is asked. When the whole chain declines, the pane says
-so rather than showing a guess.
+That makes Lingva load-bearing for French in a way it is not for Spanish, and
+Lingva instances are volunteer-run: `lingva.ml` and `lingva.garudalinux.org`
+now answer 403 to everything from behind a Cloudflare challenge, and the ones
+that do work have bad afternoons. So a host that fails is **rested for a
+minute** before it is asked again.
 
-**If you are deploying this, point `LINGVA_INSTANCES` at an instance that
-works** — a self-hosted one is a few lines of Docker — and the French translator
-becomes as good as the Spanish one. Nothing else needs changing.
+That is worth more than it sounds. The translator fires on a debounce as you
+type, so re-asking a dead instance every time cost a timeout per keystroke-pause
+before anything else was even tried. With two dead hosts configured, the first
+translation pays 2.5s and every one after it takes 0.7s. Nothing is disabled
+permanently — the rest expiring is what puts a host back — and while they are
+all resting Lingva simply steps aside and the chain carries on beneath it.
+
+**Self-hosting is the durable answer**, and an entry may carry its own scheme
+to allow it:
+
+```bash
+docker run -d -p 3100:3000 --restart unless-stopped \
+  --name lingva ghcr.io/thedaviddelta/lingva-translate:latest
+
+LINGVA_INSTANCES=http://localhost:3100,lingva.lunar.icu
+```
+
+Listing a public instance after it keeps the site working while the container
+restarts.
 
 ## Design
 
@@ -500,7 +515,7 @@ cp .env.example .env      # then put your key in it
 | `LLM_PROVIDER` | Pin one: `gemini`, `groq`, `openrouter` or `anthropic`. |
 | `PORT` | Defaults to `4000`. |
 | `CHAT_FREE_LIMIT` | Off-topic chat questions per window, shared by both languages. Default `5`; set `0` to seal the chat immediately and see the tape. |
-| `LINGVA_INSTANCES` | Comma-separated Lingva hosts, tried in order. Worth setting — see *[The French translator](#the-french-translator)*. |
+| `LINGVA_INSTANCES` | Comma-separated Lingva hosts, tried in order; an entry may carry a scheme, so a self-hosted instance is `http://localhost:3100`. See *[The French translator](#the-french-translator)*. |
 | `CHAT_WINDOW_MINUTES` | Length of that window. Default `30`. |
 
 Without a key:
@@ -561,14 +576,15 @@ test/
   tutor.test.js             52 checks on intent routing and the form index
   tutor-fr.test.js      ·fr  64 that the French pack drives the same router
   corpus.test.js            13 checks on sentence ranking and gloss extraction
-  translators.test.js       32 checks on engine order, names and the agreement rule
+  translators.test.js       42 checks on engine order, names, the agreement rule
+                               and the rest a failing Lingva instance is given
   idioms.test.js            17 checks on idiom pairing in both directions
   quota.test.js             18 checks on the sliding window and refunds
   identity.test.js          15 checks on per-browser identity and its signature
   openrouter.test.js        20 checks on the guards that keep OpenRouter free
 ```
 
-`npm test` runs all 781, offline, in about a second.
+`npm test` runs all 791, offline, in about a second.
 
 ## The conjugation engine
 

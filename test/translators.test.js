@@ -11,7 +11,7 @@ function ok(name, condition, detail = '') {
   if (!condition) failures.push(`${name}${detail ? `\n    ${detail}` : ''}`);
 }
 
-const { translate, chunk } = await import('../server/translators.js');
+const { translate, chunk, resetLingvaCooldowns } = await import('../server/translators.js');
 
 let plan = {};
 const asked = [];
@@ -237,6 +237,56 @@ ok('every engine failing is an error, not a wrong answer', threw);
 // --- no model is ever consulted -------------------------------------------
 const source = (await import('node:fs')).readFileSync(new URL('../server/routes/translate.js', import.meta.url), 'utf8');
 ok('the route imports no model', !/llm\.js|providerInfo|hasProvider/.test(source));
+
+// --- a dead Lingva instance is passed over rather than re-tried -----------
+// The translator box fires on a debounce as you type, so re-asking a dead host
+// every time cost a timeout per keystroke-pause before anything else was tried.
+resetLingvaCooldowns();
+plan = { wikipedia: null, lingva: null, mymemory: null, apertium: { responseData: { translatedText: 'piso' } } };
+
+asked.length = 0;
+await translate('floor', 'en', 'es');
+const firstRun = asked.filter((url) => url.includes('lingva')).length;
+ok('every instance is tried the first time', firstRun >= 3, `${firstRun} asked`);
+
+asked.length = 0;
+await translate('ceiling', 'en', 'es');
+const secondRun = asked.filter((url) => url.includes('lingva')).length;
+ok('and none of them the next time, while they are resting', secondRun === 0, `${secondRun} asked`);
+
+// A host that answers is put straight back into the rotation.
+resetLingvaCooldowns();
+plan = { ...plan, lingva: { translation: 'suelo' } };
+asked.length = 0;
+let revived = await translate('floor again', 'en', 'es');
+ok('a working instance answers', revived.engine === 'Lingva', revived.engine);
+asked.length = 0;
+revived = await translate('another floor', 'en', 'es');
+ok('and is asked again next time', asked.some((url) => url.includes('lingva')));
+ok('and still answers', revived.engine === 'Lingva', revived.engine);
+
+// With every instance resting, Lingva steps aside and the chain carries on
+// rather than the translation failing.
+resetLingvaCooldowns();
+plan = { ...plan, lingva: null };
+await translate('wall', 'en', 'es');
+asked.length = 0;
+revived = await translate('wall two', 'en', 'es');
+ok('the chain still answers while they rest', revived.engine === 'Apertium', revived.engine);
+ok('and nothing was spent asking them', !asked.some((url) => url.includes('lingva')));
+
+// Resting is never permanent — it expires. Clearing it stands in for the wait.
+resetLingvaCooldowns();
+plan = { ...plan, lingva: { translation: 'pared' } };
+revived = await translate('wall three', 'en', 'es');
+ok('once the rest is over they answer again', revived.engine === 'Lingva', revived.engine);
+
+resetLingvaCooldowns();
+
+// --- an instance may carry its own scheme, for a self-hosted one ----------
+const translators = (await import('node:fs')).readFileSync(new URL('../server/translators.js', import.meta.url), 'utf8');
+ok('a host without a scheme is assumed https', /https:\/\/\$\{host\}/.test(translators));
+ok('and one with a scheme is left alone', /\^https\?:/.test(translators));
 
 // --- long text is split on sentence boundaries ----------------------------
 const long = `${'Una frase corta. '.repeat(60)}`;
