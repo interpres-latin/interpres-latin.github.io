@@ -39,7 +39,9 @@ function paintChrome() {
 }
 
 let teardown = null;
-let currentPath = null;
+// Includes the query, so /conjugacion?v=ir re-renders when arriving from
+// /conjugacion — the verb lives in the query, not the path.
+let currentKey = null;
 
 function match(pathname) {
   return ROUTES.find((route) => route.path === pathname) || ROUTES[0];
@@ -63,13 +65,14 @@ async function navigate({ replace = false } = {}) {
   const route = match(window.location.pathname);
   const { hash } = window.location;
 
-  if (route.path !== currentPath) {
+  const key = window.location.pathname + window.location.search;
+  if (key !== currentKey) {
     if (typeof teardown === 'function') teardown();
     teardown = null;
     clear(main);
     document.title = route.path === '/' ? t('meta.home') : `ProfeGPT · ${t(`nav.${route.nav === 'traductor' ? 'translator' : route.nav === 'conjugacion' ? 'conjugation' : route.nav === 'diccionario' ? 'dictionary' : 'chat'}`)}`;
     teardown = (await route.render(main)) || null;
-    currentPath = route.path;
+    currentKey = key;
     if (!hash) window.scrollTo({ top: 0 });
   }
 
@@ -123,7 +126,7 @@ window.addEventListener('popstate', () => navigate({ replace: true }));
 // at render time rather than bound.
 window.addEventListener('langchange', () => {
   paintChrome();
-  currentPath = null;
+  currentKey = null;
   navigate({ replace: true });
 });
 

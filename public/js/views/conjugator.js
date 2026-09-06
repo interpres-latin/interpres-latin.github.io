@@ -181,6 +181,12 @@ export function renderConjugator(main) {
 
     paint(result);
 
+    // Keep the URL on the verb being shown, so the page can be linked to,
+    // refreshed and shared — which is what the chat's "full table" link needs.
+    const url = new URL(window.location.href);
+    url.searchParams.set('v', result.verb);
+    history.replaceState({}, '', url.pathname + url.search);
+
     // RAE's own table is authoritative when it has one; merge it in on arrival.
     const ticket = (state.request += 1);
     try {
@@ -197,7 +203,13 @@ export function renderConjugator(main) {
     results.append(verbCard(result), tables(result, state.highlight));
   }
 
-  show(state.verb, 'ar');
+  const requested = new URLSearchParams(window.location.search).get('v');
+  if (requested) {
+    searchInput.value = requested;
+    show(requested);
+  } else {
+    show(state.verb, 'ar');
+  }
 
   const stopWallpaper = startWallpaper(wallpaper, results);
 

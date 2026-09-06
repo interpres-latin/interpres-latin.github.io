@@ -352,8 +352,8 @@ and exposes `GET /api/health` for a health check.
 - Dictionary data comes from [rae-api.com](https://rae-api.com), which serves
   the RAE's *DLE* as JSON. `dle.rae.es` itself blocks direct requests.
   Anonymous access is **10 requests a minute and 100 a day** — enough for
-  development, not for a public site. A free self-service key at
-  <https://rae-api.com/login> raises it to 60/minute and 5,000/day; set
+  development, not for a class. A free self-service key at
+  <https://rae-api.com/login> raises it to **60/minute and 5,000/day**; set
   `RAE_API_KEY` and it is sent automatically. Being rate-limited surfaces as a
   429 with a "come back in N minutes" message rather than a generic failure.
 - The model-backed paths (off-topic chat, model translation, generated example

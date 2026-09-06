@@ -234,7 +234,7 @@ function withVerbLink(blocks, verb, language) {
   blocks.push({
     type: 'links',
     label: language === 'es' ? 'Tabla completa' : 'Full table',
-    items: [{ label: verb, href: '/conjugacion' }],
+    items: [{ label: verb, href: `/conjugacion?v=${encodeURIComponent(verb)}` }],
   });
   return blocks;
 }
@@ -312,7 +312,8 @@ function formLookupAnswer(word, language) {
     {
       type: 'links',
       label: language === 'es' ? 'Conjugación' : 'Conjugation',
-      items: [...new Set(matches.slice(0, 4).map((m) => m.verb))].map((verb) => ({ label: verb, href: '/conjugacion' })),
+      items: [...new Set(matches.slice(0, 4).map((m) => m.verb))]
+        .map((verb) => ({ label: verb, href: `/conjugacion?v=${encodeURIComponent(verb)}` })),
     },
   ];
 }
