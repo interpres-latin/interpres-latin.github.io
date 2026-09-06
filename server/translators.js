@@ -24,6 +24,8 @@
 const LINGVA_HOSTS = (process.env.LINGVA_INSTANCES || 'lingva.lunar.icu,lingva.ml,lingva.garudalinux.org')
   .split(',').map((host) => host.trim()).filter(Boolean);
 
+import { findIdioms } from './idioms.js';
+
 const WIKIPEDIA = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
 const APERTIUM = 'https://apertium.org/apy/translate';
@@ -326,8 +328,33 @@ async function apertium(text, from, to) {
 const ENGINES = [namedEntity, lingva, myMemory, apertium];
 
 /**
+ * Swap a word-for-word rendering of an idiom for the equivalent idiom.
+ *
+ * Most idioms already survive translation — "raining cats and dogs" comes back
+ * as "llueve a cántaros" — so only the ones that do not are listed, and only
+ * those are touched.
+ */
+async function restoreIdioms(source, translated, from, to, translateSpan) {
+  const idioms = findIdioms(source, from, to);
+  if (!idioms.length) return { text: translated, notes: [] };
+
+  let result = translated;
+  const notes = [];
+
+  for (const idiom of idioms) {
+    const literal = await translateSpan(idiom.phrase).catch(() => null);
+    if (literal && normalise(literal) !== normalise(idiom.say)) {
+      result = substitute(result, literal, idiom.say);
+    }
+    notes.push({ source: idiom.source, target: idiom.say, meaning: idiom.meaning });
+  }
+
+  return { text: result, notes };
+}
+
+/**
  * Translate, trying each engine until one answers.
- * @returns {Promise<{text: string, engine: string}>}
+ * @returns {Promise<{text: string, engine: string, notes: Array}>}
  */
 export async function translate(text, from, to) {
   const failures = [];
@@ -339,14 +366,16 @@ export async function translate(text, from, to) {
 
       // Wikipedia already answers with the established name; the translators
       // need the names put back afterwards.
-      if (engine === namedEntity) return result;
+      if (engine === namedEntity) return { ...result, notes: [] };
 
-      const corrected = await restoreNames(
-        text, result.text, from, to,
-        async (span) => (await engine(span, from, to)).text,
-      ).catch(() => result.text);
+      const translateSpan = async (span) => (await engine(span, from, to)).text;
 
-      return { ...result, text: corrected };
+      const named = await restoreNames(text, result.text, from, to, translateSpan)
+        .catch(() => result.text);
+      const withIdioms = await restoreIdioms(text, named, from, to, translateSpan)
+        .catch(() => ({ text: named, notes: [] }));
+
+      return { ...result, text: withIdioms.text, notes: withIdioms.notes };
     } catch (error) {
       failures.push(error.message);
     }

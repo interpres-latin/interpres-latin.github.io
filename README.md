@@ -167,6 +167,26 @@ particular meaning. Tatoeba's search also returns relatives, so "madrugar" can
 come back with "madrugador"; sentences containing the word itself are ranked
 first, then the ones short enough for a learner to hold in their head.
 
+### Idioms
+
+Most idioms already survive translation — "it's raining cats and dogs" comes
+back as *llueve a cántaros*, "he kicked the bucket" as *estiró la pata*. The
+ones that do not come back word for word: *cost an arm and a leg* became *un
+brazo y una pierna*.
+
+The tempting repair is to flatten the idiom first — "it cost a lot" → *costó
+mucho* — which is accurate and teaches the wrong thing, because Spanish has its
+own idiom and a learner should meet it. So `server/idioms.js` pairs each idiom
+with its **equivalent** rather than a paraphrase, and the plain meaning is shown
+beside the translation as a note:
+
+> it cost an arm and a leg **=** costó un ojo de la cara
+> *to be extremely expensive*
+
+Hand-written and hand-checked, like the grammar notes, and only the idioms a
+translator actually gets wrong are listed. Matching ignores case and accents,
+works inside a sentence, and is capped at two notes per translation.
+
 ### Keeping OpenRouter free
 
 Three guards in `server/providers/openrouter.js`, none of which trusts the
@@ -363,7 +383,8 @@ test/
   conjugator.test.js    204 reference forms checked against RAE paradigms
   tutor.test.js         47 checks on intent routing and the form index
   corpus.test.js        10 checks on sentence ranking and gloss extraction
-  translators.test.js   14 checks on the engine order and the agreement rule
+  translators.test.js   32 checks on engine order, names and the agreement rule
+  idioms.test.js        17 checks on idiom pairing in both directions
   quota.test.js         21 checks on the sliding window and refunds
   identity.test.js      15 checks on per-browser identity and its signature
   openrouter.test.js    20 checks on the guards that keep OpenRouter free

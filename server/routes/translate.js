@@ -32,7 +32,7 @@ router.post('/', async (req, res) => {
 
   try {
     const result = await translate(text, from, to);
-    const payload = { translation: result.text, engine: result.engine };
+    const payload = { translation: result.text, engine: result.engine, notes: result.notes || [] };
     remember(key, payload);
     return res.json(payload);
   } catch (error) {

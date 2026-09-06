@@ -450,6 +450,12 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .pane__out { flex: 1; padding: 18px; font-size: 16.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; overflow-y: auto; max-height: 460px; }
 .pane__out:empty::before { content: attr(data-placeholder); color: var(--text-faint); }
 
+.idioms { border-top: 1px solid var(--line); }
+.idioms__item { padding: 12px 18px; border-left: 2px solid var(--es); background: var(--panel-hi); }
+.idioms__pair { margin: 0; font-size: 14.5px; }
+.idioms__arrow { color: var(--text-faint); }
+.idioms__meaning { margin: 4px 0 0; font-size: 12.5px; color: var(--text-dim); }
+
 .pane__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-faint); min-height: 38px; }
 
 .swap {

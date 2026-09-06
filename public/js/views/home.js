@@ -173,12 +173,28 @@ function buildTranslator(root) {
     el('div', { class: 'pane__body' }, input),
     el('div', { class: 'pane__foot' }, counter, status));
 
+  const notes = el('div', { class: 'idioms' });
+
   const targetPane = el('div', { class: 'pane' },
     el('div', { class: 'pane__bar' },
       el('span', { class: 'pane__lang' }, targetDot, targetLang),
       copy),
     el('div', { class: 'pane__body' }, output),
+    notes,
     el('div', { class: 'pane__foot' }, engine, el('span', {})));
+
+  /** Idioms are worth pointing at: the pairing is the thing being taught. */
+  function paintNotes(list) {
+    clear(notes);
+    for (const note of list || []) {
+      notes.appendChild(el('div', { class: 'idioms__item' },
+        el('p', { class: 'idioms__pair' },
+          el('span', {}, note.source),
+          el('span', { class: 'idioms__arrow' }, ' = '),
+          el('b', {}, note.target)),
+        el('p', { class: 'idioms__meaning' }, note.meaning[lang()] || note.meaning.en)));
+    }
+  }
 
   root.append(
     el('div', { class: 'translator__head' },
@@ -207,6 +223,7 @@ function buildTranslator(root) {
     counter.textContent = `${input.value.length} / ${MAX_CHARS}`;
     if (!input.value.trim()) {
       clear(output);
+      clear(notes);
       engine.textContent = '';
       status.textContent = t('translator.ready');
       return;
@@ -237,6 +254,7 @@ function buildTranslator(root) {
       const data = await postJson('/api/translate', { text, from: state.from }, { signal: controller.signal });
       if (controller.signal.aborted) return;
       output.textContent = data.translation || '';
+      paintNotes(data.notes);
       engine.textContent = data.engine ? t('translator.engine', { engine: data.engine }) : '';
       status.textContent = force ? t('translator.done') : t('translator.ready');
     } catch (error) {
@@ -268,7 +286,7 @@ function buildTranslator(root) {
     input.focus();
 
     if (input.value.trim()) translate();
-    else { clear(output); engine.textContent = ''; status.textContent = t('translator.ready'); }
+    else { clear(output); clear(notes); engine.textContent = ''; status.textContent = t('translator.ready'); }
   });
 
   input.addEventListener('input', sync);
