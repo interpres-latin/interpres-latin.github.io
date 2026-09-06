@@ -108,21 +108,33 @@ class looking words up would have exhausted a day's allowance before lunch.
 | Example sentences | [Tatoeba](https://tatoeba.org) — real sentences by native speakers, already paired with English translations (CC BY) | free, unmetered |
 | English glosses | [Wiktionary](https://en.wiktionary.org) (CC BY-SA) | free, unmetered |
 | Definitions | RAE, via rae-api.com | 5,000/day with a key |
-| Translation | MyMemory when its candidates agree, a model when they do not | see below |
+| Translation | Lingva, then MyMemory, then Apertium — never a model | free, unmetered |
 
 A model is woken only when Tatoeba has nothing for a word, and the template
 frame is the last resort after that. Seven lookups across common and uncommon
 words cost **zero** model calls.
 
-The translator is the exception, and deliberately so. MyMemory is a crowd
-translation memory whose stored segments can simply be wrong: *"Buenos días,
-¿cómo estás?"* comes back as *"Good morning Najlaa how are you?"* — a stranger's
-name, at the top confidence score. Neither the quality score nor the source
-segment separates that from a good answer, because the memory genuinely holds
-three different translations of the same sentence. What does separate them is
-**agreement**: when the candidates concur the answer is free and trustworthy;
-when they contradict each other the request goes to a model instead. Results are
-cached, and the pane names the engine that produced each one.
+### The translator
+
+No model, at any point. Three dedicated engines, tried in order:
+
+| | | |
+| --- | --- | --- |
+| 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES` and a dead one is skipped. |
+| 2 | **MyMemory** | a crowd translation memory, believed only when its candidates agree with each other. |
+| 3 | **Apertium** | open-source rule-based translation. Clumsy, but always up and it never invents content. |
+
+The agreement rule on MyMemory exists because its segments can be wrong in ways
+no score exposes: *"Buenos días, ¿cómo estás?"* comes back as *"Good morning
+**Najlaa** how are you?"* — a stranger's name, at the top confidence score.
+Neither the quality field nor the source segment separates that from a good
+answer, since the memory genuinely holds three different translations of the
+same sentence. Disagreement does.
+
+Apertium is a floor rather than a choice — it renders "Me gustaría aprender
+español contigo" as *"It would like me learn Spanish with you"* — so it is only
+reached when both better engines are unavailable. Results are cached, and the
+pane names the engine behind each translation.
 
 Corpus sentences are attached to the word rather than to a sense, because a
 sentence merely contains the word — it does not promise to illustrate one
@@ -326,6 +338,7 @@ test/
   conjugator.test.js    204 reference forms checked against RAE paradigms
   tutor.test.js         47 checks on intent routing and the form index
   corpus.test.js        10 checks on sentence ranking and gloss extraction
+  translators.test.js   14 checks on the engine order and the agreement rule
   quota.test.js         21 checks on the sliding window and refunds
   identity.test.js      15 checks on per-browser identity and its signature
   openrouter.test.js    20 checks on the guards that keep OpenRouter free
