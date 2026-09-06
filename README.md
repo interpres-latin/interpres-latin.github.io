@@ -288,6 +288,11 @@ languages.
 The typed command is the hidden way in; the menu is the way back out for anyone
 who found it by accident.
 
+Switching subject **clears the query as well as the view**. Every page keeps
+what you looked at in the URL — `?v=parler`, `?q=sobremesa` — so without this the
+Latin conjugator would open on a French verb. There is no notice either: the
+whole page changing language is announcement enough.
+
 ### Site language
 
 The interface is Spanish. The **ES / EN** switch in the header offers English
@@ -296,11 +301,13 @@ right code is entered, and the lock survives a reload. Strings live in
 `public/js/lib/i18n.js`; a language change re-renders the current view.
 
 In French mode the same switch reads **FR / EN**, and English sits behind the
-same passcode. Someone who has already paid it stays in English across a change
-of mode — see *[The French side](#the-french-side)*.
+same passcode. Latin reads **LA / EN** with neither side gated, since English is
+the working language of a Latin lesson rather than a way round it.
 
-Latin is the exception on both counts: **LA / EN**, starting in **English**, and
-neither side gated. See *[The Latin side](#the-latin-side)*.
+**A change of subject takes the interface with it**: the site speaks whatever it
+is about, Latin included. An earlier version kept English across the switch on
+the grounds that the reader had paid a passcode for it, which meant choosing a
+language and then not being given it. English is one click away in the menu.
 
 What the site is *about* stays in its own language either way — verb forms,
 dictionary headwords, the subject pronouns in the conjugation tables. Grammatical labels do
@@ -495,7 +502,7 @@ side does, plus the things Latin needs and a modern language does not.
 
 | | |
 | --- | --- |
-| the header switch | **LA \| EN**, starting in **English**, and **neither side is gated** |
+| the header switch | **LA \| EN**, and **neither side is gated** |
 | the conjugator | five conjugations, active and passive, from the principal parts |
 | **a declensions page** | the five noun declensions and the adjectives, in every case |
 | **a stages page** | the Cambridge Latin Course vocabulary, stages 1–28 |
@@ -503,11 +510,10 @@ side does, plus the things Latin needs and a modern language does not.
 | the translator | every Latin word parsed, and the case corrected where it is wrong |
 | the tutor | 26 grammar topics, answering **in English** |
 
-**The interface starts in English and the passcode is gone.** English is the
-working language of a Latin lesson rather than a way round it, so there is
-nothing there to protect; Latin is a curiosity to opt into. And the chat answers
-in English whatever the switch says — a Latin tutor replying in Latin would be a
-joke at the reader's expense.
+**The passcode is gone.** English is the working language of a Latin lesson
+rather than a way round it, so there is nothing there to protect. But the chat
+answers in English whatever the switch says — a Latin tutor replying in Latin
+would be a joke at the reader's expense.
 
 ### Whitaker's Words
 

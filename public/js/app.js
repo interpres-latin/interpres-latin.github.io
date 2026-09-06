@@ -168,6 +168,13 @@ window.addEventListener('langchange', () => {
 window.addEventListener('studychange', () => {
   followStudyLanguage();
   paintChrome();
+
+  // Drop the query as well. Every page keeps what you looked at in the URL —
+  // ?v=parler, ?q=sobremesa — and rebuilding the view would otherwise reload a
+  // French verb into the Latin conjugator. The subject changed; the search
+  // should start empty.
+  history.replaceState({}, '', window.location.pathname);
+
   currentKey = null;
   navigate({ replace: true });
 });

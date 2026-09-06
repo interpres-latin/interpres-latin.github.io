@@ -154,13 +154,10 @@ function switchMode(next, state, output, status) {
   state.pending?.abort();
   output.textContent = '';
   status.textContent = '';
-
-  // Everything below this line happens in the new language: setStudyLang fires
-  // studychange, which the router answers by tearing this view down and
-  // rebuilding it. The notice therefore has to outlive the view — toast()
-  // attaches to the body, which survives.
+  // setStudyLang fires studychange, which the router answers by tearing this
+  // view down and rebuilding it in the new language — which is announcement
+  // enough. The whole page changing does not need a notice on top of it.
   setStudyLang(next);
-  toast(`${t('mode.entered')} · ${t('mode.enteredNote')}`);
 }
 
 function buildTranslator(root) {

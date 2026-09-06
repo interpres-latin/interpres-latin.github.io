@@ -25,7 +25,6 @@ import { checkPasscode, isLocked, lang, languageOptions, passcodeRequired, setLa
 import { setStudyLang, studyLang, STUDY_LANGUAGES } from './study.js';
 import { allowedSubjects, onRestrictionChange } from './restriction.js';
 import { sealWithTape } from './tape.js';
-import { toast } from './toast.js';
 
 /**
  * The subjects the site can be about, in their own names.
@@ -154,9 +153,6 @@ export function mountLanguageSwitch(container) {
             closeSubjects();
             if (code === study) return;
             setStudyLang(code);
-            // The view is rebuilt from under us, so the notice has to outlive
-            // it — and by now t() is answering in the new language.
-            toast(`${t('mode.entered')} · ${t('mode.enteredNote')}`);
           },
         }, SUBJECTS[code], el('em', {}, code.toUpperCase()));
         if (code === study) button.classList.add('is-active');

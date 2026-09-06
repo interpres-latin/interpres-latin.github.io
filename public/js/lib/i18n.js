@@ -10,10 +10,13 @@
  * French one, and English is gated behind a passcode on both. Getting the
  * passcode wrong seals the whole page until the right one is entered.
  *
- * Latin is the exception on both counts: it reads LA | EN, it **starts in
- * English**, and neither side is gated. English is the working language of a
- * Latin classroom rather than a way round the lesson, so there is nothing to
- * protect — and a Latin interface is a curiosity to opt into, not the default.
+ * Switching subject takes the interface with it: the site speaks whatever it is
+ * about. Latin included — turning the site Latin turns the chrome Latin, and
+ * the reader can put it back to English from the same menu.
+ *
+ * Latin is still the exception on the passcode: neither side is gated. English
+ * is the working language of a Latin classroom rather than a way round the
+ * lesson, so there is nothing there to protect.
  *
  * Content the site is about never changes language: verb forms, dictionary
  * headwords, the subject pronouns in the tables. Only the chrome moves.
@@ -44,18 +47,12 @@ function write(key, value) {
   }
 }
 
-/**
- * Which half of the switch a language starts on. Spanish and French start in
- * themselves; Latin starts in English, because that is the language the lesson
- * is conducted in.
- */
-const DEFAULT_INTERFACE = { es: 'es', fr: 'fr', la: 'en' };
-
-/** Whether the half that is not the default costs a passcode. */
+/** Whether the half that is not the study language costs a passcode. */
 const GATED = { es: true, fr: true, la: false };
 
+/** A subject's own language is the one its side of the site starts in. */
 function defaultFor(study) {
-  return DEFAULT_INTERFACE[study] ?? study;
+  return study;
 }
 
 /** A stored choice only counts if it is one of the two on offer now. */
@@ -91,12 +88,12 @@ export function setLang(next) {
 /**
  * Follow a change of study language.
  *
- * Someone reading the site in English stays in English — that choice cost them
- * a passcode. Anyone else moves to the new study language, which is the only
- * other option the switch now offers.
+ * The interface goes with the subject, unconditionally — switching to Latin
+ * turns the site Latin. An earlier version kept English across the switch on
+ * the grounds that the reader had paid a passcode for it, which meant choosing
+ * a language and then not getting it. English is one click away in the menu.
  */
 export function followStudyLanguage() {
-  if (current === 'en') return current;
   current = defaultFor(studyLang());
   write(LANG_KEY, current);
   document.documentElement.lang = current;
@@ -382,9 +379,7 @@ const SPANISH = {
   },
 
   mode: {
-    entered: two('Modo español', 'Spanish mode'),
     restricted: two('Tu profe ha dejado solo el español por ahora.', 'Your teacher has left only Spanish available for now.'),
-    enteredNote: two('La web vuelve a ser de español.', 'The site is about Spanish again.'),
   },
 };
 
@@ -639,12 +634,7 @@ const FRENCH = {
   },
 
   mode: {
-    entered: deux('Mode français', 'French mode'),
     restricted: deux('Votre professeur n’a laissé que l’espagnol pour le moment.', 'Your teacher has left only Spanish available for now.'),
-    enteredNote: deux(
-      'Le site porte maintenant sur le français. Écrivez « mode: spanish » pour revenir.',
-      'The site is about French now. Type "mode: spanish" to go back.',
-    ),
   },
 };
 
@@ -987,12 +977,7 @@ const LATIN = {
   },
 
   mode: {
-    entered: latine('Modus Latinus', 'Latin mode'),
     restricted: latine('Magister solam Hispanicam reliquit.', 'Your teacher has left only Spanish available for now.'),
-    enteredNote: latine(
-      'Pagina nunc de lingua Latina est. Scribe “mode: spanish” ut redeas.',
-      'The site is about Latin now. Type "mode: spanish" to go back.',
-    ),
   },
 };
 
