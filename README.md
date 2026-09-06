@@ -116,10 +116,11 @@ words cost **zero** model calls.
 
 ### The translator
 
-No model, at any point. Three dedicated engines, tried in order:
+No model, at any point. Four dedicated engines, tried in order:
 
 | | | |
 | --- | --- | --- |
+| 0 | **Wikipedia** | for names and titles. Machine translation renders them literally: "Cuban Missile Crisis" becomes *"crisis de los misiles cubanos"*, which says the missiles were Cuban when they were Soviet. Wikipedia's cross-language links hold the name each language actually uses — *Crisis de los misiles de Cuba*. |
 | 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES` and a dead one is skipped. |
 | 2 | **MyMemory** | a crowd translation memory, believed only when its candidates agree with each other. |
 | 3 | **Apertium** | open-source rule-based translation. Clumsy, but always up and it never invents content. |
@@ -130,6 +131,13 @@ no score exposes: *"Buenos días, ¿cómo estás?"* comes back as *"Good morning
 Neither the quality field nor the source segment separates that from a good
 answer, since the memory genuinely holds three different translations of the
 same sentence. Disagreement does.
+
+Wikipedia is only asked for things that look like names — two to eight words,
+no sentence punctuation — and the article the query lands on has to *be* the
+phrase, not merely resemble it. Both guards matter: without the first, a
+sentence gets looked up as though it were a title; without the second, "la casa
+de papel" comes back as "Money Heist" from a loosely matching article. Anything
+else falls through to the translators untouched.
 
 Apertium is a floor rather than a choice — it renders "Me gustaría aprender
 español contigo" as *"It would like me learn Spanish with you"* — so it is only

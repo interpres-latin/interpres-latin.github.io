@@ -18,19 +18,65 @@ const asked = [];
 globalThis.fetch = async (url) => {
   const target = String(url);
   asked.push(target);
-  const which = target.includes('lingva') ? 'lingva'
-    : target.includes('mymemory') ? 'mymemory'
-      : 'apertium';
+  const which = target.includes('wikipedia') ? 'wikipedia'
+    : target.includes('lingva') ? 'lingva'
+      : target.includes('mymemory') ? 'mymemory'
+        : 'apertium';
   const answer = plan[which];
   if (!answer) return { ok: false, status: 503, json: async () => ({}) };
   return { ok: true, json: async () => answer };
 };
+
+const article = (title, resolved) => ({ query: { pages: { 1: { title: resolved ?? title, langlinks: [{ '*': title }] } } } });
+const noArticle = { query: { pages: { '-1': { missing: '' } } } };
 
 const memory = (...translations) => ({
   responseStatus: 200,
   responseData: { translatedText: translations[0] },
   matches: translations.map((translation) => ({ translation })),
 });
+
+// --- names and titles go to Wikipedia, not to a translator ----------------
+// "Cuban Missile Crisis" translated literally becomes "crisis de los misiles
+// cubanos", which says the missiles were Cuban. They were Soviet.
+plan = {
+  wikipedia: article('Crisis de los misiles de Cuba', 'Cuban Missile Crisis'),
+  lingva: { translation: 'crisis de los misiles cubanos' },
+};
+let named = await translate('Cuban Missile Crisis', 'en', 'es');
+ok('an established name comes from Wikipedia', named.engine === 'Wikipedia', JSON.stringify(named));
+ok('and is the name people actually use', named.text === 'Crisis de los misiles de Cuba', named.text);
+
+named = await translate('cuban missile crisis', 'en', 'es');
+ok('capitalisation does not matter', named.engine === 'Wikipedia', JSON.stringify(named));
+
+// --- prose is never sent to the encyclopedia ------------------------------
+plan = { wikipedia: article('Should not be used'), lingva: { translation: 'The dog sleeps in the garden' } };
+asked.length = 0;
+let prose = await translate('El perro duerme en el jardín.', 'es', 'en');
+ok('a sentence is not treated as a title', prose.engine === 'Lingva', JSON.stringify(prose));
+ok('and Wikipedia is not even asked', !asked.some((u) => u.includes('wikipedia')), asked.join(' '));
+
+// --- an article about something else is refused ---------------------------
+// The query resolving to a *different* title means the phrase was not that name.
+plan = { wikipedia: article('Money Heist', 'La casa de papel (serie de televisión)'), lingva: { translation: 'the paper house' } };
+const loose = await translate('la casa de papel', 'es', 'en');
+ok('a loose article match is refused', loose.engine === 'Lingva', JSON.stringify(loose));
+
+// --- a single word is left to the translator ------------------------------
+asked.length = 0;
+plan = { wikipedia: article('Dog'), lingva: { translation: 'dog' } };
+const single = await translate('perro', 'es', 'en');
+ok('a lone common word skips the encyclopedia', single.engine === 'Lingva', JSON.stringify(single));
+ok('which is not consulted for it', !asked.some((u) => u.includes('wikipedia')));
+
+// --- a phrase with no article falls through -------------------------------
+plan = { wikipedia: noArticle, lingva: { translation: 'a green table' } };
+const nothing = await translate('una mesa verde', 'es', 'en');
+ok('a phrase with no article falls through to the translator',
+  nothing.engine === 'Lingva' && nothing.text === 'a green table', JSON.stringify(nothing));
+
+plan = {};
 
 // --- Lingva first ----------------------------------------------------------
 plan = {
