@@ -126,7 +126,7 @@ function celebrate() {
 }
 
 function buildTranslator(root) {
-  const state = { from: 'es', to: 'en', pending: null };
+  const state = { from: 'en', to: 'es', pending: null };
 
   const input = el('textarea', { spellcheck: false, maxLength: MAX_CHARS, 'aria-label': t('translator.sourceLabel') });
 
