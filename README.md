@@ -132,6 +132,14 @@ Neither the quality field nor the source segment separates that from a good
 answer, since the memory genuinely holds three different translations of the
 same sentence. Disagreement does.
 
+Names inside a sentence are handled too, and separately: the whole-input lookup
+cannot see them, and a translator renders them literally wherever they appear.
+Each capitalised run in the source is looked up, translated on its own to learn
+how this engine renders it, and that rendering swapped for the real name —
+keeping whatever capitalisation the position called for. "The Cuban Missile
+Crisis was a serious event" now comes back as *"La crisis de los misiles de
+Cuba fue un acontecimiento grave."*
+
 Wikipedia is only asked for things that look like names — two to eight words,
 no sentence punctuation — and the article the query lands on has to *be* the
 phrase, not merely resemble it. Both guards matter: without the first, a

@@ -77,16 +77,49 @@ function looksLikeAName(text) {
   return words.length >= 2 && words.length <= 8;
 }
 
-/**
- * The established name, rather than a literal rendering of one.
- * Falls through silently when the phrase is not an article title.
- */
-async function namedEntity(text, from, to) {
-  // Tested before anything is stripped: trimming a trailing full stop first
-  // would let a sentence through the very gate meant to catch it.
-  if (!looksLikeAName(text)) throw new Error('not a name');
-  const phrase = text.trim().replace(/[¿¡]/g, '');
+/** Small words that sit inside a name without breaking it. */
+const CONNECTORS = new Set(['of', 'the', 'and', 'de', 'del', 'la', 'las', 'los', 'y', 'en']);
+const LEADING_ARTICLE = /^(?:the|a|an|el|la|los|las|un|una)\s+/i;
 
+/**
+ * Runs of capitalised words, which is what a name looks like in running text.
+ * A lone capitalised word is ignored: at the start of a sentence every word is
+ * capitalised, and one word is rarely a name worth looking up.
+ */
+function findNameSpans(text) {
+  const words = [...text.matchAll(/[\p{L}\p{N}''-]+/gu)];
+  const spans = [];
+  let run = [];
+
+  const flush = () => {
+    if (run.length >= 2) {
+      const start = run[0].index;
+      const last = run[run.length - 1];
+      spans.push(text.slice(start, last.index + last[0].length));
+    }
+    run = [];
+  };
+
+  for (let i = 0; i < words.length; i += 1) {
+    const word = words[i];
+    const capitalised = /^\p{Lu}/u.test(word[0]);
+    const connector = CONNECTORS.has(word[0].toLowerCase());
+
+    if (capitalised) {
+      run.push(word);
+    } else if (connector && run.length && words[i + 1] && /^\p{Lu}/u.test(words[i + 1][0])) {
+      run.push(word); // "United States of America"
+    } else {
+      flush();
+    }
+  }
+  flush();
+
+  return [...new Set(spans)].slice(0, 3);
+}
+
+/** Ask Wikipedia what a phrase is called in the other language. */
+async function officialName(phrase, from, to) {
   const url = new URL(WIKIPEDIA(from));
   url.searchParams.set('action', 'query');
   url.searchParams.set('titles', phrase);
@@ -100,19 +133,66 @@ async function namedEntity(text, from, to) {
     headers: { accept: 'application/json', 'user-agent': 'ProfeGPT (educational)' },
     signal: AbortSignal.timeout(10000),
   });
-  if (!response.ok) throw new Error(`Wikipedia responded ${response.status}`);
+  if (!response.ok) return null;
 
   const body = await response.json();
-  const pages = body?.query?.pages || {};
-  const page = Object.values(pages)[0];
+  const page = Object.values(body?.query?.pages || {})[0];
   const link = page?.langlinks?.[0]?.['*'];
+  if (!link) return null;
+
+  // The article has to be the phrase itself, not something it resembles.
+  if (normalise(page.title || '') !== normalise(phrase)) return null;
+  return link;
+}
+
+/** Replace `find` in `text`, keeping the capitalisation that was already there. */
+function substitute(text, find, replacement) {
+  const pattern = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  return text.replace(pattern, (match) => (/^\p{Ll}/u.test(match)
+    ? replacement.charAt(0).toLowerCase() + replacement.slice(1)
+    : replacement));
+}
+
+/**
+ * Put the established names back into a finished translation.
+ *
+ * A translator renders a name literally wherever it appears, so "The Cuban
+ * Missile Crisis was a serious event" becomes "La crisis de los misiles
+ * cubanos fue…" — the wrong name, now buried in a sentence where the
+ * whole-input lookup cannot see it. Each name is looked up, translated on its
+ * own to learn how this engine renders it, and that rendering swapped for the
+ * real name.
+ */
+async function restoreNames(source, translated, from, to, translateSpan) {
+  let result = translated;
+
+  for (const span of findNameSpans(source)) {
+    const bare = span.replace(LEADING_ARTICLE, '');
+    const official = (await officialName(span, from, to))
+      ?? (bare !== span ? await officialName(bare, from, to) : null);
+    if (!official) continue;
+
+    const literal = await translateSpan(bare).catch(() => null);
+    if (!literal || normalise(literal) === normalise(official)) continue;
+
+    result = substitute(result, literal, official);
+  }
+
+  return result;
+}
+
+/**
+ * The established name, rather than a literal rendering of one.
+ * Falls through silently when the phrase is not an article title.
+ */
+async function namedEntity(text, from, to) {
+  // Tested before anything is stripped: trimming a trailing full stop first
+  // would let a sentence through the very gate meant to catch it.
+  if (!looksLikeAName(text)) throw new Error('not a name');
+  const phrase = text.trim().replace(/[¿¡]/g, '');
+
+  const link = await officialName(phrase, from, to);
   if (!link) throw new Error('no article');
-
-  // The article the query landed on has to be the phrase itself. Without this a
-  // sentence that happens to resemble some article's title would come back as
-  // that article's name in the other language.
-  if (normalise(page.title || '') !== normalise(phrase)) throw new Error('not the same phrase');
-
   return { text: link, engine: 'Wikipedia' };
 }
 
@@ -209,7 +289,18 @@ export async function translate(text, from, to) {
   for (const engine of ENGINES) {
     try {
       const result = await engine(text, from, to);
-      if (result.text.trim()) return result;
+      if (!result.text.trim()) continue;
+
+      // Wikipedia already answers with the established name; the translators
+      // need the names put back afterwards.
+      if (engine === namedEntity) return result;
+
+      const corrected = await restoreNames(
+        text, result.text, from, to,
+        async (span) => (await engine(span, from, to)).text,
+      ).catch(() => result.text);
+
+      return { ...result, text: corrected };
     } catch (error) {
       failures.push(error.message);
     }

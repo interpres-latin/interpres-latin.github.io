@@ -22,7 +22,14 @@ globalThis.fetch = async (url) => {
     : target.includes('lingva') ? 'lingva'
       : target.includes('mymemory') ? 'mymemory'
         : 'apertium';
-  const answer = plan[which];
+  let answer = plan[which];
+  // Lingva carries its text in the path, so a stub can answer per phrase —
+  // which matters here, since a name is translated on its own to learn how the
+  // engine renders it before being swapped for the real one.
+  if (which === 'lingva' && answer && typeof answer === 'object' && !answer.translation) {
+    const asked = decodeURIComponent(target.split('/').pop());
+    answer = answer[asked] ? { translation: answer[asked] } : null;
+  }
   if (!answer) return { ok: false, status: 503, json: async () => ({}) };
   return { ok: true, json: async () => answer };
 };
@@ -77,6 +84,47 @@ ok('a phrase with no article falls through to the translator',
   nothing.engine === 'Lingva' && nothing.text === 'a green table', JSON.stringify(nothing));
 
 plan = {};
+
+// --- a name buried in a sentence is put right ------------------------------
+// The whole-input lookup cannot see it, and the translator renders it
+// literally, so it has to be restored afterwards.
+plan = {
+  wikipedia: article('Crisis de los misiles de Cuba', 'Cuban Missile Crisis'),
+  lingva: {
+    'The Cuban Missile Crisis was serious.': 'La crisis de los misiles cubanos fue grave.',
+    'Cuban Missile Crisis': 'crisis de los misiles cubanos',
+  },
+};
+let inSentence = await translate('The Cuban Missile Crisis was serious.', 'en', 'es');
+ok('the established name replaces the literal one inside a sentence',
+  inSentence.text === 'La crisis de los misiles de Cuba fue grave.', inSentence.text);
+ok('and the sentence still comes from the translator', inSentence.engine === 'Lingva');
+
+// --- the surrounding capitalisation is kept -------------------------------
+plan = {
+  wikipedia: article('Guerra Civil Española', 'Spanish Civil War'),
+  lingva: {
+    'We studied the Spanish Civil War at school.': 'Estudiamos la guerra civil de España en la escuela.',
+    'Spanish Civil War': 'guerra civil de España',
+  },
+};
+const midSentence = await translate('We studied the Spanish Civil War at school.', 'en', 'es');
+ok('the name is corrected mid-sentence',
+  midSentence.text === 'Estudiamos la guerra Civil Española en la escuela.', midSentence.text);
+ok('and keeps the lower case of the position it sits in',
+  !/ La guerra/.test(midSentence.text), midSentence.text);
+
+// --- text with no names is returned untouched -----------------------------
+plan = { wikipedia: noArticle, lingva: { 'El perro duerme en el jardín.': 'The dog sleeps in the garden.' } };
+const plain = await translate('El perro duerme en el jardín.', 'es', 'en');
+ok('a sentence with no name is untouched',
+  plain.text === 'The dog sleeps in the garden.', plain.text);
+
+// --- a name the encyclopedia does not know is left alone ------------------
+plan = { wikipedia: noArticle, lingva: { 'Yesterday Maria And Pedro Went Home.': 'Ayer María y Pedro se fueron a casa.' } };
+const unknown = await translate('Yesterday Maria And Pedro Went Home.', 'en', 'es');
+ok('unknown capitalised words are left as the translator rendered them',
+  unknown.text === 'Ayer María y Pedro se fueron a casa.', unknown.text);
 
 // --- Lingva first ----------------------------------------------------------
 plan = {
