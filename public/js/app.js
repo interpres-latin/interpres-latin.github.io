@@ -36,6 +36,10 @@ function paintChrome() {
     href: 'https://dle.rae.es', target: '_blank', rel: 'noopener', textContent: t('meta.footerDict'),
   }));
   footer.append(' (RAE)');
+  footer.appendChild(Object.assign(document.createElement('span'), {
+    className: 'footer__legal',
+    textContent: t('meta.copyright'),
+  }));
 }
 
 let teardown = null;

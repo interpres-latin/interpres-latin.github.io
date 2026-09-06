@@ -101,22 +101,34 @@ export async function fetchRae(word, attempt = 0) {
   return { found: true, data: body.data };
 }
 
-const EXAMPLE_SYSTEM = `You write example sentences for ProfeGPT, a Spanish learning site.
+const EXAMPLE_SYSTEM = `You work on ProfeGPT, a Spanish learning site, alongside
+the Real Academia Española dictionary.
 
-For each numbered dictionary sense you are given, write ONE short natural Spanish
-sentence (8-16 words) that uses the headword in exactly that sense, plus its
-English translation.
+For each numbered sense you are given, write ONE short natural Spanish sentence
+(8-16 words) using the headword in exactly that sense, plus its English
+translation.
 
 Rules:
 - Use the headword itself. Verbs may be conjugated; nouns may take an article or plural.
 - Everyday, concrete, neutral register. No proper names of real people.
 - The sentence must make that specific sense obvious from context.
-- Reply with JSON only: {"1": {"es": "...", "en": "..."}, "2": {...}}
-  keyed by the sense number you were given. No other text.`;
+- When asked for "def", render the RAE's definition in plain English. Translate
+  the definition, do not replace it with your own — it is a dictionary entry.
+- Reply with JSON only, keyed by the sense number you were given. No other text.`;
 
-async function generateExamples(word, senses) {
+/**
+ * One call per word covers every sense: an example sentence for each, and — in
+ * English mode — an English rendering of the RAE's own definition, since the
+ * dictionary itself is Spanish-only.
+ */
+async function generateExamples(word, senses, language) {
   const wanted = senses.slice(0, EXAMPLES_PER_WORD);
   if (!wanted.length || !hasProvider()) return null;
+
+  const english = language === 'en';
+  const shape = english
+    ? '{"1": {"def": "...", "es": "...", "en": "..."}, "2": {...}}'
+    : '{"1": {"es": "...", "en": "..."}, "2": {...}}';
 
   const list = wanted
     .map((sense) => `${sense.number}. (${[sense.category, sense.verbCategory].filter(Boolean).join(', ')}) ${sense.description}`)
@@ -124,8 +136,13 @@ async function generateExamples(word, senses) {
 
   const text = await ask({
     system: EXAMPLE_SYSTEM,
-    messages: [{ role: 'user', content: `Headword: ${word}\n\nSenses:\n${list}` }],
-    maxTokens: 1200,
+    messages: [{
+      role: 'user',
+      content: `Headword: ${word}\n\nSenses:\n${list}\n\n`
+        + `Reply with ${shape}`
+        + (english ? '\n"def" is the definition above, in plain English.' : ''),
+    }],
+    maxTokens: 1600,
   });
 
   const parsed = parseJson(text);
@@ -134,7 +151,11 @@ async function generateExamples(word, senses) {
   const examples = {};
   for (const [key, value] of Object.entries(parsed)) {
     if (value && typeof value === 'object' && value.es) {
-      examples[key] = { es: String(value.es), en: String(value.en || '') };
+      examples[key] = {
+        es: String(value.es),
+        en: String(value.en || ''),
+        def: value.def ? String(value.def) : '',
+      };
     }
   }
   return Object.keys(examples).length ? examples : null;
@@ -165,7 +186,11 @@ router.get('/', async (req, res) => {
   const word = normalizeQuery(req.query.word);
   if (!word) return res.status(400).json({ error: 'Falta la palabra a buscar.' });
 
-  const cached = cache.get(word);
+  // The English rendering differs, so it is a different cache entry.
+  const language = req.query.lang === 'en' ? 'en' : 'es';
+  const key = `${word}|${language}`;
+
+  const cached = cache.get(key);
   if (cached && Date.now() - cached.at < CACHE_TTL) return res.json(cached.payload);
 
   let lookup;
@@ -193,7 +218,7 @@ router.get('/', async (req, res) => {
   let examples = null;
   let exampleSource = null;
   try {
-    examples = await generateExamples(lookup.data.word, allSenses);
+    examples = await generateExamples(lookup.data.word, allSenses, language);
     if (examples) exampleSource = 'model';
   } catch (error) {
     console.warn('[dictionary] example generation failed:', error.message);
@@ -215,6 +240,6 @@ router.get('/', async (req, res) => {
     source: { name: 'Real Academia Española · DLE', url: `https://dle.rae.es/${encodeURIComponent(word)}` },
   };
 
-  cache.set(word, { at: Date.now(), payload });
+  cache.set(key, { at: Date.now(), payload });
   res.json(payload);
 });

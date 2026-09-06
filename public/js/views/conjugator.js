@@ -313,9 +313,17 @@ function mood(title, children) {
   return el('section', { class: 'mood' }, el('h2', { class: 'mood__title' }, title), ...children);
 }
 
-/** In English the English name leads and the Spanish one becomes the hint. */
+const upperFirst = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
+
+/**
+ * In English the English name leads and the Spanish one becomes the hint.
+ * Case belongs to the role, not to the string: swapping the pair used to carry
+ * the capitalisation with it, so English mode showed "present" above "Presente".
+ */
 function tenseNames(label, hint) {
-  return lang() === 'en' ? [hint, label] : [label, hint];
+  const [main, sub] = lang() === 'en' ? [hint, label] : [label, hint];
+  return [upperFirst(main), lowerFirst(sub)];
 }
 
 function tenseTable(tenses, rows, moodKey, marks, caption) {

@@ -87,6 +87,7 @@ export const STRINGS = {
     home: two('ProfeGPT — español, sin fricción', 'ProfeGPT — Spanish, without the friction'),
     skip: two('Saltar al contenido', 'Skip to content'),
     footer: two('definiciones del', 'definitions from the'),
+    copyright: two('© Yuzhe (Julian) Chen 2026', '© Yuzhe (Julian) Chen 2026'),
     footerDict: two('Diccionario de la lengua española', 'Diccionario de la lengua española'),
   },
 
@@ -164,7 +165,7 @@ export const STRINGS = {
       'Start from one of the three regular models, or search for the verb you need. Irregular forms are highlighted.',
     ),
     tab: two('verbos -{ending}', '-{ending} verbs'),
-    search: two('Busca un verbo: pedir, obtener, construir…', 'Search a verb: pedir, obtener, construir…'),
+    search: two('Buscar un verbo', 'Search a verb'),
     searchLabel: two('Buscar un verbo', 'Search for a verb'),
     highlight: two('Resaltar irregulares', 'Highlight irregulars'),
     notAVerb: two('No reconozco ese verbo', "I don't recognise that verb"),
@@ -198,7 +199,7 @@ export const STRINGS = {
       'Definiciones del Diccionario de la lengua española, con sus acepciones, sinónimos y una frase de ejemplo para cada sentido.',
       'Definitions from the Diccionario de la lengua española, with every sense, its synonyms, and an example sentence for each.',
     ),
-    search: two('Busca una palabra: sobremesa, madrugar, entrañable…', 'Search a word: sobremesa, madrugar, entrañable…'),
+    search: two('Buscar una palabra', 'Search a word'),
     button: two('Buscar', 'Search'),
     emptyTitle: two('Escribe una palabra', 'Type a word'),
     emptyBody: two(

@@ -74,8 +74,27 @@ function required() {
   throw error;
 }
 
-export function ask(options) {
-  return required().ask(options);
+/**
+ * Walk the chain until one provider answers. Translation and the dictionary's
+ * example sentences come through here, and they used to give up on the first
+ * provider's bad day — which, on a free tier with a daily cap, is most of the
+ * time. The chat route walks the chain itself, because it has to interleave
+ * quota accounting with the attempts.
+ */
+export async function ask(options) {
+  const chain = providerChain();
+  if (!chain.length) required();
+
+  let last = null;
+  for (const provider of chain) {
+    try {
+      return await provider.ask(options);
+    } catch (error) {
+      console.warn(`[llm] ${provider.id} failed:`, error.message.split('\n')[0]);
+      last = error;
+    }
+  }
+  throw last;
 }
 
 export function askStream(options) {

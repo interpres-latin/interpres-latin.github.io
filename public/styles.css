@@ -313,6 +313,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 .footer { border-top: 1px solid var(--line); padding: 26px 0; text-align: center; color: var(--text-faint); font-size: 13px; background: var(--bg); }
 .footer p { margin: 0; }
+.footer__legal { display: block; margin-top: 8px; color: var(--text-faint); }
 .footer a { color: var(--text-dim); }
 
 /* --- hero ----------------------------------------------------------------- */
@@ -578,6 +579,7 @@ table.conj td.is-empty { color: var(--text-faint); }
 .sense__num { font-family: var(--sans); font-weight: 700; font-size: 16px; color: var(--text-faint); }
 .sense__tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .sense__def { font-size: 15.5px; line-height: 1.72; margin: 0; }
+.sense__original { color: var(--text-dim); font-size: 13.5px; font-style: italic; margin: 6px 0 0; }
 .sense__note { color: var(--text-dim); font-size: 13px; margin: 6px 0 0; }
 
 .sense__example { margin-top: 12px; padding: 12px 14px; border-left: 2px solid var(--es); background: var(--panel); }

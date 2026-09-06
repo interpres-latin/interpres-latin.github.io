@@ -1,40 +1,43 @@
 import { el, icon, ICONS, clear, getJson } from '../lib/dom.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
-import { t } from '../lib/i18n.js';
+import { lang, t } from '../lib/i18n.js';
 
 const CATEGORIES = {
-  noun: 'sustantivo',
-  verb: 'verbo',
-  adjective: 'adjetivo',
-  adverb: 'adverbio',
-  pronoun: 'pronombre',
-  preposition: 'preposición',
-  conjunction: 'conjunción',
-  interjection: 'interjección',
-  article: 'artículo',
-  determiner: 'determinante',
-  numeral: 'numeral',
-  contraction: 'contracción',
-  expression: 'expresión',
+  noun: ['sustantivo', 'noun'],
+  verb: ['verbo', 'verb'],
+  adjective: ['adjetivo', 'adjective'],
+  adverb: ['adverbio', 'adverb'],
+  pronoun: ['pronombre', 'pronoun'],
+  preposition: ['preposición', 'preposition'],
+  conjunction: ['conjunción', 'conjunction'],
+  interjection: ['interjección', 'interjection'],
+  article: ['artículo', 'article'],
+  determiner: ['determinante', 'determiner'],
+  numeral: ['numeral', 'numeral'],
+  contraction: ['contracción', 'contraction'],
+  expression: ['expresión', 'expression'],
 };
 
 const GENDERS = {
-  masculine: 'm.',
-  feminine: 'f.',
-  masculine_and_feminine: 'm. y f.',
-  ambiguous: 'amb.',
-  common: 'com.',
-  neuter: 'n.',
+  masculine: ['m.', 'masc.'],
+  feminine: ['f.', 'fem.'],
+  masculine_and_feminine: ['m. y f.', 'masc. & fem.'],
+  ambiguous: ['amb.', 'ambiguous'],
+  common: ['com.', 'common'],
+  neuter: ['n.', 'neuter'],
 };
 
 const VERB_KINDS = {
-  transitive: 'transitivo',
-  intransitive: 'intransitivo',
-  pronominal: 'pronominal',
-  impersonal: 'impersonal',
-  copulative: 'copulativo',
-  auxiliary: 'auxiliar',
+  transitive: ['transitivo', 'transitive'],
+  intransitive: ['intransitivo', 'intransitive'],
+  pronominal: ['pronominal', 'pronominal'],
+  impersonal: ['impersonal', 'impersonal'],
+  copulative: ['copulativo', 'copulative'],
+  auxiliary: ['auxiliar', 'auxiliary'],
 };
+
+/** Grammatical labels follow the interface; the headword never does. */
+const label = (table, key) => (table[key] ? table[key][lang() === 'en' ? 1 : 0] : key);
 
 export function renderDictionary(main) {
   const state = { request: 0 };
@@ -84,7 +87,7 @@ export function renderDictionary(main) {
     results.appendChild(el('div', { class: 'empty' }, el('p', {}, el('span', { class: 'spinner' }), ` ${t('dictionary.looking')}`)));
 
     try {
-      const data = await getJson(`/api/dictionary?word=${encodeURIComponent(word)}`);
+      const data = await getJson(`/api/dictionary?word=${encodeURIComponent(word)}&lang=${lang()}`);
       if (ticket !== state.request) return;
       clear(results);
       results.appendChild(renderEntry(data, search));
@@ -142,7 +145,7 @@ function renderEntry(data, search) {
     for (const sense of entry.senses) {
       senseIndex += 1;
       const example = data.examples?.[sense.number];
-      wrap.appendChild(renderSense(sense, senseIndex <= 4 ? example : null, data.exampleSource, search));
+      wrap.appendChild(renderSense(sense, example, data.exampleSource, search));
     }
 
     if (entry.locutions.length) {
@@ -159,14 +162,18 @@ function renderEntry(data, search) {
 
 function renderSense(sense, example, exampleSource, search) {
   const tags = [];
-  if (sense.category) tags.push(el('span', { class: 'chip' }, CATEGORIES[sense.category] || sense.category));
-  if (sense.gender) tags.push(el('span', { class: 'chip' }, GENDERS[sense.gender] || sense.gender));
-  if (sense.verbCategory) tags.push(el('span', { class: 'chip' }, VERB_KINDS[sense.verbCategory] || sense.verbCategory));
+  if (sense.category) tags.push(el('span', { class: 'chip' }, label(CATEGORIES, sense.category)));
+  if (sense.gender) tags.push(el('span', { class: 'chip' }, label(GENDERS, sense.gender)));
+  if (sense.verbCategory) tags.push(el('span', { class: 'chip' }, label(VERB_KINDS, sense.verbCategory)));
   if (sense.usage) tags.push(el('span', { class: 'chip chip--warn' }, sense.usage));
 
+  // The RAE is Spanish-only. In English the translation leads and the original
+  // stays underneath, because the Spanish wording is the authoritative text.
+  const englishDef = example?.def;
   const body = el('div', {},
     tags.length ? el('div', { class: 'sense__tags' }, tags) : null,
-    el('p', { class: 'sense__def' }, sense.description || '—'),
+    el('p', { class: 'sense__def' }, englishDef || sense.description || '—'),
+    englishDef ? el('p', { class: 'sense__original' }, sense.description) : null,
     ...sense.usageNotes.map((note) => el('p', { class: 'sense__note' }, note)),
   );
 

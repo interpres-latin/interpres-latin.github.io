@@ -366,9 +366,10 @@ function scoreTopic(topic, folded) {
  * Work out what the question is asking and answer it.
  * @returns {Promise<{blocks: Array, confident: boolean}>}
  */
-export async function answer(question, { language = null } = {}) {
+export async function answer(question, { language = null, force = false } = {}) {
   const text = String(question || '').trim();
-  const lang = detectLanguage(text, language);
+  // force: answer in the language given, whatever the question was written in.
+  const lang = force && language ? language : detectLanguage(text, language);
   const folded = fold(text).replace(/[¿?¡!.,;:]/g, ' ').replace(/\s+/g, ' ').trim();
   const accented = text.toLowerCase().replace(/[¿?¡!.,;:«»"]/g, ' ').replace(/\s+/g, ' ').trim();
 

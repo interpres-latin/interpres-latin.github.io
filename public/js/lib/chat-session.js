@@ -13,6 +13,7 @@
 
 import { answer as askTutor } from './tutor.js';
 import { getJson } from './dom.js';
+import { lang } from './i18n.js';
 
 const state = {
   messages: [],        // { role, content, provider? } — the visible transcript
@@ -113,7 +114,10 @@ export async function ask(text, { needsKeyNote } = {}) {
 
   let result;
   try {
-    result = await askTutor(text, { language: state.language });
+    // Grounded answers — grammar, dictionary, conjugation — follow the site's
+    // language, since that is the language the reader chose to work in. The
+    // model fall-through still mirrors whatever the question was asked in.
+    result = await askTutor(text, { language: lang(), force: true });
     state.language = result.language;
   } catch (error) {
     result = { confident: false, blocks: [{ type: 'md', text: String(error.message) }] };

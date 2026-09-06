@@ -16,7 +16,7 @@ No build step. The frontend is plain ES modules served straight out of `public/`
 | -------------- | ------------ |
 | `/`            | Hero with an animated node network; the **translator**, whose centre button flips the languages and carries the text across; and a **dictionary search** that opens the dictionary page with your query already applied. |
 | `/conjugacion` | Every tense of the indicative, subjunctive and imperative. Three tabs for the regular **-ar / -er / -ir** models, plus a verb search that conjugates anything you type. Irregular forms are highlighted. |
-| `/diccionario` | Definitions from the *Diccionario de la lengua española*, with senses, synonyms, locutions and an example sentence per sense. |
+| `/diccionario` | Definitions from the *Diccionario de la lengua española*, with senses, synonyms, locutions and an example sentence per sense. The RAE is Spanish-only, so in English mode each definition is rendered into English with the original kept underneath. |
 | `/chat`        | A **grounded tutor** that answers from the site's own data — the conjugator, the RAE dictionary, the translator, and hand-written grammar explanations. Needs no API key and invents nothing. |
 
 ## The chat page
@@ -146,9 +146,15 @@ right code is entered, and the lock survives a reload. Strings live in
 `public/js/lib/i18n.js`; a language change re-renders the current view.
 
 What the site is *about* stays in Spanish either way — verb forms, dictionary
-headwords, the person pronouns in the conjugation tables. Only the chrome moves.
+headwords, the person pronouns in the conjugation tables. Grammatical labels do
+follow the interface, and so do grounded chat answers: ask in English while the
+site is in Spanish and the conjugation still comes back in Spanish, because that
+is the language you chose to work in. Only the model fall-through mirrors the
+language of the question.
+
 In English the conjugation tables lead with the English tense name and keep the
-Spanish one underneath.
+Spanish one underneath. Capitalisation belongs to the role rather than the
+string, so the leading name is always capitalised and the hint never is.
 
 ### One easter egg
 
