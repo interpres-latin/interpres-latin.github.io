@@ -30,12 +30,12 @@ payload = {
 };
 let found = await tatoebaExamples('madrugar', 2);
 ok('a sentence containing the word outranks a relative',
-  found[0].es === 'Mañana tenemos que madrugar.', found.map((f) => f.es).join(' | '));
+  found[0].text === 'Mañana tenemos que madrugar.', found.map((f) => f.text).join(' | '));
 
 // --- accent-insensitive matching -----------------------------------------
 payload = { results: [sentence('Un rincón entrañable.', 'A lovely corner.'), sentence('Nada aquí.', 'Nothing here.')] };
 found = await tatoebaExamples('entrañable', 1);
-ok('matching ignores accents', found[0].es === 'Un rincón entrañable.', found[0]?.es);
+ok('matching ignores accents', found[0].text === 'Un rincón entrañable.', found[0]?.text);
 
 // --- skips sentences with no English --------------------------------------
 payload = {
@@ -56,7 +56,7 @@ payload = {
   ],
 };
 found = await tatoebaExamples('ladrar-test-perro', 2);
-ok('the shorter sentence comes first', found[0].es === 'El perro ladra.', found[0]?.es);
+ok('the shorter sentence comes first', found[0].text === 'El perro ladra.', found[0]?.text);
 
 // --- respects the limit ---------------------------------------------------
 ok('never returns more than asked', (await tatoebaExamples('limit-test', 1)).length === 1);
@@ -79,6 +79,21 @@ ok('a gloss comes back', Array.isArray(gloss) && gloss.length === 1, JSON.string
 ok('markup is stripped', gloss[0] === 'to get up early', gloss[0]);
 ok('empty definitions are skipped', !gloss.includes(''));
 ok('other languages are ignored', !gloss.some((g) => /French/.test(g)));
+
+// --- the language is a parameter, not a constant --------------------------
+const frenchGloss = await wiktionaryGloss('manger-fr-test', 3, 'fr');
+ok('French mode reads the French section', frenchGloss?.[0] === 'French, not wanted',
+  JSON.stringify(frenchGloss));
+
+let requested = null;
+globalThis.fetch = async (url) => {
+  requested = String(url);
+  return { ok: true, json: async () => ({ results: [] }) };
+};
+await tatoebaExamples('manger', 2, 'fr');
+ok('and Tatoeba is asked for French sentences', /from=fra/.test(requested), requested);
+await tatoebaExamples('madrugar-2', 2);
+ok('while Spanish stays the default', /from=spa/.test(requested), requested);
 
 if (failures.length) {
   console.error(`\n✗ ${failures.length} of ${checked} corpus checks failed:\n`);

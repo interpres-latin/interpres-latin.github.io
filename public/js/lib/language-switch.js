@@ -1,13 +1,14 @@
 /**
- * The ES / EN switch in the header.
+ * The language switch in the header: ES | EN on the Spanish side of the site,
+ * FR | EN on the French one.
  *
- * Spanish is open. English is behind a passcode, and a wrong one seals the
- * whole page with tape until the right one is entered — the lock survives a
- * reload, so closing the tab is not a way around it.
+ * The study language is always open. English is behind a passcode, and a wrong
+ * one seals the whole page with tape until the right one is entered — the lock
+ * survives a reload, so closing the tab is not a way around it.
  */
 
 import { el, clear } from './dom.js';
-import { checkPasscode, isLocked, lang, setLang, setLocked, t } from './i18n.js';
+import { checkPasscode, isLocked, lang, languageOptions, setLang, setLocked, t } from './i18n.js';
 import { sealWithTape } from './tape.js';
 
 let unseal = null;
@@ -88,7 +89,7 @@ function askForPasscode(anchor) {
 }
 
 export function mountLanguageSwitch(container) {
-  const buttons = new Map();
+  let buttons = new Map();
 
   function paint() {
     for (const [code, button] of buttons) {
@@ -97,24 +98,32 @@ export function mountLanguageSwitch(container) {
     }
   }
 
-  clear(container);
-  container.setAttribute('aria-label', t('nav.langLabel'));
+  /** Rebuilt rather than repainted when the study language changes: ES becomes FR. */
+  function build() {
+    buttons = new Map();
+    clear(container);
+    container.setAttribute('aria-label', t('nav.langLabel'));
 
-  for (const code of ['es', 'en']) {
-    const button = el('button', {
-      class: 'langswitch__option',
-      type: 'button',
-      onclick: () => {
-        if (lang() === code) return;
-        if (code === 'es') { setLang('es'); return; }
-        askForPasscode(container);
-      },
-    }, code.toUpperCase());
-    buttons.set(code, button);
-    container.appendChild(button);
+    const [study] = languageOptions();
+    for (const code of languageOptions()) {
+      const button = el('button', {
+        class: 'langswitch__option',
+        type: 'button',
+        onclick: () => {
+          if (lang() === code) return;
+          if (code === study) { setLang(study); return; }
+          askForPasscode(container);
+        },
+      }, code.toUpperCase());
+      buttons.set(code, button);
+      container.appendChild(button);
+    }
+
+    paint();
   }
 
-  paint();
+  build();
   window.addEventListener('langchange', paint);
+  window.addEventListener('studychange', build);
   return paint;
 }

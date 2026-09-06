@@ -1,8 +1,30 @@
 import { Router } from 'express';
 import { ask, hasProvider, parseJson } from '../llm.js';
 import { ATTRIBUTION, tatoebaExamples, wiktionaryGloss } from '../corpus.js';
+import { ACADEMIE, fetchWiktionnaire, WIKTIONNAIRE_CREDIT } from '../dictionary-fr.js';
 
 export const router = Router();
+
+/**
+ * The two dictionaries this route can answer from.
+ *
+ * Spanish has the RAE, which is the authority and says so. French has no
+ * equivalent that can be queried — the Académie française publishes no API —
+ * so the Wiktionnaire answers and the Académie is linked rather than quoted.
+ * See server/dictionary-fr.js.
+ */
+const MESSAGES = {
+  es: {
+    missing: 'Falta la palabra a buscar.',
+    notFound: (word) => `"${word}" no aparece en el Diccionario de la lengua española.`,
+    failed: (detail) => `No se pudo consultar el diccionario: ${detail}`,
+  },
+  fr: {
+    missing: 'Il manque le mot à chercher.',
+    notFound: (word) => `« ${word} » ne figure pas dans le dictionnaire.`,
+    failed: (detail) => `Impossible de consulter le dictionnaire : ${detail}`,
+  },
+};
 
 const RAE_API = 'https://rae-api.com/api/words';
 const EXAMPLES_PER_WORD = 4;
@@ -102,19 +124,22 @@ export async function fetchRae(word, attempt = 0) {
   return { found: true, data: body.data };
 }
 
-const EXAMPLE_SYSTEM = `You work on ProfeGPT, a Spanish learning site, alongside
-the Real Academia Española dictionary.
+const LANGUAGE_NAMES = { es: 'Spanish', fr: 'French' };
+const DICTIONARY_NAMES = { es: 'the Real Academia Española dictionary', fr: 'the Wiktionnaire' };
 
-For each numbered sense you are given, write ONE short natural Spanish sentence
-(8-16 words) using the headword in exactly that sense, plus its English
+const EXAMPLE_SYSTEM = (study) => `You work on ProfeGPT, a ${LANGUAGE_NAMES[study]} learning
+site, alongside ${DICTIONARY_NAMES[study]}.
+
+For each numbered sense you are given, write ONE short natural ${LANGUAGE_NAMES[study]}
+sentence (8-16 words) using the headword in exactly that sense, plus its English
 translation.
 
 Rules:
 - Use the headword itself. Verbs may be conjugated; nouns may take an article or plural.
 - Everyday, concrete, neutral register. No proper names of real people.
 - The sentence must make that specific sense obvious from context.
-- When asked for "def", render the RAE's definition in plain English. Translate
-  the definition, do not replace it with your own — it is a dictionary entry.
+- When asked for "def", render the dictionary's definition in plain English.
+  Translate the definition, do not replace it with your own — it is a dictionary entry.
 - Reply with JSON only, keyed by the sense number you were given. No other text.`;
 
 /**
@@ -122,25 +147,25 @@ Rules:
  * English mode — an English rendering of the RAE's own definition, since the
  * dictionary itself is Spanish-only.
  */
-async function generateExamples(word, senses, language) {
+async function generateExamples(word, senses, english, study) {
   const wanted = senses.slice(0, EXAMPLES_PER_WORD);
   if (!wanted.length || !hasProvider()) return null;
 
-  const english = language === 'en';
   const shape = english
-    ? '{"1": {"def": "...", "es": "...", "en": "..."}, "2": {...}}'
-    : '{"1": {"es": "...", "en": "..."}, "2": {...}}';
+    ? '{"1": {"def": "...", "text": "...", "en": "..."}, "2": {...}}'
+    : '{"1": {"text": "...", "en": "..."}, "2": {...}}';
 
   const list = wanted
     .map((sense) => `${sense.number}. (${[sense.category, sense.verbCategory].filter(Boolean).join(', ')}) ${sense.description}`)
     .join('\n');
 
   const text = await ask({
-    system: EXAMPLE_SYSTEM,
+    system: EXAMPLE_SYSTEM(study),
     messages: [{
       role: 'user',
       content: `Headword: ${word}\n\nSenses:\n${list}\n\n`
         + `Reply with ${shape}`
+        + `\n"text" is the ${LANGUAGE_NAMES[study]} sentence.`
         + (english ? '\n"def" is the definition above, in plain English.' : ''),
     }],
     maxTokens: 1600,
@@ -151,9 +176,10 @@ async function generateExamples(word, senses, language) {
 
   const examples = {};
   for (const [key, value] of Object.entries(parsed)) {
-    if (value && typeof value === 'object' && value.es) {
+    const sentence = value?.text ?? value?.es ?? value?.fr;
+    if (sentence) {
       examples[key] = {
-        es: String(value.es),
+        text: String(sentence),
         en: String(value.en || ''),
         def: value.def ? String(value.def) : '',
       };
@@ -166,34 +192,114 @@ async function generateExamples(word, senses, language) {
  * No API key: build one plainly-correct frame per part of speech. Clearly
  * labelled as a template in the UI so nobody mistakes it for a real citation.
  */
-function templateExample(word, sense) {
+function templateExample(word, sense, study) {
   const feminine = sense.gender === 'feminine';
+  if (study === 'fr') {
+    switch (sense.category) {
+      case 'verb':
+        return { text: `Demain, nous allons ${word} de nouveau.`, en: '' };
+      case 'adjective':
+        return { text: `Ce détail me paraît plutôt ${word}.`, en: '' };
+      case 'adverb':
+        return { text: `Il l'a fait ${word}, comme toujours.`, en: '' };
+      case 'noun':
+        return { text: `Nous avons parlé ${feminine ? `de la ${word}` : `du ${word}`} pendant le dîner.`, en: '' };
+      default:
+        return { text: `Voici un exemple avec « ${word} ».`, en: '' };
+    }
+  }
   switch (sense.category) {
     case 'verb':
-      return { es: `Mañana vamos a ${word} otra vez.`, en: '' };
+      return { text: `Mañana vamos a ${word} otra vez.`, en: '' };
     case 'adjective':
-      return { es: `Ese detalle me parece bastante ${word}.`, en: '' };
+      return { text: `Ese detalle me parece bastante ${word}.`, en: '' };
     case 'adverb':
-      return { es: `Lo hizo ${word}, como siempre.`, en: '' };
+      return { text: `Lo hizo ${word}, como siempre.`, en: '' };
     case 'noun':
       // "de + el" contracts to "del", so the two frames differ by more than the article.
-      return { es: `Hablamos ${feminine ? `de la ${word}` : `del ${word}`} durante la cena.`, en: '' };
+      return { text: `Hablamos ${feminine ? `de la ${word}` : `del ${word}`} durante la cena.`, en: '' };
     default:
-      return { es: `Aquí tienes un ejemplo con «${word}».`, en: '' };
+      return { text: `Aquí tienes un ejemplo con «${word}».`, en: '' };
   }
 }
 
-router.get('/', async (req, res) => {
-  const word = normalizeQuery(req.query.word);
-  if (!word) return res.status(400).json({ error: 'Falta la palabra a buscar.' });
+/**
+ * Example sentences and glosses, shared by both dictionaries.
+ *
+ * Corpora first: real sentences and a real gloss, free and unmetered. A model
+ * is only worth waking when the corpus has nothing, and the template frame is
+ * the last resort after that.
+ */
+async function enrich(word, senses, english, study) {
+  const [usage, gloss] = await Promise.all([
+    tatoebaExamples(word, 2, study),
+    english ? wiktionaryGloss(word, 3, study) : Promise.resolve(null),
+  ]);
 
-  // The English rendering differs, so it is a different cache entry.
-  const language = req.query.lang === 'en' ? 'en' : 'es';
-  const key = `${word}|${language}`;
+  let examples = {};
+  let exampleSource = 'tatoeba';
 
-  const cached = cache.get(key);
-  if (cached && Date.now() - cached.at < CACHE_TTL) return res.json(cached.payload);
+  if (!usage?.length) {
+    exampleSource = null;
+    try {
+      examples = (await generateExamples(word, senses, english, study)) ?? {};
+      if (Object.keys(examples).length) exampleSource = 'model';
+    } catch (error) {
+      console.warn('[dictionary] example generation failed:', error.message);
+    }
+    if (!exampleSource) {
+      examples = {};
+      for (const sense of senses.slice(0, EXAMPLES_PER_WORD)) {
+        examples[sense.number] = templateExample(word, sense, study);
+      }
+      exampleSource = 'template';
+    }
+  }
 
+  return {
+    examples,
+    exampleSource,
+    // Attached to the word rather than to a sense: a corpus sentence contains
+    // the word, it does not promise to illustrate one particular meaning.
+    usage: usage?.length ? { sentences: usage, credit: ATTRIBUTION.tatoeba } : null,
+    gloss: gloss?.length ? { senses: gloss, credit: ATTRIBUTION.wiktionary } : null,
+  };
+}
+
+/** The French entry: the Wiktionnaire, with the Académie linked beside it. */
+async function lookupFrench(word, english) {
+  const lookup = await fetchWiktionnaire(word);
+  if (!lookup.found) {
+    const error = new Error(MESSAGES.fr.notFound(word));
+    error.status = 404;
+    error.suggestions = lookup.suggestions || [];
+    throw error;
+  }
+
+  const entries = [{
+    // The Wiktionnaire keeps one etymology for the whole page rather than one
+    // per part of speech, so it sits on the first entry.
+    origin: lookup.origin || '',
+    senses: lookup.entries.flatMap((entry) => entry.senses),
+    locutions: [],
+  }];
+
+  return {
+    word: lookup.word,
+    definitionSource: 'wiktionnaire',
+    entries,
+    ...await enrich(lookup.word, entries[0].senses, english, 'fr'),
+    suggestions: [],
+    // Named plainly: this is not the Académie, and an entry that quietly
+    // implied otherwise would be worse than one that says where it came from.
+    source: { name: 'Wiktionnaire', url: `https://fr.wiktionary.org/wiki/${encodeURIComponent(lookup.word)}` },
+    authority: { name: 'Dictionnaire de l’Académie française', url: ACADEMIE(lookup.word) },
+    credit: WIKTIONNAIRE_CREDIT,
+  };
+}
+
+/** The Spanish entry: the RAE, with Wiktionary standing in only if it is down. */
+async function lookupSpanish(word, english) {
   let lookup;
   try {
     lookup = await fetchRae(word);
@@ -202,9 +308,10 @@ router.get('/', async (req, res) => {
     // better than nothing — but the entry says plainly that it is not the RAE,
     // because a dictionary that quietly changes authority is worse than one
     // that admits it is unavailable.
-    const glosses = await wiktionaryGloss(word, 6);
+    const glosses = await wiktionaryGloss(word, 6, 'es');
     if (glosses?.length) {
-      return res.json({
+      const sentences = await tatoebaExamples(word, 2, 'es');
+      return {
         word,
         definitionSource: 'wiktionary',
         entries: [{
@@ -224,77 +331,68 @@ router.get('/', async (req, res) => {
         }],
         examples: {},
         exampleSource: null,
-        usage: (await tatoebaExamples(word))?.length
-          ? { sentences: await tatoebaExamples(word), credit: ATTRIBUTION.tatoeba }
-          : null,
+        usage: sentences?.length ? { sentences, credit: ATTRIBUTION.tatoeba } : null,
         gloss: null,
         suggestions: [],
         raeError: error.message,
         source: ATTRIBUTION.wiktionary,
-      });
+      };
     }
-
-    // Pass a rate limit through as one, so the client can tell "come back
-    // later" apart from "the dictionary is broken".
-    const status = error.status === 429 ? 429 : 502;
-    return res.status(status).json({
-      error: status === 429 ? error.message : `No se pudo consultar el diccionario: ${error.message}`,
-    });
+    throw error;
   }
 
   if (!lookup.found) {
-    return res.status(404).json({
-      error: `"${word}" no aparece en el Diccionario de la lengua española.`,
-      suggestions: lookup.suggestions,
-    });
+    const error = new Error(MESSAGES.es.notFound(word));
+    error.status = 404;
+    error.suggestions = lookup.suggestions || [];
+    throw error;
   }
 
   const entries = (lookup.data.meanings || []).map(normalizeEntry);
   const allSenses = entries.flatMap((entry) => entry.senses);
 
-  // Corpora first: real sentences and a real gloss, free and unmetered.
-  const [usage, gloss] = await Promise.all([
-    tatoebaExamples(lookup.data.word),
-    language === 'en' ? wiktionaryGloss(lookup.data.word) : Promise.resolve(null),
-  ]);
-
-  let examples = null;
-  let exampleSource = null;
-
-  // Only when the corpus has nothing is a model worth waking for one sentence.
-  if (!usage?.length) {
-    try {
-      examples = await generateExamples(lookup.data.word, allSenses, language);
-      if (examples) exampleSource = 'model';
-    } catch (error) {
-      console.warn('[dictionary] example generation failed:', error.message);
-    }
-    if (!examples) {
-      examples = {};
-      for (const sense of allSenses.slice(0, EXAMPLES_PER_WORD)) {
-        examples[sense.number] = templateExample(lookup.data.word, sense);
-      }
-      exampleSource = 'template';
-    }
-  } else {
-    examples = {};
-    exampleSource = 'tatoeba';
-  }
-
-  const payload = {
+  return {
     word: lookup.data.word,
     definitionSource: 'rae',
     entries,
-    examples,
-    exampleSource,
-    // Attached to the word rather than to a sense: a corpus sentence contains
-    // the word, it does not promise to illustrate one particular meaning.
-    usage: usage?.length ? { sentences: usage, credit: ATTRIBUTION.tatoeba } : null,
-    gloss: gloss?.length ? { senses: gloss, credit: ATTRIBUTION.wiktionary } : null,
+    ...await enrich(lookup.data.word, allSenses, english, 'es'),
     suggestions: lookup.data.suggestions || [],
     source: { name: 'Real Academia Española · DLE', url: `https://dle.rae.es/${encodeURIComponent(word)}` },
   };
+}
 
-  cache.set(key, { at: Date.now(), payload });
-  res.json(payload);
+router.get('/', async (req, res) => {
+  // Which language the site is about, which is not the language of the chrome.
+  const study = req.query.study === 'fr' ? 'fr' : 'es';
+  const messages = MESSAGES[study];
+
+  const word = normalizeQuery(req.query.word);
+  if (!word) return res.status(400).json({ error: messages.missing });
+
+  // The chrome language, which decides only whether an English gloss and an
+  // English rendering of the definition are wanted. The English entry differs,
+  // so it is a different cache entry.
+  const english = req.query.lang === 'en';
+  const key = `${study}|${word}|${english ? 'en' : 'study'}`;
+
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.at < CACHE_TTL) return res.json(cached.payload);
+
+  try {
+    const payload = study === 'fr'
+      ? await lookupFrench(word, english)
+      : await lookupSpanish(word, english);
+    cache.set(key, { at: Date.now(), payload });
+    return res.json(payload);
+  } catch (error) {
+    if (error.status === 404) {
+      return res.status(404).json({ error: error.message, suggestions: error.suggestions || [] });
+    }
+    // Pass a rate limit through as one, so the client can tell "come back
+    // later" apart from "the dictionary is broken".
+    const status = error.status === 429 ? 429 : 502;
+    return res.status(status).json({
+      error: status === 429 ? error.message : messages.failed(error.message),
+    });
+  }
 });

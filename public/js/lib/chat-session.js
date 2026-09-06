@@ -14,6 +14,7 @@
 import { answer as askTutor } from './tutor.js';
 import { getJson } from './dom.js';
 import { lang } from './i18n.js';
+import { studyLang } from './study.js';
 
 const state = {
   messages: [],        // { role, content, provider? } — the visible transcript
@@ -92,6 +93,11 @@ export function reset() {
   emit();
 }
 
+// The conversation is about one language. Carrying a Spanish transcript into
+// French mode would send the model a history it cannot follow, and would leave
+// answers on screen that the new tutor could not have given.
+window.addEventListener('studychange', reset);
+
 /** Flatten a grounded answer so it can go back to a model as history. */
 function blocksToText(blocks) {
   return blocks.map((block) => {
@@ -154,13 +160,15 @@ async function streamFromModel() {
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history.slice(-20) }),
+      body: JSON.stringify({ messages: history.slice(-20), study: studyLang() }),
     });
 
     if (!response.ok || !response.body) {
       const failure = await response.json().catch(() => ({}));
       if (response.status === 429) state.quota = failure.quota || { ...state.quota, remaining: 0 };
-      throw new Error(failure.error || `El servidor respondió ${response.status}.`);
+      throw new Error(failure.error || (studyLang() === 'fr'
+        ? `Le serveur a répondu ${response.status}.`
+        : `El servidor respondió ${response.status}.`));
     }
 
     const reader = response.body.getReader();
@@ -197,7 +205,13 @@ async function streamFromModel() {
 
     const { reply, provider } = state.streaming;
     if (reply.trim()) state.messages.push({ role: 'assistant', content: reply, provider });
-    else state.messages.push({ role: 'assistant', content: '', error: 'La respuesta llegó vacía.' });
+    else {
+      state.messages.push({
+        role: 'assistant',
+        content: '',
+        error: studyLang() === 'fr' ? 'La réponse est arrivée vide.' : 'La respuesta llegó vacía.',
+      });
+    }
   } catch (error) {
     const { reply, provider } = state.streaming;
     state.messages.push({

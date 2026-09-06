@@ -1,19 +1,35 @@
 import { el, icon, ICONS, clear, debounce, postJson } from '../lib/dom.js';
 import { startNetwork } from '../lib/network.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
-import { lang, t } from '../lib/i18n.js';
+import { pick, t } from '../lib/i18n.js';
+import { modeCommand, setStudyLang, studyLang } from '../lib/study.js';
 import { fireConfetti } from '../lib/confetti.js';
+import { toast } from '../lib/toast.js';
 
-const LANGUAGES = {
-  es: { label: 'Español', colour: 'var(--es)', placeholder: 'translator.placeholderEs', out: 'translator.outEs' },
-  en: { label: 'English', colour: 'var(--en)', placeholder: 'translator.placeholderEn', out: 'translator.outEn' },
-};
+/**
+ * The two sides of the translator: the language the site is about, and English.
+ * `--es` is the study language's marker colour whichever language that is —
+ * the palette has one accent per side of the pane, not one per language.
+ */
+const LANGUAGES = () => ({
+  [studyLang()]: {
+    label: t('translator.studyName'),
+    colour: 'var(--es)',
+    placeholder: 'translator.placeholderStudy',
+    out: 'translator.outStudy',
+  },
+  en: {
+    label: t('translator.englishName'),
+    colour: 'var(--en)',
+    placeholder: 'translator.placeholderEn',
+    out: 'translator.outEn',
+  },
+});
 
 const MAX_CHARS = 5000;
 
 /** Any capitalisation, any spacing. */
 const GRADUATION = /^\s*graduation\s*2028\s*$/i;
-const SAMPLE_WORDS = ['sobremesa', 'madrugar', 'entrañable', 'friolero', 'estrenar'];
 
 export function renderHome(main) {
   const canvas = el('canvas', { class: 'hero__canvas', 'aria-hidden': 'true' });
@@ -69,7 +85,7 @@ function buildFinder() {
   const input = el('input', {
     type: 'search',
     name: 'q',
-    placeholder: 'sobremesa',
+    placeholder: t('finder.samples').split(',')[0],
     autocomplete: 'off',
     spellcheck: false,
     'aria-label': t('finder.label'),
@@ -95,14 +111,14 @@ function buildFinder() {
           form,
           el('div', { class: 'finder__hints' },
             el('span', {}, t('finder.tryWith')),
-            ...SAMPLE_WORDS.map((word) =>
+            ...t('finder.samples').split(',').map((word) =>
               el('button', { type: 'button', onclick: () => openDictionary(word) }, word))),
           el('p', { class: 'finder__note' }, t('finder.note'))))));
 }
 
 // ---------------------------------------------------------------------------
 
-/** The one thing on this site that is not about Spanish grammar. */
+/** The one thing on this site that is not about grammar. */
 function celebrate() {
   if (document.querySelector('.ole')) return;
 
@@ -125,15 +141,36 @@ function celebrate() {
   setTimeout(close, 6000);
 }
 
+/**
+ * The way into the French side of the site, and back out again.
+ *
+ * It is typed into the translator rather than clicked in the navigation, which
+ * is the whole point: the French ProfeGPT sits behind the Spanish one and is
+ * found by knowing the phrase. Handled before anything is sent anywhere — this
+ * is a command, not text to translate.
+ */
+function switchMode(next, state, output, status) {
+  state.pending?.abort();
+  output.textContent = '';
+  status.textContent = '';
+
+  // Everything below this line happens in the new language: setStudyLang fires
+  // studychange, which the router answers by tearing this view down and
+  // rebuilding it. The notice therefore has to outlive the view — toast()
+  // attaches to the body, which survives.
+  setStudyLang(next);
+  toast(`${t('mode.entered')} · ${t('mode.enteredNote')}`);
+}
+
 function buildTranslator(root) {
-  const state = { from: 'en', to: 'es', pending: null };
+  const state = { from: 'en', to: studyLang(), pending: null };
 
   const input = el('textarea', { spellcheck: false, maxLength: MAX_CHARS, 'aria-label': t('translator.sourceLabel') });
 
   const output = el('div', {
     class: 'pane__out',
     'aria-live': 'polite',
-    'data-placeholder': t('translator.outEs'),
+    'data-placeholder': t('translator.outStudy'),
   });
 
   const sourceLang = el('span', {});
@@ -192,7 +229,7 @@ function buildTranslator(root) {
           el('span', {}, note.source),
           el('span', { class: 'idioms__arrow' }, ' = '),
           el('b', {}, note.target)),
-        el('p', { class: 'idioms__meaning' }, note.meaning[lang()] || note.meaning.en)));
+        el('p', { class: 'idioms__meaning' }, pick(note.meaning))));
     }
   }
 
@@ -209,8 +246,9 @@ function buildTranslator(root) {
   // --- behaviour -----------------------------------------------------------
 
   function paintLanguages() {
-    const source = LANGUAGES[state.from];
-    const target = LANGUAGES[state.to];
+    const languages = LANGUAGES();
+    const source = languages[state.from];
+    const target = languages[state.to];
     sourceLang.textContent = source.label;
     targetLang.textContent = target.label;
     sourceDot.style.background = source.colour;
@@ -235,6 +273,17 @@ function buildTranslator(root) {
     const text = input.value.trim();
     if (!text) return;
 
+    const mode = modeCommand(text);
+    if (mode) {
+      if (mode === studyLang()) {
+        output.textContent = '';
+        status.textContent = t('translator.ready');
+        return;
+      }
+      switchMode(mode, state, output, status);
+      return;
+    }
+
     if (GRADUATION.test(text)) {
       celebrate();
       output.textContent = '¡Olé!';
@@ -251,7 +300,7 @@ function buildTranslator(root) {
     status.append(el('span', { class: 'spinner' }), ` ${t('translator.working')}`);
 
     try {
-      const data = await postJson('/api/translate', { text, from: state.from }, { signal: controller.signal });
+      const data = await postJson('/api/translate', { text, from: state.from, study: studyLang() }, { signal: controller.signal });
       if (controller.signal.aborted) return;
       output.textContent = data.translation || '';
       paintNotes(data.notes);

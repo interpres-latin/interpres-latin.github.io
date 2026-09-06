@@ -14,10 +14,13 @@
   <script>
     // Runs before the first paint so the page never flashes the wrong palette.
     (function () {
+      // The chrome is either English or whichever language the site is about.
+      var study = 'es';
+      try { study = localStorage.getItem('profegpt:study') === 'fr' ? 'fr' : 'es'; } catch (e) {}
       try {
         var l = localStorage.getItem('profegpt:lang');
-        document.documentElement.lang = l === 'en' ? 'en' : 'es';
-      } catch (e) {}
+        document.documentElement.lang = l === 'en' ? 'en' : study;
+      } catch (e) { document.documentElement.lang = study; }
       var stored = null;
       try { stored = localStorage.getItem('profegpt:theme'); } catch (e) {}
       var system = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';

@@ -6,7 +6,7 @@ import { clear } from './lib/dom.js';
 import { mountThemeToggle } from './lib/theme.js';
 import { mountLanguageSwitch, restoreLock } from './lib/language-switch.js';
 import { mountSiteLock } from './lib/site-lock.js';
-import { lang, t } from './lib/i18n.js';
+import { followStudyLanguage, t } from './lib/i18n.js';
 
 const ROUTES = [
   { path: '/', nav: 'traductor', render: renderHome },
@@ -33,9 +33,9 @@ function paintChrome() {
   clear(footer);
   footer.append('ProfeGPT · ', t('meta.footer'), ' ');
   footer.appendChild(Object.assign(document.createElement('a'), {
-    href: 'https://dle.rae.es', target: '_blank', rel: 'noopener', textContent: t('meta.footerDict'),
+    href: t('meta.footerHref'), target: '_blank', rel: 'noopener', textContent: t('meta.footerDict'),
   }));
-  footer.append(' (RAE)');
+  footer.append(t('meta.footerCredit'));
   footer.appendChild(Object.assign(document.createElement('span'), {
     className: 'footer__legal',
     textContent: t('meta.copyright'),
@@ -129,6 +129,17 @@ window.addEventListener('popstate', () => navigate({ replace: true }));
 // A language change rebuilds the current view, since every string is baked in
 // at render time rather than bound.
 window.addEventListener('langchange', () => {
+  paintChrome();
+  currentKey = null;
+  navigate({ replace: true });
+});
+
+// So does a change of *study* language — the site swapping from Spanish to
+// French replaces the strings, the tables and the dictionary behind the page,
+// which is every bit as much of a rebuild. The chrome language follows first,
+// since ES is no longer one of the options once the site is about French.
+window.addEventListener('studychange', () => {
+  followStudyLanguage();
   paintChrome();
   currentKey = null;
   navigate({ replace: true });

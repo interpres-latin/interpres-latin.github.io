@@ -2,18 +2,15 @@ import { el, icon, ICONS, clear } from '../lib/dom.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import { sealWithTape } from '../lib/tape.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
-import { EXCLAMATIONS } from '../data/grammar.js';
+import { EXCLAMATIONS as SPANISH_EXCLAMATIONS } from '../data/grammar.js';
+import { EXCLAMATIONS as FRENCH_EXCLAMATIONS } from '../data/grammar-fr.js';
 import { t } from '../lib/i18n.js';
+import { studyLang } from '../lib/study.js';
 import { acknowledgeQuota, ask, getState, isBusy, loadStatus, subscribe } from '../lib/chat-session.js';
 import { toast } from '../lib/toast.js';
 
-const STARTERS = [
-  'ser y estar',
-  'conjuga tener en subjuntivo',
-  'qué significa sobremesa',
-  'qué es «dijeron»',
-  'cómo se dice "I am tired" en español',
-];
+/** The profe's interjections, and their French counterparts. */
+const EXCLAMATIONS = { es: SPANISH_EXCLAMATIONS, fr: FRENCH_EXCLAMATIONS };
 
 /**
  * The chat page is a pure view over lib/chat-session.js. It owns no
@@ -45,7 +42,7 @@ export function renderChat(main) {
   function bubble(role) {
     const body = el('div', { class: 'msg__body' });
     log.appendChild(el('div', { class: `msg msg--${role}` },
-      el('div', { class: 'msg__who' }, role === 'user' ? 'TÚ' : 'PG'),
+      el('div', { class: 'msg__who' }, role === 'user' ? t('chat.you') : 'PG'),
       body));
     return body;
   }
@@ -78,7 +75,7 @@ export function renderChat(main) {
       el('h3', {}, t('chat.title')),
       el('p', {}, t('chat.lead')),
       el('div', { class: 'starters', style: { justifyContent: 'center' } },
-        ...STARTERS.map((starter) => el('button', {
+        ...t('chat.starters').split('|').map((starter) => el('button', {
           type: 'button',
           onclick: () => { input.value = starter; resize(); submit(); },
         }, starter))));
@@ -135,7 +132,10 @@ export function renderChat(main) {
       t('chat.perWindow', { minutes: quota ? quota.windowMinutes : 30 })));
   }
 
-  const pick = (kind) => EXCLAMATIONS[kind][Math.floor(Math.random() * EXCLAMATIONS[kind].length)];
+  const pick = (kind) => {
+    const options = (EXCLAMATIONS[studyLang()] ?? EXCLAMATIONS.es)[kind];
+    return options[Math.floor(Math.random() * options.length)];
+  };
 
   /**
    * Seal the page once, to say the allowance is gone. It has to be dismissible:

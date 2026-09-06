@@ -3,6 +3,9 @@
 A Spanish learning site: a two-way translator, complete conjugation tables, the
 RAE dictionary, and an AI tutor.
 
+There is a French one behind it. Type **`mode: french`** into the translator and
+the whole site changes subject — see *[The French side](#the-french-side)*.
+
 ```bash
 npm install
 npm start          # http://localhost:4000
@@ -17,7 +20,9 @@ No build step. The frontend is plain ES modules served straight out of `public/`
 | `/`            | Hero with an animated node network; the **translator**, whose centre button flips the languages and carries the text across; and a **dictionary search** that opens the dictionary page with your query already applied. |
 | `/conjugacion` | Every tense of the indicative, subjunctive and imperative. Three tabs for the regular **-ar / -er / -ir** models, plus a verb search that conjugates anything you type. Irregular forms are highlighted. |
 | `/diccionario` | Definitions from the *Diccionario de la lengua española*, with senses, synonyms and locutions, plus real example sentences and — in English mode — an English gloss. |
-| `/chat`        | A **grounded tutor** that answers from the site's own data — the conjugator, the RAE dictionary, the translator, and hand-written grammar explanations. Needs no API key and invents nothing. |
+| `/chat`        | A **grounded tutor** that answers from the site's own data — the conjugator, the dictionary, the translator, and hand-written grammar explanations. Needs no API key and invents nothing. |
+
+Every one of them has a French counterpart on the other side of the switch.
 
 ## The chat page
 
@@ -49,12 +54,15 @@ If `ANTHROPIC_API_KEY` is set, the questions the tutor declined — and only tho
 
 ### The free allowance
 
-Spanish questions are free forever: they never leave the server. Off-topic ones
-go to a language model, and are metered at **10 per 30 minutes per visitor**,
-enforced server-side in `server/quota.js` with a sliding window. Tune it with
-`CHAT_FREE_LIMIT` and `CHAT_WINDOW_MINUTES`.
+Questions about the language are free forever: they never leave the server.
+Off-topic ones go to a language model, and are metered server-side in
+`server/quota.js` with a sliding window.
 
-**Five off-topic questions per browser, per 30 minutes** (`CHAT_FREE_LIMIT`).
+**Five off-topic questions per browser, per 30 minutes** — `CHAT_FREE_LIMIT`
+and `CHAT_WINDOW_MINUTES`.
+
+**Spanish and French share the one allowance.** The bucket has no language in
+it: switching sides is a change of subject, not a second helping.
 
 Per *browser*, not per address: a classroom sits behind one router, so an
 address identifies the room rather than the student, and the first person to ask
@@ -123,7 +131,7 @@ No model, at any point. Four dedicated engines, tried in order:
 | 0 | **Wikipedia** | for names and titles. Machine translation renders them literally: "Cuban Missile Crisis" becomes *"crisis de los misiles cubanos"*, which says the missiles were Cuban when they were Soviet. Wikipedia's cross-language links hold the name each language actually uses — *Crisis de los misiles de Cuba*. |
 | 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES` and a dead one is skipped. |
 | 2 | **MyMemory** | a crowd translation memory, believed only when its candidates agree with each other. |
-| 3 | **Apertium** | open-source rule-based translation. Clumsy, but always up and it never invents content. |
+| 3 | **Apertium** | open-source rule-based translation. Clumsy, but always up and it never invents content. Spanish only — it has no English–French pair, so the French chain stops at MyMemory. |
 
 The agreement rule on MyMemory exists because its segments can be wrong in ways
 no score exposes: *"Buenos días, ¿cómo estás?"* comes back as *"Good morning
@@ -187,6 +195,12 @@ Hand-written and hand-checked, like the grammar notes, and only the idioms a
 translator actually gets wrong are listed. Matching ignores case and accents,
 works inside a sentence, and is capped at two notes per translation.
 
+There is one table per language — 26 Spanish, 28 French — rather than one table
+with an extra column, because the sets barely overlap: the idioms a translator
+fumbles going into Spanish are not the ones it fumbles going into French, and
+half of each list has no counterpart in the other. French gets *coûter les yeux
+de la tête*, *casser sa pipe*, *quand les poules auront des dents*.
+
 ### Keeping OpenRouter free
 
 Three guards in `server/providers/openrouter.js`, none of which trusts the
@@ -243,8 +257,12 @@ behind a passcode; getting it wrong seals the entire page with tape until the
 right code is entered, and the lock survives a reload. Strings live in
 `public/js/lib/i18n.js`; a language change re-renders the current view.
 
-What the site is *about* stays in Spanish either way — verb forms, dictionary
-headwords, the person pronouns in the conjugation tables. Grammatical labels do
+In French mode the same switch reads **FR / EN**, and English sits behind the
+same passcode. Someone who has already paid it stays in English across a change
+of mode — see *[The French side](#the-french-side)*.
+
+What the site is *about* stays in its own language either way — verb forms,
+dictionary headwords, the subject pronouns in the conjugation tables. Grammatical labels do
 follow the interface, and so do grounded chat answers: ask in English while the
 site is in Spanish and the conjugation still comes back in Spanish, because that
 is the language you chose to work in. Only the model fall-through mirrors the
@@ -269,6 +287,149 @@ kind of moment that earned them rather than on every message:
 | **¡Olé!** | a word found in the dictionary |
 | **¡Mecachis en todo!** | a question outside what the tutor covers, and on the tape |
 | **¡La madre que me parió!** | a verb that is both irregular *and* stem-changing |
+
+French has counterparts on the same three moments — *Et voilà !*, *Zut alors !*,
+*Oh là là !* — fired where a verb is both irregular and takes *être*, which is
+about as much as one French verb can ask of a learner. They are stand-ins, not
+her expressions; only the Spanish ones are things she actually said.
+
+## The French side
+
+Typing **`mode: french`** into the translator — in either pane, in any
+capitalisation, with or without the colon — turns ProfeGPT into a French site.
+**`mode: spanish`** turns it back. The choice is remembered.
+
+It is behind the Spanish site rather than beside it: no link, no menu entry,
+nothing in the navigation. You get there by knowing the phrase.
+
+What changes:
+
+| | |
+| --- | --- |
+| the header switch | **ES \| EN** becomes **FR \| EN** — English is still behind the same passcode |
+| the translator | French ↔ English, with French idioms and French Wikipedia for names |
+| the conjugator | French tables, and the three tabs become **-er / -ir / -re** |
+| the dictionary | the **Wiktionnaire**, with the Académie française linked beside it |
+| the tutor | French grammar, French verb forms, answers in French |
+| the interface | every string, in French or English |
+| the allowance | **shared** — the same five off-topic questions per window |
+
+What does not change: the theme, the wallpaper, the teacher's lock, the
+passcode, the confetti, and the shape of every page. It is the same site
+pointed at a different language, not a second site.
+
+The two sides never mix. Ask a French question in Spanish mode and the tutor
+declines it, and the other way round — each has its own grammar notes, its own
+verb list and its own dictionary, and the chat clears when you switch, because
+a Spanish transcript is not history a French tutor could have produced.
+
+### How it is put together
+
+One axis was added — `public/js/lib/study.js`, the language the site is *about*
+— and everything language-specific hangs off it. It is deliberately separate
+from `lib/i18n.js`, which is the language of the *chrome*: in French mode the
+interface is French or English, in Spanish mode Spanish or English, and someone
+who paid the passcode for English stays in English across the switch.
+
+The routing that decides what a question means is **shared**. `lib/tutor.js`
+holds it, and `lib/tutor-es.js` and `lib/tutor-fr.js` are packs it reads: the
+conjugation engine to call, the words that signal an intent, the shape of the
+paradigm, and the sentences the tutor says in its own voice. That was worth the
+refactor — the interesting behaviour is all in the routing, and two copies of it
+would have drifted apart within a week. The conjugation page works the same way:
+one renderer, two sets of tense lists.
+
+The string tables are the exception, and are duplicated on purpose. The English
+half differs too — "Spanish questions are free" and "French questions are free"
+are different sentences, and so is every mention of the dictionary behind each
+side — so a third column would have been a table of near-misses.
+
+### The French conjugator
+
+`public/js/lib/conjugator-fr.js`, built the same way as the Spanish one — rules
+first, data only where rules run out:
+
+1. **Regular endings** for the three groups: `-er`, `-ir` with the `-iss-`
+   infix, and `-re`. The `-oir` verbs are irregular to a verb.
+2. **Spelling that only preserves the sound** — `commencer → commençons`,
+   `manger → mangeons`, `payer → paie`.
+3. **The mute-e stem changes** — `lever → lève`, `appeler → appelle`,
+   `acheter → achète`, `préférer → préfère`.
+4. **Explicit irregulars**, inherited by prefixed derivatives, so `comprendre`
+   comes free from `prendre` and `découvrir` from `couvrir`.
+
+Two things have no Spanish counterpart and shape the code.
+
+**The auxiliary.** Compound tenses take *avoir* or *être*, and the *être* ones
+agree with their subject, so the table shows `je suis allé(e)` and `nous sommes
+allé(e)s` rather than one string. Which auxiliary a verb takes is a chip on the
+verb card, because it is half of learning its compound tenses.
+
+**The stem splits rather than shifting.** French changes the stem before a
+*mute* ending — je, tu, il, ils of the present and subjunctive — and leaves it
+alone before nous and vous, where the ending is heard. Every verb carries a
+strong stem and a weak one; for most verbs they are the same string.
+
+The rules that took the most care:
+
+- **`-eler` / `-eter` are checked before the plainer `e_er` shape**, because
+  their stems satisfy both — otherwise *appeler* comes out *j'apèle*.
+- **A single consonant after `e`, but one or two after `é`.** *lever → lève* and
+  *régler → règle*, while *rester* stays *je reste* — two consonants after the
+  `e` and the rule does not apply. That one line is the difference between
+  correct French and *je rèste*.
+- **`é` keeps its accent through the future** where `e` does not:
+  *je préférerai*, but *je lèverai*.
+- **`percevoir` is a prefixing of `cevoir`, not of `voir`.** Spelled out as its
+  own entry it fell through to the shorter base and came back *je percevois*.
+- **The `-uire` family is a rule**, not twelve near-identical entries, and a
+  handful of them end in `-ui` rather than `-uit`.
+
+`npm test` checks 163 reference forms against the Bescherelle paradigms, and a
+further 183 that the page's tense lists and the engine's tables agree — a tense
+named on the page but absent from the table would otherwise show as a quietly
+missing row.
+
+### Where French definitions come from
+
+**Not the Académie française, and the page says so.** The Académie publishes no
+API: `api.dictionnaire-academie.fr` does not resolve, and
+dictionnaire-academie.fr serves a JavaScript search whose results are not in the
+HTML it returns. Scraping it would be fragile and unkind.
+
+So definitions come from the **Wiktionnaire** — French definitions of French
+words, CC BY-SA — which `server/dictionary-fr.js` reads as wikitext and
+normalises into exactly the shape the RAE route already returns, so the page and
+the tutor never learn which dictionary answered. Every entry carries a link to
+the Académie's own article, and a notice saying plainly where the text came
+from, on the same principle as the Spanish side: a dictionary that quietly
+changes authority is worse than one that admits what it is.
+
+Example sentences come from Tatoeba as before, asked for French rather than
+Spanish; the English gloss beside the headword comes from the French section of
+en.wiktionary.
+
+### The French translator
+
+The same chain, minus one engine: **Wikipedia → Lingva → MyMemory**.
+
+Apertium has **no English–French pair** — it has `spa↔eng` and `spa↔fra`, but
+not the one this needs — so the floor beneath MyMemory is missing on the French
+side. Pivoting through Spanish was tried and rejected: Apertium is already "a
+floor rather than a choice", and a double hop turns *Where is the library?* into
+*Où Il est la bibliothèque ?*, which is worse than no answer on a site whose
+value is being correct.
+
+That matters more than it should right now, because **every public Lingva
+instance is behind a Cloudflare challenge**, which affects the Spanish side too
+— Spanish just lands on Apertium instead. Until an instance comes back, French
+translation runs on MyMemory alone, and MyMemory's agreement rule declines
+roughly half of what it is asked. When the whole chain declines, the pane says
+so rather than showing a guess.
+
+**If you are deploying this, point `LINGVA_INSTANCES` at an instance that
+works** — a self-hosted one is a few lines of Docker — and the French translator
+becomes as good as the Spanish one. Nothing else needs changing.
 
 ## Design
 
@@ -338,7 +499,8 @@ cp .env.example .env      # then put your key in it
 | `ANTHROPIC_API_KEY` | **Paid.** Only reached if it is the only key set, or `LLM_PROVIDER=anthropic`. |
 | `LLM_PROVIDER` | Pin one: `gemini`, `groq`, `openrouter` or `anthropic`. |
 | `PORT` | Defaults to `4000`. |
-| `CHAT_FREE_LIMIT` | Off-topic chat questions per window. Default `5`; set `0` to seal the chat immediately and see the tape. |
+| `CHAT_FREE_LIMIT` | Off-topic chat questions per window, shared by both languages. Default `5`; set `0` to seal the chat immediately and see the tape. |
+| `LINGVA_INSTANCES` | Comma-separated Lingva hosts, tried in order. Worth setting — see *[The French translator](#the-french-translator)*. |
 | `CHAT_WINDOW_MINUTES` | Length of that window. Default `30`. |
 
 Without a key:
@@ -349,15 +511,22 @@ Without a key:
 
 ## Where things live
 
+Files marked **·fr** are the French counterpart of the one above them.
+
 ```
 server/
   index.js              express app: /api routes, static files, SPA fallback
-  quota.js              sliding-window allowance for off-topic chat questions
+  quota.js              sliding-window allowance — one bucket, both languages
   llm.js                picks a provider — free tiers first
-  providers/            gemini.js, groq.js, anthropic.js
+  corpus.js             Tatoeba sentences and Wiktionary glosses, either language
+  translators.js        the engine chain; every engine takes the pair as codes
+  idioms.js             one idiom table per language
+  dictionary-fr.js   ·fr the Wiktionnaire, parsed from wikitext
+  providers/            gemini.js, groq.js, anthropic.js, openrouter.js
   routes/
-    translate.js        the model, falling back to MyMemory
-    dictionary.js       RAE lookup + example-sentence generation
+    translate.js        dedicated engines, never a model
+    dictionary.js       picks a dictionary by `study`, then normalises both
+                        into one shape
     verbs.js            RAE's own conjugation tables, normalised to our shape
     chat.js             SSE streaming chat
 public/
@@ -365,35 +534,49 @@ public/
   styles.css            the whole design system
   js/
     app.js              history-API router
-    lib/conjugator.js   the conjugation engine
+    lib/study.js        the language the site is *about*, and the mode command
+    lib/conjugator.js   the Spanish conjugation engine
+    lib/conjugator-fr.js ·fr the French one: two stems, two auxiliaries
     lib/network.js      the hero node network
     lib/markdown.js     DOM-building markdown renderer (no innerHTML)
-    lib/tutor.js        intent routing for the chat: what can be grounded, and how
+    lib/tutor.js        intent routing for the chat — shared by both languages
+    lib/tutor-es.js     what the router needs to know about Spanish
+    lib/tutor-fr.js  ·fr the same, for French
     lib/chat-session.js the conversation, held outside the view so navigating
                         away cannot interrupt an answer
     lib/theme.js        dark/light switching
     lib/tape.js         the X that seals the chat when the allowance is gone
     lib/wallpaper.js    the Madrid photo: parallax, scrim, scroll fade
-    lib/i18n.js         every interface string, in both languages
-    lib/language-switch.js  the ES/EN switch and its passcode gate
+    lib/i18n.js         every interface string — one table per study language
+    lib/language-switch.js  the ES/EN — or FR/EN — switch and its passcode gate
     data/grammar.js     16 grammar explanations, Spanish and English
+    data/grammar-fr.js ·fr 20 more, French and English
     data/verbs.js       stem changes, irregulars, the search index
-    views/              one module per page
+    data/verbs-fr.js ·fr irregulars, the -er spelling exceptions, 232 verbs
+    views/              one module per page, driven by the study language
 test/
-  conjugator.test.js    204 reference forms checked against RAE paradigms
-  tutor.test.js         47 checks on intent routing and the form index
-  corpus.test.js        10 checks on sentence ranking and gloss extraction
-  translators.test.js   32 checks on engine order, names and the agreement rule
-  idioms.test.js        17 checks on idiom pairing in both directions
-  quota.test.js         21 checks on the sliding window and refunds
-  identity.test.js      15 checks on per-browser identity and its signature
-  openrouter.test.js    20 checks on the guards that keep OpenRouter free
+  conjugator.test.js       204 reference forms checked against RAE paradigms
+  conjugator-fr.test.js ·fr 163 checked against the Bescherelle paradigms
+  conjugator-view.test.js  183 that the page's tense lists match both engines
+  tutor.test.js             52 checks on intent routing and the form index
+  tutor-fr.test.js      ·fr  64 that the French pack drives the same router
+  corpus.test.js            13 checks on sentence ranking and gloss extraction
+  translators.test.js       32 checks on engine order, names and the agreement rule
+  idioms.test.js            17 checks on idiom pairing in both directions
+  quota.test.js             18 checks on the sliding window and refunds
+  identity.test.js          15 checks on per-browser identity and its signature
+  openrouter.test.js        20 checks on the guards that keep OpenRouter free
 ```
+
+`npm test` runs all 781, offline, in about a second.
 
 ## The conjugation engine
 
-`public/js/lib/conjugator.js` builds paradigms from rules rather than a form
-table, applied in this order:
+There are two, one per language: `public/js/lib/conjugator.js` for Spanish and
+`conjugator-fr.js` for French — see *[The French conjugator](#the-french-conjugator)*
+for the second. Both build paradigms from rules rather than a form table.
+
+`public/js/lib/conjugator.js` applies its rules in this order:
 
 1. **Regular endings** for the three classes.
 2. **Orthographic changes** that only preserve pronunciation — `buscar → busqué`,
@@ -410,6 +593,10 @@ On the conjugation page the local engine renders instantly, then RAE's own table
 is fetched and merged over it when the verb is in the dictionary — so the forms
 you see are authoritative where RAE has them, and generated where it doesn't.
 The badge on the verb card tells you which.
+
+French has no equivalent to merge, because the Académie française publishes no
+API, so there the local engine *is* the table and the badge is left off rather
+than claiming an authority behind it.
 
 ## Deploying
 

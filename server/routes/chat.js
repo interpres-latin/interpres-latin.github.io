@@ -11,24 +11,50 @@ const MAX_CHARS = 12000;
 // Kept deliberately general for now — this is the knob to turn when ProfeGPT
 // gets its real teaching persona. Only questions the grounded tutor could not
 // answer from the site's own data ever reach it.
-const SYSTEM = `You are ProfeGPT, a helpful, knowledgeable and friendly assistant.
+const SUBJECT = { es: 'Spanish', fr: 'French' };
 
-You live on a Spanish-learning site, so when a question touches Spanish —
-grammar, vocabulary, translation, culture — answer with a teacher's care: give
-the direct answer first, then a short example, and correct mistakes gently.
-Reply in the language the user writes in. For anything else, just be a good
-general-purpose assistant.
+const SYSTEM = (study) => `You are ProfeGPT, a helpful, knowledgeable and friendly assistant.
+
+You live on a ${SUBJECT[study]}-learning site, so when a question touches
+${SUBJECT[study]} — grammar, vocabulary, translation, culture — answer with a
+teacher's care: give the direct answer first, then a short example, and correct
+mistakes gently. Reply in the language the user writes in. For anything else,
+just be a good general-purpose assistant.
 
 Keep answers tight. Use markdown only when structure genuinely helps.`;
+
+/**
+ * The allowance deliberately has no language in it.
+ *
+ * A visitor gets one bucket of off-topic questions per window, whichever side
+ * of the site they are on: switching to French is a different subject, not a
+ * second helping. See server/quota.js, which keys on the browser alone.
+ */
+const MESSAGES = {
+  es: {
+    noProvider: 'Las preguntas que no son de español necesitan un modelo. Añade GEMINI_API_KEY (gratis) a tu .env y reinicia el servidor.',
+    noMessage: 'Se esperaba un mensaje del usuario.',
+    spent: (minutes) => `Se acabaron las preguntas libres. Vuelven ${minutes} minutos después de la primera.`,
+    noModel: 'Ningún modelo pudo responder.',
+    noModelNow: (first) => `Ningún modelo pudo responder ahora mismo (${first}). Inténtalo de nuevo en un momento.`,
+  },
+  fr: {
+    noProvider: 'Les questions qui ne portent pas sur le français ont besoin d’un modèle. Ajoutez GEMINI_API_KEY (gratuite) à votre .env et redémarrez le serveur.',
+    noMessage: 'Un message de l’utilisateur était attendu.',
+    spent: (minutes) => `Il ne reste plus de questions libres. Elles reviennent ${minutes} minutes après la première.`,
+    noModel: 'Aucun modèle n’a pu répondre.',
+    noModelNow: (first) => `Aucun modèle n’a pu répondre pour le moment (${first}). Réessayez dans un instant.`,
+  },
+};
 
 /**
  * Providers hand back whole paragraphs of billing advice. Keep the first line,
  * which is the part a visitor can act on, and drop the rest.
  */
-function describe(failures) {
-  if (!failures.length) return 'Ningún modelo pudo responder.';
+function describe(failures, strings) {
+  if (!failures.length) return strings.noModel;
   const first = failures[0].split(/[.\n]/)[0].trim();
-  return `Ningún modelo pudo responder ahora mismo (${first}). Inténtalo de nuevo en un momento.`;
+  return strings.noModelNow(first);
 }
 
 router.get('/status', (req, res) => {
@@ -42,12 +68,11 @@ router.get('/status', (req, res) => {
 });
 
 router.post('/', async (req, res) => {
+  const study = req.body?.study === 'fr' ? 'fr' : 'es';
+  const strings = MESSAGES[study];
+
   const chain = providerChain();
-  if (!chain.length) {
-    return res.status(503).json({
-      error: 'Las preguntas que no son de español necesitan un modelo. Añade GEMINI_API_KEY (gratis) a tu .env y reinicia el servidor.',
-    });
-  }
+  if (!chain.length) return res.status(503).json({ error: strings.noProvider });
 
   const caller = identify(req, res);
   const incoming = Array.isArray(req.body?.messages) ? req.body.messages : [];
@@ -58,17 +83,14 @@ router.post('/', async (req, res) => {
     .filter((message) => message.content.trim());
 
   if (!messages.length || messages.at(-1).role !== 'user') {
-    return res.status(400).json({ error: 'Se esperaba un mensaje del usuario.' });
+    return res.status(400).json({ error: strings.noMessage });
   }
 
   // One slot per question, whichever model ends up answering it. Refuse before
   // opening a stream, so the client gets a plain 429 to roll the tape from.
   const quota = consume(caller);
   if (!quota.allowed) {
-    return res.status(429).json({
-      error: `Se acabaron las preguntas libres. Vuelven ${quota.windowMinutes} minutos después de la primera.`,
-      quota,
-    });
+    return res.status(429).json({ error: strings.spent(quota.windowMinutes), quota });
   }
 
   res.writeHead(200, {
@@ -100,7 +122,7 @@ router.post('/', async (req, res) => {
     try {
       send({ type: 'provider', provider: provider.label });
 
-      for await (const text of provider.askStream({ system: SYSTEM, messages })) {
+      for await (const text of provider.askStream({ system: SYSTEM(study), messages })) {
         if (aborted) break;
         produced = true;
         generated = true;
@@ -129,6 +151,6 @@ router.post('/', async (req, res) => {
   if (aborted) return res.end();
 
   send({ type: 'quota', quota: peek(caller) });
-  send({ type: 'error', error: describe(failures) });
+  send({ type: 'error', error: describe(failures, strings) });
   res.end();
 });

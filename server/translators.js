@@ -18,7 +18,12 @@
  *                  agree with each other.
  *   3. Apertium    open-source rule-based translation. Clumsy — "It would like
  *                  me learn Spanish with you" — but always up and never invents
- *                  content, so it is a floor rather than a choice.
+ *                  content, so it is a floor rather than a choice. It has no
+ *                  English–French pair, so French translation has one engine
+ *                  fewer beneath it and stops at MyMemory.
+ *
+ * Every engine takes the language pair as codes, so the whole chain works for
+ * whichever language the site is currently about.
  */
 
 const LINGVA_HOSTS = (process.env.LINGVA_INSTANCES || 'lingva.lunar.icu,lingva.ml,lingva.garudalinux.org')
@@ -307,8 +312,15 @@ async function myMemory(text, from, to) {
   return { text: translated, engine: 'MyMemory' };
 }
 
+/** Apertium's own codes, and the pairs it actually has installed. */
+const APERTIUM_CODES = { es: 'spa', en: 'eng', fr: 'fra' };
+const APERTIUM_PAIRS = new Set(['spa|eng', 'eng|spa', 'spa|fra', 'fra|spa']);
+
 async function apertium(text, from, to) {
-  const pair = `${from === 'es' ? 'spa' : 'eng'}|${to === 'es' ? 'spa' : 'eng'}`;
+  const pair = `${APERTIUM_CODES[from]}|${APERTIUM_CODES[to]}`;
+  // English–French is not one of them. Pivoting through Spanish would double
+  // the damage of an engine that is already the floor, so it simply declines.
+  if (!APERTIUM_PAIRS.has(pair)) throw new Error(`Apertium has no ${pair} pair`);
 
   const translated = await translateChunks(text, LINGVA_CHUNK, async (part) => {
     const url = `${APERTIUM}?langpair=${encodeURIComponent(pair)}&q=${encodeURIComponent(part)}`;
