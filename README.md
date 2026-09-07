@@ -322,7 +322,8 @@ understand** button, because an undismissable tape would also lock the visitor
 out of the conjugator and the dictionary, which cost nothing and still work.
 
 After that it escalates rather than repeating itself. Every message is still
-checked by the tutor first, so Spanish questions answer normally and free. An
+checked by the tutor first, so questions about the subject answer normally and
+free — in whichever of the three languages the site is on. An
 off-topic one with nothing left behind it gets a short notice at the top that
 fades on its own — until five arrive within fifteen seconds, at which point the
 tape returns. Acknowledging it resets the count.

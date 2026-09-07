@@ -11,7 +11,7 @@ const MAX_CHARS = 12000;
 // Kept deliberately general for now — this is the knob to turn when ProfeGPT
 // gets its real teaching persona. Only questions the grounded tutor could not
 // answer from the site's own data ever reach it.
-const SUBJECT = { es: 'Spanish', fr: 'French' };
+const SUBJECT = { es: 'Spanish', fr: 'French', la: 'Latin' };
 
 const SYSTEM = (study) => `You are ProfeGPT, a helpful, knowledgeable and friendly assistant.
 
@@ -45,6 +45,15 @@ const MESSAGES = {
     noModel: 'Aucun modèle n’a pu répondre.',
     noModelNow: (first) => `Aucun modèle n’a pu répondre pour le moment (${first}). Réessayez dans un instant.`,
   },
+  // In English, like the rest of the Latin side: the chrome there defaults to
+  // English because English is the working language of a Latin lesson.
+  la: {
+    noProvider: 'Questions that are not about Latin need a model. Add GEMINI_API_KEY (free) to your .env and restart the server.',
+    noMessage: 'A message from the user was expected.',
+    spent: (minutes) => `No free questions left. They come back ${minutes} minutes after the first.`,
+    noModel: 'No model could answer.',
+    noModelNow: (first) => `No model could answer just now (${first}). Try again in a moment.`,
+  },
 };
 
 /**
@@ -68,7 +77,7 @@ router.get('/status', (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const study = req.body?.study === 'fr' ? 'fr' : 'es';
+  const study = ['fr', 'la'].includes(req.body?.study) ? req.body.study : 'es';
   const strings = MESSAGES[study];
 
   const chain = providerChain();

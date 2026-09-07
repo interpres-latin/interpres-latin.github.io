@@ -166,9 +166,11 @@ async function streamFromModel() {
     if (!response.ok || !response.body) {
       const failure = await response.json().catch(() => ({}));
       if (response.status === 429) state.quota = failure.quota || { ...state.quota, remaining: 0 };
-      throw new Error(failure.error || (studyLang() === 'fr'
-        ? `Le serveur a répondu ${response.status}.`
-        : `El servidor respondió ${response.status}.`));
+      throw new Error(failure.error || {
+        fr: `Le serveur a répondu ${response.status}.`,
+        la: `The server responded ${response.status}.`,
+        es: `El servidor respondió ${response.status}.`,
+      }[studyLang()]);
     }
 
     const reader = response.body.getReader();
@@ -209,7 +211,11 @@ async function streamFromModel() {
       state.messages.push({
         role: 'assistant',
         content: '',
-        error: studyLang() === 'fr' ? 'La réponse est arrivée vide.' : 'La respuesta llegó vacía.',
+        error: {
+          fr: 'La réponse est arrivée vide.',
+          la: 'The answer came back empty.',
+          es: 'La respuesta llegó vacía.',
+        }[studyLang()],
       });
     }
   } catch (error) {
