@@ -12,9 +12,9 @@ const cache = new Map();
 const CACHE_TTL = 1000 * 60 * 60 * 12;
 const CACHE_MAX = 500;
 
-function remember(key, value, settled = false) {
+function remember(key, value) {
   if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
-  cache.set(key, { at: Date.now(), value, settled });
+  cache.set(key, { at: Date.now(), value });
 }
 
 /**
@@ -34,28 +34,12 @@ router.post('/', async (req, res) => {
 
   if (!text.trim()) return res.json({ translation: '', engine: null });
 
-  /**
-   * Whether the sentence is finished, which decides whether a model may see it.
-   *
-   * The box translates as you type, so a sentence being typed produces a
-   * request per pause — each one a different prefix, so each one a cache miss.
-   * Sending those to a model would spend a day's free quota on half-sentences
-   * nobody asked about. The free engines answer the preview; the page asks
-   * again once typing has stopped, and that request is the one allowed to be
-   * good. See public/js/views/home.js.
-   */
-  const settled = req.body?.settled === true;
-
   const key = `${from}>${to}:${text}`;
   const hit = cache.get(key);
-  // A finished translation is served to a preview too — never the other way
-  // round, or a half-typed answer would outlive the good one.
-  if (hit && Date.now() - hit.at < CACHE_TTL && (hit.settled || !settled)) {
-    return res.json(hit.value);
-  }
+  if (hit && Date.now() - hit.at < CACHE_TTL) return res.json(hit.value);
 
   try {
-    const result = await translate(text, from, to, { model: settled });
+    const result = await translate(text, from, to);
     const payload = {
       translation: result.text,
       engine: result.engine,
@@ -79,7 +63,7 @@ router.post('/', async (req, res) => {
       }
     }
 
-    remember(key, payload, settled);
+    remember(key, payload);
     return res.json(payload);
   } catch (error) {
     console.warn('[translate]', error.message);

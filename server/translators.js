@@ -85,7 +85,6 @@ function hostsToTry() {
 
 import { alreadyIdiomatic, findIdioms, wantsProgressive } from './idioms.js';
 import { throttle, USER_AGENT } from './throttle.js';
-import { modelTranslate } from './translate-model.js';
 import { deepl } from './deepl.js';
 
 const WIKIPEDIA = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
@@ -522,18 +521,22 @@ async function apertium(text, from, to) {
  * Wikipedia first — an established name is a fact to look up, not a phrase to
  * translate. Then DeepL, which is a real translation engine and the best one
  * here for French and Spanish, answering to a published contract rather than to
- * whether Google feels like serving a volunteer's proxy today.
+ * whether Google feels like serving a volunteer's proxy today. Then the free
+ * engines, in the order they can be trusted.
  *
- * Then the model, which sits above the remaining dedicated engines rather than
- * below them — a reversal of this project's original rule. That rule held while
- * Lingva worked. It does not survive Lingva's disappearance, and it does not
- * survive Latin at all: DeepL has no Latin, nothing dedicated does, and a model
- * is not merely the best option there but the only one.
+ * **No model translates.** Gemini and OpenRouter answer off-topic chat and
+ * nothing else: their credits are a fixed monthly allowance, and translation —
+ * which fires as you type — would drain it on sentences nobody asked about.
+ * The chain is dedicated engines only, which is where this project started.
  *
- * Everything free stays underneath, so a spent quota costs quality rather than
- * service. See translate-model.js for what is done about a model's bad habits.
+ * The cost of that is Latin, and it is a real cost rather than a theoretical
+ * one: DeepL has no Latin pair, no dedicated engine has, and MyMemory's Latin
+ * returns "dog de puella" for *the dog of the girl*. Latin translation is only
+ * as good as MyMemory until something better exists. translate-model.js is kept
+ * and still tested; putting `modelTranslate` back in this list — after `deepl`,
+ * so it only ever sees what DeepL cannot — is the whole of the change.
  */
-const ENGINES = [namedEntity, deepl, modelTranslate, lingva, myMemory, apertium];
+const ENGINES = [namedEntity, deepl, lingva, myMemory, apertium];
 
 /**
  * Swap a word-for-word rendering of an idiom for the equivalent idiom.
@@ -582,17 +585,11 @@ async function restoreIdioms(source, translated, from, to, translateSpan) {
  * Translate, trying each engine until one answers.
  * @returns {Promise<{text: string, engine: string, notes: Array}>}
  */
-/**
- * @param {object} [options]
- * @param {boolean} [options.model] whether the model may be asked. False while
- *        a sentence is still being typed — see routes/translate.js.
- */
-export async function translate(text, from, to, { model = true } = {}) {
+export async function translate(text, from, to) {
   const failures = [];
   let guess = null;
 
   for (const engine of ENGINES) {
-    if (engine === modelTranslate && !model) continue;
     try {
       const result = await engine(text, from, to);
       if (!result.text.trim()) continue;

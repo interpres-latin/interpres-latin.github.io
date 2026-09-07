@@ -345,10 +345,9 @@ function buildTranslator(root) {
       return;
     }
     scheduleTranslate();
-    scheduleSettled();
   }
 
-  async function translate(force = false, settled = false) {
+  async function translate(force = false) {
     const text = input.value.trim();
     if (!text) return;
 
@@ -382,7 +381,7 @@ function buildTranslator(root) {
     try {
       const data = await postJson(
         '/api/translate',
-        { text, from: state.from, study: studyLang(), settled: settled || force },
+        { text, from: state.from, study: studyLang() },
         { signal: controller.signal },
       );
       if (controller.signal.aborted) return;
@@ -408,20 +407,21 @@ function buildTranslator(root) {
   }
 
   /**
-   * Two passes, because the good translator costs something.
+   * One pass, once typing pauses.
    *
-   * The first fires quickly and is answered by the free engines, so the box
-   * still fills in as you type. The second fires only once typing has actually
-   * stopped, and that is the one a model is allowed to answer — otherwise every
-   * half-finished prefix would spend a slice of a day's free quota on a
-   * sentence nobody asked about. Pressing the button or ⌘⏎ skips the wait.
+   * There were two for a while: a quick one answered by the free engines and a
+   * later one a model was allowed to answer. No model translates now, so there
+   * is nothing to defer to and the second pass was pure waste.
+   *
+   * The wait is longer than it looks, and deliberately. Every pause is a
+   * different prefix and so a different cache miss, and DeepL bills by the
+   * character against a monthly allowance the whole class shares — so a beat
+   * more patience here is a lesson's worth of headroom there.
    */
-  const scheduleTranslate = debounce(() => translate(), 650);
-  const scheduleSettled = debounce(() => translate(false, true), 1800);
+  const scheduleTranslate = debounce(() => translate(), 900);
 
   swap.addEventListener('click', () => {
     scheduleTranslate.cancel();
-    scheduleSettled.cancel();
     state.pending?.abort();
 
     // Keep what is on screen: the translation becomes the new source text.
