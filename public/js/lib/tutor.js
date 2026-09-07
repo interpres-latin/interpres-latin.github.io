@@ -259,14 +259,38 @@ async function dictionaryAnswer(pack, word, language) {
 async function translationAnswer(pack, text, from, language) {
   const data = await postJson('/api/translate', { text, from, study: pack.code });
   if (!data.translation) return null;
-  return [
+
+  const blocks = [
     { type: 'md', text: `**${data.translation}**` },
     {
       type: 'md',
       text: `_«${text}» — ${pack.labels.translatedWith[language]} ${data.engine || 'MyMemory'}._`,
     },
   ];
+  // The array is what every caller wants; the translation rides along for the
+  // one that asks for a definition of the word it just produced.
+  blocks.translation = data.translation;
+  return blocks;
 }
+
+/**
+ * The part of "how do you say X in Spanish and give a definition" that is X.
+ *
+ * The intent pattern only allowed the language at the very end, so the lazy
+ * capture swallowed the rest of the question and translated *that*: asking for
+ * tomato returned «tomate» en español y su definición, the whole sentence
+ * rendered into Spanish. The language marker is cut wherever it appears, and so
+ * is a tacked-on request for a definition.
+ */
+const LANGUAGE_TAIL = /\s+(?:in|into|en|al|au)\s+(?:spanish|espa[nñ]ol|english|ingl[eé]s|french|fran[cç]ais|latin|lat[ií]n)\b.*$/i;
+const EXTRA_REQUEST = /\s*(?:[,;]|\band\b|\by\b|\bet\b)\s*(?:also\s+)?(?:give|show|tell|with|include|add)?\s*(?:me\s+)?(?:the\s+|a\s+|its\s+|it's\s+)?(?:definition|meaning|significado|definici[oó]n|d[eé]finition|sens)\b.*$/i;
+
+function translationPhrase(raw) {
+  return String(raw ?? '').replace(LANGUAGE_TAIL, '').replace(EXTRA_REQUEST, '').trim();
+}
+
+/** Whether the question also asked what the word means. */
+const WANTS_DEFINITION = /\b(definition|define|meaning|significado|definici[oó]n|significa|d[eé]finition|sens)\b/i;
 
 function formLookupAnswer(pack, word, language) {
   const matches = getFormIndex(pack.code).get(fold(word));
@@ -402,7 +426,8 @@ export async function answer(question, { language = null, force = false, study =
    */
   const translateMatch = INTENTS.translateInto.exec(text);
   if (translateMatch) {
-    const phrase = translateMatch[1].trim();
+    const phrase = translationPhrase(translateMatch[1]);
+    if (!phrase) return respond(pack.CAPABILITIES[lang]);
 
     // "how do you say the subjunctive" is a grammar question wearing this
     // shape; the same guard step 5b uses, applied before the engines.
@@ -415,7 +440,16 @@ export async function answer(question, { language = null, force = false, study =
     askedSomethingSpecific = true;
     const from = INTENTS.intoEnglishLanguage?.test(text) ? pack.code : 'en';
     const blocks = await translationAnswer(pack, phrase, from, lang).catch(() => null);
-    if (blocks) return respond(blocks);
+
+    if (blocks) {
+      // "and give a definition" is a second question, and it is about the word
+      // that just came back rather than the one that was typed.
+      if (WANTS_DEFINITION.test(text) && blocks.translation && from === 'en') {
+        const defined = await dictionaryAnswer(pack, blocks.translation, lang).catch(() => null);
+        if (defined) return respond([...blocks, ...defined]);
+      }
+      return respond(blocks);
+    }
   }
 
   const defineMatch = INTENTS.define.exec(text);

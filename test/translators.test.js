@@ -26,7 +26,7 @@ delete process.env.ANTHROPIC_API_KEY;
 delete process.env.GROQ_API_KEY;
 process.env.DEEPL_API_KEY = 'test-key:fx';
 
-const { translate, chunk, resetLingvaCooldowns } = await import('../server/translators.js');
+const { translate, chunk, resetLingvaCooldowns, allEverydayWords } = await import('../server/translators.js');
 const LINGVA_COUNT = process.env.LINGVA_INSTANCES.split(',').length;
 
 let plan = {};
@@ -325,6 +325,30 @@ let noLatinRoute = null;
 try { await translate('the girl', 'en', 'la'); } catch (error) { noLatinRoute = error; }
 ok('Latin declines rather than inventing a route', noLatinRoute !== null);
 ok('and names the pair it has not got', /eng\|lat/.test(noLatinRoute?.message || ''), noLatinRoute?.message);
+
+// --- a common phrase is not a name, whatever Wikipedia also calls it ------
+// Wikipedia has an article called "I Am", and "I am tired" was coming back as
+// "I Am fatigué" — the two commonest words in English restored as an album
+// title. Asserted on the guard itself: the stub here answers every lookup,
+// which real Wikipedia does not, so a chain test would prove nothing.
+ok('"I am" is all everyday words', allEverydayWords('I am'));
+ok('and so is "am I"', allEverydayWords('am I'));
+ok('and "it is"', allEverydayWords('it is'));
+ok('and "we have been"', allEverydayWords('we have been'));
+ok('and the Spanish equivalent', allEverydayWords('yo soy'));
+ok('and the French', allEverydayWords('je suis'));
+ok('"I am tired" is not, because "tired" is not', !allEverydayWords('I am tired'));
+ok('a real name is not', !allEverydayWords('Cuban Missile Crisis'));
+ok('nor is one with a common word in it', !allEverydayWords('the Great Wall of China'));
+ok('nothing is not', !allEverydayWords(''));
+
+// A real name still comes back, which is the whole point of the mechanism.
+plan = {
+  wikipedia: article('Crisis de los misiles de Cuba', 'Cuban Missile Crisis'),
+  deepl: { translations: [{ text: 'crisis de los misiles cubanos' }] },
+};
+result = await translate('Cuban Missile Crisis', 'en', 'es');
+ok('a real name is still restored', /Crisis de los misiles de Cuba/.test(result.text), result.text);
 
 // --- DeepL answers before anything else ----------------------------------
 plan = {

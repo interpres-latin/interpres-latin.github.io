@@ -86,7 +86,7 @@ function hostsToTry() {
 import { alreadyIdiomatic, findIdioms, wantsProgressive } from './idioms.js';
 import { throttle, USER_AGENT } from './throttle.js';
 import { deepl } from './deepl.js';
-import { latinRules } from './latin-translate.js';
+import { latinRules, LATIN_RULES_ENGINE } from './latin-translate.js';
 
 const WIKIPEDIA = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
@@ -141,13 +141,41 @@ function looksLikeAName(text) {
   return words.length >= 2 && words.length <= 8;
 }
 
-/** Words a name does not begin or end with. Trims the candidate list sharply. */
+/**
+ * Words a name does not begin or end with. Trims the candidate list sharply.
+ *
+ * The pronouns and the rest of "to be" are here for a reason worth writing
+ * down: *am* was missing while *is*, *are*, *was* and *were* were present, and
+ * Wikipedia has an article called "I Am". So every sentence a student is most
+ * likely to write — "I am tired", "I am a student" — came back as "I Am
+ * fatigué", the two commonest words in English restored as the title of an
+ * album.
+ */
 const EDGE_WORDS = new Set([
   'the', 'a', 'an', 'of', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'from', 'by', 'with',
-  'was', 'were', 'is', 'are', 'be', 'been', 'has', 'have', 'had', 'that', 'this', 'it', 'as',
+  'was', 'were', 'is', 'are', 'am', 'be', 'been', 'being', 'has', 'have', 'had', 'that',
+  'this', 'these', 'those', 'it', 'as', 'do', 'does', 'did', 'not', 'no', 'so', 'very',
+  'i', 'you', 'he', 'she', 'we', 'they', 'me', 'him', 'her', 'us', 'them',
+  'my', 'your', 'his', 'its', 'our', 'their',
   'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'y', 'o', 'en', 'con',
   'por', 'para', 'que', 'fue', 'era', 'es', 'son', 'ser', 'muy', 'su', 'sus', 'se', 'al', 'lo',
+  'yo', 'tu', 'él', 'ella', 'nosotros', 'ellos', 'estoy', 'soy', 'eres', 'está', 'están',
+  'je', 'tu', 'il', 'elle', 'nous', 'vous', 'ils', 'elles', 'suis', 'est', 'sont', 'les',
+  'des', 'du', 'et', 'ou', 'ne', 'pas', 'mon', 'ma', 'mes', 'son', 'sa', 'ses', 'ce', 'cette',
 ]);
+
+/**
+ * A name has to contain something that is not an everyday word.
+ *
+ * Guarding only the edges is not enough — it stops "I am tired" but not "am I
+ * tired", and the failure is the same either way. A span made entirely of words
+ * this common is a sentence fragment, whatever Wikipedia may also happen to
+ * call an album.
+ */
+export function allEverydayWords(span) {
+  const words = span.toLowerCase().match(/[\p{L}\p{N}'’-]+/gu) ?? [];
+  return words.length > 0 && words.every((word) => EDGE_WORDS.has(word));
+}
 
 const LEADING_ARTICLE = /^(?:the|a|an|el|la|los|las|un|una)\s+/i;
 
@@ -175,7 +203,9 @@ function nameCandidates(text) {
       const last = words[i + size - 1];
       if (EDGE_WORDS.has(first[0].toLowerCase())) continue;
       if (EDGE_WORDS.has(last[0].toLowerCase())) continue;
-      spans.push(text.slice(first.index, last.index + last[0].length));
+      const span = text.slice(first.index, last.index + last[0].length);
+      if (allEverydayWords(span)) continue;
+      spans.push(span);
     }
   }
 
@@ -304,6 +334,12 @@ async function namedEntity(text, from, to) {
   // Tested before anything is stripped: trimming a trailing full stop first
   // would let a sentence through the very gate meant to catch it.
   if (!looksLikeAName(text)) throw new Error('not a name');
+
+  // The same guard the in-sentence search uses. Wikipedia has an article called
+  // "I Am", and without this a whole input of ordinary words could be answered
+  // with a title instead of a translation.
+  if (allEverydayWords(text)) throw new Error('a common phrase, not a name');
+
   const phrase = text.trim().replace(/[¿¡]/g, '');
 
   const link = await officialName(phrase, from, to);
@@ -618,8 +654,25 @@ export async function translate(text, from, to) {
         `\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'iu',
       ).test(tidied));
 
+      /**
+       * Latin from anywhere but our own grammar is a guess, and says so.
+       *
+       * The word-level check cannot catch this. "I wish I were dead, I really
+       * do" comes back from MyMemory as "Ego sum mortis, ego sum", and every
+       * word of that is real Latin — it simply does not mean what was asked, so
+       * nothing looks wrong. Latin has no engine that can be trusted with a
+       * sentence, so a Latin translation the rules engine did not build is
+       * marked uncertain whatever it looks like.
+       */
+      const guessedLatin = (to === 'la' || from === 'la') && result.engine !== LATIN_RULES_ENGINE;
+
       return {
-        ...result, text: tidied, notes: withIdioms.notes, unsure: stillThere,
+        ...result,
+        text: tidied,
+        notes: withIdioms.notes,
+        unsure: stillThere,
+        uncertain: result.uncertain === true || guessedLatin,
+        uncertainWhy: guessedLatin ? 'latin' : (result.uncertain ? 'memory' : null),
       };
     } catch (error) {
       failures.push(error.message);

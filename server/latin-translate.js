@@ -560,12 +560,15 @@ async function taggedPhrases(tokens) {
  * The chain's entry point. Latin only, and it declines everything else by name
  * so the log says which pair it was asked for.
  */
+/** What this engine calls itself, so the chain can tell its work from a guess. */
+export const LATIN_RULES_ENGINE = 'Whitaker’s Words';
+
 export async function latinRules(text, from, to) {
   if (from === 'la' && to === 'en') {
-    return { text: await latinToEnglish(text), engine: 'Whitaker’s Words' };
+    return { text: await latinToEnglish(text), engine: LATIN_RULES_ENGINE };
   }
   if (from === 'en' && to === 'la') {
-    return { text: await englishToLatin(text), engine: 'Whitaker’s Words' };
+    return { text: await englishToLatin(text), engine: LATIN_RULES_ENGINE };
   }
   throw new Error(`the rules translator is Latin only, not ${from}|${to}`);
 }

@@ -234,6 +234,13 @@ can be one. Going the other way, English gives one cheap signal worth more than
 it looks — a word after "the" is a noun — without which "the dog of the girl"
 came out as *puellae canit*.
 
+**Anything else that answers in Latin says so.** The word-by-word check cannot
+catch a sentence that is wrong while every word in it is real: "I wish I were
+dead, I really do" comes back from MyMemory as *Ego sum mortis, ego sum*, which
+is Latin, and is not what was asked. Nothing on the open web translates Latin
+reliably, so a Latin translation this engine did not build is marked uncertain
+whatever it looks like, and the page says which kind of doubt it is.
+
 **It declines rather than guesses.** Subordinate clauses, participles, indirect
 statement, relative pronouns — anything past the sentence shapes a first- or
 second-year class writes — throw, and the chain falls through to the engines
@@ -295,6 +302,14 @@ first. French and Latin reach it whenever the memory holds a sentence twice and
 its copies disagree, and there the choice is between a doubtful sentence that
 says it is doubtful and an error message that helps nobody: a student can weigh
 a translation marked uncertain, and cannot weigh a blank page.
+
+**A name has to contain something that is not an everyday word.** Guarding the
+edges of a candidate is not enough: *am* was missing from that list while *is*,
+*are*, *was* and *were* were on it, Wikipedia has an article called "I Am", and
+so every sentence a student is most likely to write came back wearing an album
+title — *I am tired* → **I Am** *fatigué*. Both the whole-input lookup and the
+in-sentence search now refuse a span made entirely of ordinary words, in all
+three languages.
 
 Names inside a sentence are handled too, and separately: the whole-input lookup
 cannot see them, and a translator renders them literally wherever they appear.

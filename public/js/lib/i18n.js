@@ -196,6 +196,9 @@ const SPANISH = {
     unsureWord: two(
       'El traductor no conocía esta palabra y la dejó como estaba.',
       'The translator did not know this word and left it as it was.'),
+    uncertainLatin: two(
+      'Ningún motor traduce latín con fiabilidad. Esto viene de una memoria de traducción, no de la gramática del sitio: compruébalo palabra por palabra.',
+      'No engine translates Latin reliably. This came from a translation memory rather than from the site’s own grammar — check it word by word.'),
   },
 
   finder: {
@@ -456,6 +459,9 @@ const FRENCH = {
     unsureWord: deux(
       'Le traducteur ne connaissait pas ce mot et l’a laissé tel quel.',
       'The translator did not know this word and left it as it was.'),
+    uncertainLatin: deux(
+      'Aucun moteur ne traduit le latin de façon fiable. Ceci vient d’une mémoire de traduction, pas de la grammaire du site : vérifiez mot à mot.',
+      'No engine translates Latin reliably. This came from a translation memory rather than from the site’s own grammar — check it word by word.'),
   },
 
   finder: {
@@ -736,6 +742,9 @@ const LATIN = {
     unsureWord: latine(
       'Interpres hoc verbum non novit et intactum reliquit.',
       'The translator did not know this word and left it as it was.'),
+    uncertainLatin: latine(
+      'Nulla machina Latine fideliter vertit. Hoc ex memoria versionum venit, non ex grammatica huius situs — verbum de verbo cave.',
+      'No engine translates Latin reliably. This came from a translation memory rather than from the site’s own grammar — check it word by word.'),
     parseTitle: latine('Verbum ac verbum', 'Word by word'),
     parseLead: latine(
       'Omne verbum Latinum, ut Whitaker’s Words id legit.',

@@ -394,7 +394,10 @@ function buildTranslator(root) {
       // loud style — it is a caveat about the sentence itself, not a remark
       // about one word in it.
       if (data.uncertain) {
-        notes.prepend(el('p', { class: 'parses__alarm' }, t('translator.uncertain')));
+        // Latin's caveat is a different one: not "the memory disagrees with
+        // itself" but "nothing translates Latin, so read every word".
+        const why = data.uncertainWhy === 'latin' ? 'translator.uncertainLatin' : 'translator.uncertain';
+        notes.prepend(el('p', { class: 'parses__alarm' }, t(why)));
       }
       status.textContent = force ? t('translator.done') : t('translator.ready');
     } catch (error) {
