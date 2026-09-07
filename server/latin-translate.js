@@ -145,6 +145,21 @@ const PARTICLES = {
   quia: { kind: 'conjunction', english: 'because' },
   ubi: { kind: 'conjunction', english: 'when' },
   cum: { kind: 'conjunction', english: 'when' },
+  ita: { kind: 'adverb', english: 'so' },
+  sic: { kind: 'adverb', english: 'thus' },
+  valde: { kind: 'adverb', english: 'very' },
+  iam: { kind: 'adverb', english: 'now' },
+  nunc: { kind: 'adverb', english: 'now' },
+  tum: { kind: 'adverb', english: 'then' },
+  semper: { kind: 'adverb', english: 'always' },
+  numquam: { kind: 'adverb', english: 'never' },
+  saepe: { kind: 'adverb', english: 'often' },
+  statim: { kind: 'adverb', english: 'at once' },
+  subito: { kind: 'adverb', english: 'suddenly' },
+  tandem: { kind: 'adverb', english: 'at last' },
+  mox: { kind: 'adverb', english: 'soon' },
+  hodie: { kind: 'adverb', english: 'today' },
+  heri: { kind: 'adverb', english: 'yesterday' },
   tamen: { kind: 'adverb', english: 'however' },
   itaque: { kind: 'adverb', english: 'and so' },
   igitur: { kind: 'adverb', english: 'therefore' },
@@ -178,6 +193,73 @@ const PERSON_CELL = {
   '2nd': { singular: 's2', plural: 'p2' },
   '3rd': { singular: 's3', plural: 'p3' },
 };
+
+/**
+ * English for a Latin pronoun, by case.
+ *
+ * Pronouns are what a beginner's sentence is mostly made of, and they were the
+ * words this had no idea about: *id* was read as a form of *eo*, "go", because
+ * Whitaker's lists that analysis first, so "ita id est" came out as "He is go
+ * the he".
+ */
+const PRONOUN_ENGLISH = {
+  ego: { nominative: 'I', accusative: 'me', genitive: 'my', dative: 'to me', ablative: 'by me' },
+  tu: { nominative: 'you', accusative: 'you', genitive: 'your', dative: 'to you', ablative: 'by you' },
+  nos: { nominative: 'we', accusative: 'us', genitive: 'our', dative: 'to us', ablative: 'by us' },
+  vos: { nominative: 'you', accusative: 'you', genitive: 'your', dative: 'to you', ablative: 'by you' },
+};
+
+/** *is, ea, id* — one word for he, she and it, told apart by gender. */
+const IS_ENGLISH = {
+  masculine: { nominative: 'he', accusative: 'him', genitive: 'his', dative: 'to him', ablative: 'by him' },
+  feminine: { nominative: 'she', accusative: 'her', genitive: 'her', dative: 'to her', ablative: 'by her' },
+  neuter: { nominative: 'it', accusative: 'it', genitive: 'its', dative: 'to it', ablative: 'by it' },
+  plural: { nominative: 'they', accusative: 'them', genitive: 'their', dative: 'to them', ablative: 'by them' },
+};
+
+function pronounEnglish(lemma, inflection) {
+  const wanted = inflection.case;
+  const table = PRONOUN_ENGLISH[lemma];
+  if (table) return table[wanted] ?? table.nominative;
+
+  if (['is', 'idem', 'ille', 'hic', 'iste'].includes(lemma)) {
+    const gender = inflection.number === 'plural' ? 'plural' : (inflection.gender || 'masculine');
+    return (IS_ENGLISH[gender] ?? IS_ENGLISH.masculine)[wanted] ?? 'it';
+  }
+  return null;
+}
+
+/**
+ * Which part of speech to believe when a form has several readings.
+ *
+ * Closed classes first: the language has a few dozen pronouns and adverbs and
+ * thousands of verbs, so a form that could be either is almost always the
+ * pronoun. Except at the end of a clause, where Latin puts its verb.
+ */
+/**
+ * How common Whitaker's says a word is, as a number to sort by.
+ *
+ * This is the field that settles the collisions nothing else can. *sum* is
+ * listed after *sumo*, so "laetus sum" was read as "take, happy!" — an
+ * imperative from a verb meaning "pick up" — and the copula never got a look
+ * in. A reader disambiguates by knowing which word is common; so does this.
+ */
+const FREQUENCY_RANK = {
+  'very frequent': 0, frequent: 1, common: 2, uncommon: 3, rare: 4,
+  'very rare': 5, inscription: 6, graffiti: 7,
+};
+
+function frequencyRank(analysis) {
+  return FREQUENCY_RANK[String(analysis?.frequency ?? '').toLowerCase()] ?? 3;
+}
+
+function rankPos(pos, last) {
+  const order = last
+    ? ['verb', 'pronoun', 'adverb', 'noun', 'adjective']
+    : ['pronoun', 'adverb', 'noun', 'adjective', 'verb'];
+  const at = order.indexOf(pos);
+  return at === -1 ? order.length : at;
+}
 
 /** The pronoun a Latin verb implies when its subject is not written out. */
 const IMPLIED_SUBJECT = {
@@ -318,12 +400,51 @@ export function englishVerb(stem, { tense, number, person }) {
 /* --------------------------------------------------------- Latin → English */
 
 /** Every reading of a word, flattened to one entry per possible inflection. */
+/**
+ * The personal pronouns, supplied here because Whitaker's does not parse them.
+ *
+ * `analyse('ego')` returns nothing at all, so "ego laboro" was refused as
+ * unknown Latin — the first person singular pronoun, in a beginner's sentence.
+ */
+const BARE_PRONOUNS = {
+  ego: { lemma: 'ego', case: 'nominative', number: 'singular' },
+  me: { lemma: 'ego', case: 'accusative', number: 'singular' },
+  mihi: { lemma: 'ego', case: 'dative', number: 'singular' },
+  tu: { lemma: 'tu', case: 'nominative', number: 'singular' },
+  te: { lemma: 'tu', case: 'accusative', number: 'singular' },
+  tibi: { lemma: 'tu', case: 'dative', number: 'singular' },
+  nos: { lemma: 'nos', case: 'nominative', number: 'plural' },
+  vos: { lemma: 'vos', case: 'nominative', number: 'plural' },
+  nobis: { lemma: 'nos', case: 'dative', number: 'plural' },
+  vobis: { lemma: 'vos', case: 'dative', number: 'plural' },
+};
+
 async function readingsOf(word) {
+  const bare = BARE_PRONOUNS[fold(word)];
+  if (bare) {
+    return [{
+      analysis: { lemma: bare.lemma, pos: 'pronoun', definition: '', principalParts: [bare.lemma] },
+      inflection: { case: bare.case, number: bare.number, pos: 'pronoun' },
+      surface: word,
+      pos: 'pronoun',
+    }];
+  }
+
   const analyses = await analyse(word).catch(() => null);
   if (!analyses?.length) return [];
 
-  return analyses.flatMap((analysis) => (analysis.inflections ?? []).map((inflection) => ({
-    analysis, inflection, surface: word, pos: inflection.pos || analysis.pos,
+  const ranked = [...analyses].sort((one, other) => (rankPos(one.pos, false) - rankPos(other.pos, false))
+    || (frequencyRank(one) - frequencyRank(other)));
+  return ranked.flatMap((analysis) => (analysis.inflections ?? []).map((inflection) => ({
+    // The inflection knows it is a participle where the headword only says
+    // "verb", and a participle behaves like an adjective. Losing that turned
+    // "utinam mortuus essem" back into "I wish the dead were".
+    analysis,
+    inflection,
+    surface: word,
+    pos: String(inflection.pos).startsWith('verb participle')
+      ? inflection.pos
+      : (analysis.pos || inflection.pos),
   })));
 }
 
@@ -351,9 +472,25 @@ export async function latinToEnglish(text) {
 
   // The finite verb, taken from the end: Latin puts it there, and a word that
   // could be either reads better as the verb when nothing else can be.
-  const finiteAt = (i) => parsed[i].find((reading) => reading.pos === 'verb'
-    && reading.inflection.person
-    && ['indicative', 'imperative', 'subjunctive'].includes(reading.inflection.mood)) ?? null;
+  /**
+   * The finite verb of a clause, preferring a statement to a command and a
+   * common word to a rare one.
+   *
+   * Order as Whitaker's returns it is not a ranking: *sum* comes after *sumo*,
+   * so "laetus sum" was being built around an imperative meaning "take!".
+   */
+  const finiteAt = (i) => {
+    const finite = parsed[i].filter((reading) => reading.pos === 'verb'
+      && reading.inflection.person
+      && ['indicative', 'imperative', 'subjunctive'].includes(reading.inflection.mood));
+    if (!finite.length) return null;
+
+    return [...finite].sort((one, other) => {
+      const command = (reading) => (reading.inflection.mood === 'imperative' ? 1 : 0);
+      return (command(one) - command(other))
+        || (frequencyRank(one.analysis) - frequencyRank(other.analysis));
+    })[0];
+  };
 
   const alsoNoun = (i) => parsed[i].some((reading) => reading.pos === 'noun');
 
@@ -391,6 +528,19 @@ export async function latinToEnglish(text) {
    * neither wants "the dog **of the girl**".
    */
   const shape = {
+    /**
+     * With *sum* and a first- or second-person ending, the subject is the
+     * pronoun the verb already carries — so a nominative standing alone can
+     * only be the complement, and has to be read as a describing word.
+     *
+     * *mortuus* is both "dead" and "a dead man", and a fixed order of parts of
+     * speech cannot choose between them: "utinam mortuus essem" wants the
+     * adjective ("I wish I were dead") and nothing about the word says so. The
+     * verb does.
+     */
+    complementWanted: Boolean(verb)
+      && verb.analysis?.lemma === 'sum'
+      && ['1st', '2nd'].includes(verb.inflection.person),
     hasVerb: Boolean(verb),
     hasAccusative: parsed.some((readings, i) => i !== verb?.index
       && readings.some((reading) => reading.inflection.case === 'accusative')),
@@ -449,10 +599,17 @@ export async function latinToEnglish(text) {
       : candidates;
     const chosen = pickCase(usable.length ? usable : candidates, phrases, shape);
 
-    const gloss = glossFor(surface, chosen.analysis);
+    // A pronoun is not a noun with an article in front of it.
+    const asPronoun = chosen.pos === 'pronoun'
+      ? pronounEnglish(chosen.analysis.lemma, chosen.inflection)
+      : null;
+
+    const gloss = asPronoun ?? glossFor(surface, chosen.analysis);
     if (!gloss) fail(`no English for ${surface}`);
 
-    const modifier = chosen.pos === 'adjective' || String(chosen.pos).startsWith('verb participle');
+    // Pronouns take no article either, so they render like a modifier does.
+    const modifier = Boolean(asPronoun) || chosen.pos === 'adjective'
+      || String(chosen.pos).startsWith('verb participle');
 
     phrases.push({
       index: i,
@@ -501,8 +658,10 @@ function refuseWhatItCannotSee(tokens, parsed) {
   // An infinitive with an accusative beside it is indirect statement: "he says
   // that the farmer works" is *agricolam laborare*, and read as a plain
   // sentence it becomes nonsense about a farmer being worked.
-  const hasInfinitive = parsed.some((readings) => readings.some((reading) => reading.inflection.mood === 'infinitive'
-    || (reading.pos === 'verb' && !reading.inflection.person && reading.inflection.tense)));
+  // Only a form actually marked infinitive. Testing for "a verb with a tense
+  // and no person" also caught participles and gerunds, and refused "ita id
+  // est" as indirect statement.
+  const hasInfinitive = parsed.some((readings) => readings.some((reading) => reading.inflection.mood === 'infinitive'));
   const hasAccusative = parsed.some((readings) => readings.some((reading) => reading.inflection.case === 'accusative'));
   if (hasInfinitive && hasAccusative) fail('indirect statement is beyond the rules translator');
 
@@ -531,6 +690,12 @@ function refuseWhatItCannotSee(tokens, parsed) {
  * subject and a second one becomes its genitive.
  */
 function pickCase(candidates, phrases, shape = {}) {
+  // See `complementWanted`: a describing reading beats a naming one here.
+  if (shape.complementWanted) {
+    const describing = candidates.filter((reading) => reading.pos === 'adjective'
+      || String(reading.pos).startsWith('verb participle'));
+    if (describing.length) return describing[0];
+  }
   /**
    * An adjective agrees with its noun, and that is the answer before any
    * preference is consulted.
@@ -573,7 +738,8 @@ function pickCase(candidates, phrases, shape = {}) {
 
 /** Adjectives and participles describe; they do not take an article. */
 function isModifier(phrase) {
-  return phrase.pos === 'adjective' || String(phrase.pos).startsWith('verb participle');
+  return phrase.pos === 'adjective' || phrase.pos === 'pronoun'
+    || String(phrase.pos).startsWith('verb participle');
 }
 
 function noun(phrase, attached = null) {
@@ -1298,14 +1464,7 @@ export async function latinWordByWord(text) {
      * never what a beginner's sentence means.
      */
     const last = token === tokens[tokens.length - 1];
-    const ranked = [...analyses].sort((one, other) => {
-      const rank = (item) => {
-        if (item.pos === 'noun') return last ? 1 : 0;
-        if (item.pos === 'adjective') return last ? 2 : 1;
-        return last ? 0 : 2;
-      };
-      return rank(one) - rank(other);
-    });
+    const ranked = [...analyses].sort((one, other) => rankPos(one.pos, last) - rankPos(other.pos, last));
 
     const analysis = ranked[0];
     const gloss = glossFor(surface, analysis) ?? '?';
