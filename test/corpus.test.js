@@ -95,6 +95,32 @@ ok('and Tatoeba is asked for French sentences', /from=fra/.test(requested), requ
 await tatoebaExamples('madrugar-2', 2);
 ok('while Spanish stays the default', /from=spa/.test(requested), requested);
 
+
+
+// --- putting the accents back on a word that was typed without them -------
+// "jamon" is not in any dictionary; "jamón" is. The lookup used to fail and the
+// question went to a language model, spending one of the reader's free five to
+// be told something the dictionary knew.
+const { accentedForm, foldAccents } = await import('../server/accents.js');
+
+for (const [typed, candidates, expected, why] of [
+  ['jamon', ['jamón'], 'jamón', 'the RAE suggests it in its own 404'],
+  ['corazon', ['corazón', 'corazonada'], 'corazón', 'and ignores the near-misses'],
+  ['flaner', ['flâner', 'flânes', 'flâné'], 'flâner', 'the French search folds accents'],
+  ['eleve', ['eleve', 'Eleve', 'élève', 'élevé'], 'élève', 'case alone is not an accent'],
+  ['ecole', ['Ecole', 'école', 'École'], 'école', 'nor is a capital'],
+  ['jamon', ['jabón', 'jamones'], null, 'a different word is never substituted'],
+  ['perro', ['perro'], null, 'nor an identical one'],
+  ['xyz', [], null, 'nothing to offer'],
+]) {
+  ok(`"${typed}" -> ${expected ?? 'nothing'} — ${why}`, accentedForm(typed, candidates) === expected,
+    String(accentedForm(typed, candidates)));
+}
+
+ok('folding strips accents', foldAccents('jamón') === 'jamon');
+ok('and lowercases', foldAccents('École') === 'ecole');
+ok('and leaves a plain word alone', foldAccents('perro') === 'perro');
+
 if (failures.length) {
   console.error(`\n✗ ${failures.length} of ${checked} corpus checks failed:\n`);
   for (const failure of failures) console.error(`  ${failure}`);

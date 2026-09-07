@@ -116,6 +116,31 @@ Note that Google's own free tier is roughly **20 requests a day** for the Flash
 models, well below what this site's per-visitor allowance would permit — which
 is exactly why the overflow tier exists.
 
+### Typing without accents
+
+*jamon* is not in any dictionary. *jamón* is. Students do not type accents, so a
+perfectly ordinary vocabulary question came back as "not found" and went to a
+language model — spending one of the reader's five free questions to be told
+something the dictionary knew all along.
+
+The word is now looked up a second time with its accents put back, and the entry
+says so. Where the accented spelling comes from differs by language: the **RAE
+returns it in its own 404** (asked for *jamon* it suggests *jamón*), while the
+Wiktionnaire needs its **search** index rather than opensearch — asked for
+*flaner*, opensearch offers Breton words that merely start the same way, and
+search returns *flâner*.
+
+The rule is deliberately narrow, and both halves of it matter:
+
+- it runs **only when the word as typed was not found at all**, so *bebe* is
+  never quietly turned into *bebé* — both are words, the first lookup succeeds,
+  and this never runs;
+- it accepts **only the same word with its accents restored**, so *jamon* is
+  never turned into *jabón*, which is a different word rather than a carelessly
+  spelled one.
+
+`server/accents.js`.
+
 ### Where definitions come from
 
 **The RAE, always** — that is the point of the page, and the Spanish wording is

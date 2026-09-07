@@ -3,6 +3,7 @@ import { ask, hasProvider, parseJson } from '../llm.js';
 import { ATTRIBUTION, tatoebaExamples, wiktionaryGloss } from '../corpus.js';
 import { ACADEMIE, fetchWiktionnaire, WIKTIONNAIRE_CREDIT } from '../dictionary-fr.js';
 import { analyse, describeInflection, WHITAKER_CREDIT } from '../latin.js';
+import { accentedForm } from '../accents.js';
 
 export const router = Router();
 
@@ -303,6 +304,7 @@ async function lookupFrench(word, english) {
     definitionSource: 'wiktionnaire',
     entries,
     ...await enrich(lookup.word, entries[0].senses, english, 'fr'),
+    corrected: lookup.corrected ?? null,
     suggestions: [],
     // Named plainly: this is not the Académie, and an entry that quietly
     // implied otherwise would be worse than one that says where it came from.
@@ -406,6 +408,21 @@ async function lookupSpanish(word, english) {
     throw error;
   }
 
+  // The RAE's own 404 carries the accented spelling: asked for "jamon" it
+  // answers not-found and suggests "jamón". Taken only when it is the same
+  // word with its accents put back — see server/accents.js.
+  let corrected = null;
+  if (!lookup.found) {
+    const accented = accentedForm(word, lookup.suggestions);
+    if (accented) {
+      const second = await fetchRae(accented).catch(() => null);
+      if (second?.found) {
+        lookup = second;
+        corrected = { from: word, to: accented };
+      }
+    }
+  }
+
   if (!lookup.found) {
     const error = new Error(MESSAGES.es.notFound(word));
     error.status = 404;
@@ -421,6 +438,7 @@ async function lookupSpanish(word, english) {
     definitionSource: 'rae',
     entries,
     ...await enrich(lookup.data.word, allSenses, english, 'es'),
+    corrected,
     suggestions: lookup.data.suggestions || [],
     source: { name: 'Real Academia Española · DLE', url: `https://dle.rae.es/${encodeURIComponent(word)}` },
   };

@@ -227,6 +227,14 @@ function renderEntry(data, search) {
       ? el('a', { class: 'chip', href: data.authority.url, target: '_blank', rel: 'noopener' }, t('dictionary.seeAuthority'))
       : null));
 
+  // Say when the word looked up was not quite the word typed. Only ever the
+  // same word with its accents put back — see server/accents.js — but the
+  // reader should still be told, since the accent is part of the spelling.
+  if (data.corrected) {
+    wrap.appendChild(el('p', { class: 'notice' },
+      t('dictionary.corrected', { from: data.corrected.from, to: data.corrected.to })));
+  }
+
   // Never let the authority change silently.
   if (!expected) wrap.appendChild(el('p', { class: 'notice' }, t('dictionary.notRae')));
   else if (data.authority) wrap.appendChild(el('p', { class: 'notice' }, t('dictionary.notAcademie')));

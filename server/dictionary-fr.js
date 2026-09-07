@@ -16,6 +16,8 @@
  * page and the tutor do not have to know which dictionary answered.
  */
 
+import { accentedForm } from './accents.js';
+
 const WIKTIONNAIRE = 'https://fr.wiktionary.org/w/api.php';
 
 /** Wiktionnaire section names → the categories the dictionary page knows. */
@@ -329,29 +331,56 @@ async function suggestions(word) {
 }
 
 /**
+ * The same word with its accents back, if that is what was meant.
+ *
+ * Uses the search index rather than opensearch, because only the former folds
+ * accents: asked for *flaner*, opensearch offers Breton words beginning with
+ * those letters, while search returns *flâner*.
+ */
+async function accentedTitle(word) {
+  try {
+    const body = await wiki({
+      action: 'query', list: 'search', srsearch: word, srlimit: '6', format: 'json',
+    });
+    const titles = (body?.query?.search ?? []).map((hit) => hit.title);
+    return accentedForm(word, titles);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Look a French word up.
  * @returns {Promise<{found: boolean, word?: string, entries?: Array, origin?: string, suggestions?: string[]}>}
  */
-export async function fetchWiktionnaire(word) {
+export async function fetchWiktionnaire(word, { corrected = null } = {}) {
   const body = await wiki({ action: 'parse', page: word, prop: 'wikitext' });
 
+  // Tried once, and only when the word as typed is not there at all: someone
+  // who wrote "flaner" meant "flâner", and the dictionary has no idea.
+  const retry = async () => {
+    if (corrected) return { found: false, suggestions: await suggestions(word) };
+    const accented = await accentedTitle(word);
+    if (!accented) return { found: false, suggestions: await suggestions(word) };
+    const second = await fetchWiktionnaire(accented, { corrected: word });
+    return second.found ? { ...second, corrected: { from: word, to: accented } } : second;
+  };
+
   if (body.error) {
-    if (body.error.code === 'missingtitle' || body.error.code === 'nosuchpageid') {
-      return { found: false, suggestions: await suggestions(word) };
-    }
+    if (body.error.code === 'missingtitle' || body.error.code === 'nosuchpageid') return retry();
     throw new Error(body.error.info || 'Le Wiktionnaire a refusé la requête.');
   }
 
   const wikitext = body?.parse?.wikitext;
-  if (!wikitext) return { found: false, suggestions: await suggestions(word) };
+  if (!wikitext) return retry();
 
   const section = frenchSection(wikitext);
   // The page exists but holds no French entry — "casa" is Spanish and Italian
   // on fr.wiktionary, and answering with those would be worse than not finding it.
-  if (!section) return { found: false, suggestions: await suggestions(word) };
+  if (!section) return retry();
 
   const entries = readEntries(section);
-  if (!entries.length) return { found: false, suggestions: await suggestions(word) };
+  if (!entries.length) return retry();
 
   return {
     found: true,
