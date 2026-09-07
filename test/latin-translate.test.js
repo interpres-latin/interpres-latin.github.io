@@ -12,6 +12,7 @@ import {
 } from '../server/latin-lexicon.js';
 import {
   pluralise, thirdPerson, pastOf, firstSense, verbStem, englishVerb, baseVerb, notted,
+  adjectiveCitation, verbCandidates,
 } from '../server/latin-translate.js';
 
 let checked = 0;
@@ -124,6 +125,32 @@ ok('a simple present takes "does not"', notted('works') === 'does not work');
 ok('"is" takes a bare not', notted('is') === 'is not');
 ok('an auxiliary keeps its place', notted('was working') === 'was not working');
 ok('and a modal does too', notted('may praise') === 'may not praise');
+
+// --- Whitaker's compressed adjective parts --------------------------------
+// They arrive the way a paper dictionary prints them, comparative and all, with
+// the neuter as a bare ending. Handed over unexpanded they produced "laetaes".
+ok('a first/second declension adjective expands',
+  adjectiveCitation(['laetus', 'laeta -um']) === 'laetus, laeta, laetum',
+  adjectiveCitation(['laetus', 'laeta -um']));
+ok('and another', adjectiveCitation(['bonus', 'bona -um']) === 'bonus, bona, bonum');
+ok('a third declension one is left as it is',
+  adjectiveCitation(['fortis', 'forte']) === 'fortis, forte');
+ok('two-termination likewise', adjectiveCitation(['omnis', 'omne']) === 'omnis, omne');
+ok('the comparative and superlative are dropped',
+  !adjectiveCitation(['laetus', 'laeta -um', 'laetior -or -us', 'laetissimus -a -um']).includes('laetior'));
+ok('nothing is not a citation', adjectiveCitation([]) === '');
+
+// --- the forms an English verb might be hiding behind ---------------------
+// One guess was not enough: "praised" is praise with a d and prais with an ed,
+// and only the lexicon knows which — so the whole past tense failed.
+ok('"praised" offers "praise"', verbCandidates('praised').includes('praise'),
+  JSON.stringify(verbCandidates('praised')));
+ok('and offers "prais" too', verbCandidates('praised').includes('prais'));
+ok('"carried" offers "carry"', verbCandidates('carried').includes('carry'));
+ok('"gave" offers "give"', verbCandidates('gave').includes('give'));
+ok('"praises" offers "praise"', verbCandidates('praises').includes('praise'));
+ok('"working" offers "work"', verbCandidates('working').includes('work'));
+ok('the word itself is always a candidate', verbCandidates('laudo').includes('laudo'));
 
 if (failures.length) {
   console.error(`\n✗ ${failures.length} of ${checked} Latin-translator checks failed:\n`);

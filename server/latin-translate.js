@@ -32,7 +32,7 @@
 
 import { analyse } from './latin.js';
 import { courseGloss, latinFor, singularsOf } from './latin-lexicon.js';
-import { formOf } from '../public/js/lib/decliner-la.js';
+import { formOf, declineAdjective } from '../public/js/lib/decliner-la.js';
 import { conjugate } from '../public/js/lib/conjugator-la.js';
 
 const fold = (word) => String(word ?? '').trim().toLowerCase();
@@ -96,6 +96,35 @@ const PARTICLES = {
   tamen: { kind: 'adverb', english: 'however' },
   itaque: { kind: 'adverb', english: 'and so' },
   igitur: { kind: 'adverb', english: 'therefore' },
+};
+
+/**
+ * English subject pronouns, and the ending they call for.
+ *
+ * They translate to nothing at all, which is the point: Latin puts the person
+ * in the verb and writes *ego* only for emphasis. So "I work" is *laboro*, one
+ * word — and before this it failed outright for want of a Latin word for "I".
+ */
+const SUBJECT_PRONOUNS = {
+  i: { person: '1st', number: 'singular' },
+  we: { person: '1st', number: 'plural' },
+  you: { person: '2nd', number: 'singular' },
+  he: { person: '3rd', number: 'singular' },
+  she: { person: '3rd', number: 'singular' },
+  it: { person: '3rd', number: 'singular' },
+  they: { person: '3rd', number: 'plural' },
+};
+
+/** Object pronouns, which Latin does write out. */
+const OBJECT_PRONOUNS = {
+  me: 'me', us: 'nos', him: 'eum', her: 'eam', them: 'eos', it: 'id',
+};
+
+/** The person and number a Latin verb takes, as `conjugate` names its cells. */
+const PERSON_CELL = {
+  '1st': { singular: 's1', plural: 'p1' },
+  '2nd': { singular: 's2', plural: 'p2' },
+  '3rd': { singular: 's3', plural: 'p3' },
 };
 
 /** The pronoun a Latin verb implies when its subject is not written out. */
@@ -589,8 +618,49 @@ export function notted(phrase) {
 
 /* --------------------------------------------------------- English → Latin */
 
+/**
+ * An adjective in one case, number and gender.
+ *
+ * Adjectives do not decline like nouns and cannot be built with `formOf`, which
+ * wants a nominative and a genitive: *laetus, laeta, laetum* is three genders,
+ * not two principal parts, and asking formOf for it simply failed.
+ */
+function adjectiveForm(parts, gender, wantedCase, number) {
+  const built = declineAdjective(adjectiveCitation(parts));
+  return built?.table?.[gender || 'masculine']?.[number]?.[wantedCase] ?? null;
+}
+
+/**
+ * Whitaker's adjective parts, expanded into a citation the decliner can read.
+ *
+ * They arrive compressed, the way a paper dictionary prints them:
+ * `["laetus", "laeta -um", "laetior -or -us", …]` — comparative and superlative
+ * included, and the neuter written as a bare ending. Handed over as they stand
+ * they produced *laetaes*, which is not a word in any language.
+ */
+export function adjectiveCitation(principalParts) {
+  const pieces = principalParts.slice(0, 2).join(' ').split(/[,\s]+/).filter(Boolean);
+  if (!pieces.length) return '';
+
+  const head = pieces[0];
+  const stem = head.replace(/(?:us|er|is|e|s)$/, '');
+
+  const expanded = pieces.map((piece) => (piece.startsWith('-') ? stem + piece.slice(1) : piece));
+  return [...new Set(expanded)].slice(0, 3).join(', ');
+}
+
+/**
+ * *sum* is written out rather than looked up.
+ *
+ * Its principal parts are irregular and its lemma collides: asking the lexicon
+ * for "be" and analysing what came back landed on *sumo*, "I take", so "the boy
+ * is good" was rendered *puer bonus sumit* — the boy takes goodly.
+ */
+const SUM = 'sum, esse, fui, futurus';
+
 /** Find the Latin word for an English one, of the part of speech wanted. */
 async function latinWord(english, wantedPos) {
+  if (!english) return null;
   for (const candidate of latinFor(english)) {
     const analyses = await analyse(candidate).catch(() => null);
     if (!analyses?.length) continue;
@@ -628,27 +698,66 @@ export async function englishToLatin(text) {
    */
   const determined = new Set();
   let article = false;
+  let negated = false;
+  let copula = false;
+  let subjectPerson = null;
 
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
     if (ARTICLES.has(token)) { article = true; continue; }
+
+    // A pronoun subject is not a word in Latin, it is an ending. Read off and
+    // dropped — "I work" is one word, laboro.
+    if (SUBJECT_PRONOUNS[token] && !OBJECT_PRONOUNS[token]) {
+      subjectPerson = SUBJECT_PRONOUNS[token];
+      article = false;
+      continue;
+    }
+
+    // "does not work" is non laborat: the auxiliary carries nothing Latin needs
+    // and the negative is a word of its own, placed before the verb.
+    if (['not', 'never', 'nt'].includes(token)) { negated = true; continue; }
+    if (['do', 'does', 'did'].includes(token)) {
+      if (token === 'did') tense = 'perfectum';
+      continue;
+    }
+
     if (article) { determined.add(content.length); article = false; }
     if (token === 'will') { tense = 'futurum'; continue; }
-    if (['was', 'were'].includes(token)) { tense = 'imperfectum'; continue; }
+    if (['was', 'were'].includes(token)) {
+      // "was working" is imperfect; "was happy" is the copula in the past.
+      if (/ing$/.test(tokens[i + 1] ?? '')) tense = 'imperfectum';
+      else { copula = true; tense = 'imperfectum'; }
+      continue;
+    }
     if (['has', 'have', 'had'].includes(token)) { tense = 'perfectum'; continue; }
-    if (['is', 'are', 'am'].includes(token) && /ing$/.test(tokens[i + 1] ?? '')) continue;
+    if (['is', 'are', 'am', 'be'].includes(token)) {
+      // "is working" is a tense; "is happy" is *sum* with a complement.
+      if (!/ing$/.test(tokens[i + 1] ?? '')) copula = true;
+      continue;
+    }
     content.push(token);
   }
-  if (!content.length) fail('nothing to translate');
+  if (!content.length && !copula) fail('nothing to translate');
 
   // The verb, and everything else hangs off where it is.
   let verbAt = -1;
   let verb = null;
+
+  if (copula) {
+    verb = { surface: 'sum', analysis: { principalParts: SUM.split(', ') } };
+    verbAt = content.length;   // the complement is everything before it
+  }
+
   for (let i = 0; i < content.length && !verb; i += 1) {
     if (ENGLISH_PREPOSITIONS[content[i]]) continue;
     if (determined.has(i)) continue;
-    const found = await latinWord(baseVerb(content[i]), 'verb');
-    if (found) { verb = found; verbAt = i; if (isPastForm(content[i])) tense = 'perfectum'; }
+
+    for (const guess of verbCandidates(content[i])) {
+      const found = await latinWord(guess, 'verb');
+      if (found) { verb = found; verbAt = i; break; }
+    }
+    if (verb && isPastForm(content[i])) tense = 'perfectum';
   }
 
   // With a verb, everything before it is the subject and everything after it
@@ -660,23 +769,57 @@ export async function englishToLatin(text) {
     ? content.findIndex((token) => ENGLISH_PREPOSITIONS[token])
     : verbAt;
 
-  const before = content.slice(0, boundary === -1 ? content.length : boundary);
-  const after = boundary === -1 ? [] : content.slice(verbAt === -1 ? boundary : boundary + 1);
+  const before = copula
+    ? content.slice(0, subjectPerson ? 0 : Math.max(0, content.length - 1))
+    : content.slice(0, boundary === -1 ? content.length : boundary);
 
-  const subject = await nounPhrase(before, 'nominative');
-  const rest = await taggedPhrases(after);
+  const after = copula
+    ? content.slice(subjectPerson ? 0 : Math.max(0, content.length - 1))
+    : (boundary === -1 ? [] : content.slice(verbAt === -1 ? boundary : boundary + 1));
+
+  /**
+   * With *sum* the words after "is" describe the subject, so they go into the
+   * nominative and not the accusative: "the boy is good" is *puer bonus est*,
+   * never *puer bonum est*. The subject's gender is what they agree with, which
+   * is why the complement is built after it rather than beside it.
+   */
+  const subject = before.length ? await nounPhrase(before, 'nominative') : null;
+  const rest = copula
+    ? []
+    : await taggedPhrases(after);
+
+  /**
+   * What the complement has to agree with. An explicit subject gives its gender
+   * and number; a pronoun subject gives only number, since "I am happy" says
+   * nothing about who is speaking — masculine is the conventional default.
+   */
+  const agreement = subject
+    ? { gender: subject.gender, number: subject.number }
+    : { gender: 'masculine', number: subjectPerson?.number ?? 'singular' };
+
+  const complement = copula && after.length
+    ? await nounPhrase(after, 'nominative', null, agreement)
+    : null;
 
   if (!verb && !subject && !rest.length) fail('nothing recognisable');
 
   const pieces = [];
   if (subject) pieces.push(...subject.words);
+  if (complement) pieces.push(...complement.words);
   for (const phrase of rest) pieces.push(...phrase.words);
 
   if (verb) {
     const table = conjugate(verb.analysis.principalParts.join(', '))?.table;
-    const person = subject?.number === 'plural' ? 'p3' : 's3';
-    const form = table?.indicativus?.[tense]?.[person];
+
+    // The ending carries the person, whether it came from a pronoun that is not
+    // written or from the number of a subject that is.
+    const person = subjectPerson?.person ?? '3rd';
+    const number = subjectPerson?.number ?? (subject?.number ?? 'singular');
+    const cell = PERSON_CELL[person]?.[number] ?? 's3';
+
+    const form = table?.indicativus?.[tense]?.[cell];
     if (!form) fail(`cannot conjugate ${verb.surface}`);
+    if (negated) pieces.push('non');
     pieces.push(form);
   }
 
@@ -691,12 +834,25 @@ function isPastForm(token) {
   return /ed$/.test(token) && token.length > 3;
 }
 
+/**
+ * The forms an English verb might be hiding behind.
+ *
+ * More than one, because "praised" is *praise* with a d and *prais* with an ed,
+ * and only the lexicon knows which. Returning a single guess meant "the boy
+ * praised the farmer" failed for want of a Latin word for "prais".
+ */
+export function verbCandidates(token) {
+  const guesses = [token];
+  for (const [stem, past] of Object.entries(ENGLISH_PAST)) if (past === token) guesses.push(stem);
+  if (/ied$/.test(token)) guesses.push(`${token.slice(0, -3)}y`);
+  if (/ed$/.test(token) && token.length > 3) guesses.push(token.slice(0, -1), token.slice(0, -2));
+  if (/ing$/.test(token) && token.length > 4) guesses.push(token.slice(0, -3), `${token.slice(0, -3)}e`);
+  if (/e?s$/.test(token)) guesses.push(token.replace(/e?s$/, ''), token.replace(/s$/, ''));
+  return [...new Set(guesses)].filter(Boolean);
+}
+
 export function baseVerb(token) {
-  for (const [stem, past] of Object.entries(ENGLISH_PAST)) if (past === token) return stem;
-  if (/ied$/.test(token)) return `${token.slice(0, -3)}y`;
-  if (/ed$/.test(token) && token.length > 4) return token.slice(0, -2);
-  if (/ing$/.test(token) && token.length > 5) return token.slice(0, -3);
-  return token;
+  return verbCandidates(token)[1] ?? token;
 }
 
 /**
@@ -704,38 +860,83 @@ export function baseVerb(token) {
  * Adjectives are put into the same case, number and gender as their noun, which
  * is the agreement the whole exercise is about.
  */
-async function nounPhrase(tokens, wantedCase, preposition = null) {
+async function nounPhrase(tokens, wantedCase, preposition = null, agreeWith = null) {
   const words = tokens.filter((token) => !ARTICLES.has(token));
   if (!words.length) return null;
 
-  const number = words.some(looksPlural) ? 'plural' : 'singular';
-  let head = null;
-  const adjectives = [];
+  /**
+   * A complement agrees with its subject, not with itself.
+   *
+   * "the boys are happy" has nothing plural in the word *happy*, and reading
+   * the number off the complement's own tokens gave *pueri laetus sunt* — a
+   * plural subject with a singular adjective, which is the one mistake this
+   * whole exercise exists to prevent.
+   */
+  const number = agreeWith?.number ?? (words.some(looksPlural) ? 'plural' : 'singular');
 
-  for (const token of words) {
-    const singular = looksPlural(token) ? (singularsOf(token).find((s) => latinFor(s).length) ?? token) : token;
-    const asNoun = await latinWord(singular, 'noun');
-    if (asNoun && !head) { head = asNoun; continue; }
-
-    const asAdjective = await latinWord(singular, 'adjective');
-    if (asAdjective) { adjectives.push(asAdjective); continue; }
-    if (!asNoun) fail(`no Latin for "${token}"`);
+  // An object pronoun is a word Latin does write, and it is already in the
+  // case it needs.
+  if (words.length === 1 && OBJECT_PRONOUNS[words[0]] && wantedCase === 'accusative') {
+    return { number: 'singular', gender: null, words: [preposition, OBJECT_PRONOUNS[words[0]]].filter(Boolean) };
   }
 
-  if (!head) fail(`no noun in "${words.join(' ')}"`);
+  const resolved = [];
+  for (const token of words) {
+    const singular = looksPlural(token)
+      ? (singularsOf(token).find((one) => latinFor(one).length) ?? token)
+      : token;
+    const asNoun = await latinWord(singular, 'noun');
+    const asAdjective = await latinWord(singular, 'adjective');
+    if (!asNoun && !asAdjective) fail(`no Latin for "${token}"`);
+    resolved.push({ token, asNoun, asAdjective });
+  }
+
+  /**
+   * The head is the *last* word that can be a noun, because that is where
+   * English puts it: in "the good boy", *good* can be a noun too (bonus is one)
+   * and taking the first match made it the head and dropped *boy* on the floor
+   * — "bonus agricolam laudat", a sentence about nobody.
+   */
+  let headAt = -1;
+  for (let i = resolved.length - 1; i >= 0 && headAt === -1; i -= 1) {
+    if (resolved[i].asNoun) headAt = i;
+  }
+
+  // With a copula the complement may be an adjective alone — "the boys are
+  // happy" — and then there is no noun to find and none needed.
+  if (headAt === -1) {
+    if (!agreeWith) fail(`no noun in "${words.join(' ')}"`);
+    const only = resolved.find((one) => one.asAdjective);
+    if (!only) fail(`no noun in "${words.join(' ')}"`);
+    const parts = only.asAdjective.analysis.principalParts;
+    const form = adjectiveForm(parts, agreeWith.gender, wantedCase, number);
+    if (!form) fail(`cannot decline ${only.asAdjective.surface}`);
+    return { number, gender: agreeWith.gender, words: [preposition, form].filter(Boolean) };
+  }
+
+  const head = resolved[headAt].asNoun;
+  const gender = head.analysis.gender;
 
   const parts = head.analysis.principalParts;
-  const form = formOf(parts[0], parts[1] ?? parts[0], head.analysis.gender, wantedCase, number);
+  const form = formOf(parts[0], parts[1] ?? parts[0], gender, wantedCase, number);
   if (!form) fail(`cannot decline ${head.surface}`);
 
-  const rendered = adjectives.map((adjective) => {
-    const adjectiveParts = adjective.analysis.principalParts;
-    return formOf(adjectiveParts[0], adjectiveParts[1] ?? adjectiveParts[0],
-      head.analysis.gender, wantedCase, number) ?? adjectiveParts[0];
-  });
+  // Everything that is not the head has to be an adjective agreeing with it.
+  // Nothing may be quietly left out.
+  const rendered = [];
+  for (let i = 0; i < resolved.length; i += 1) {
+    if (i === headAt) continue;
+    const { token, asAdjective } = resolved[i];
+    if (!asAdjective) fail(`cannot place "${token}"`);
+    const adjectiveParts = asAdjective.analysis.principalParts;
+    const built = adjectiveForm(adjectiveParts, gender, wantedCase, number);
+    if (!built) fail(`cannot decline ${asAdjective.surface}`);
+    rendered.push(built);
+  }
 
   return {
     number,
+    gender,
     words: [preposition, ...rendered, form].filter(Boolean),
   };
 }

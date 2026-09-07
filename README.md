@@ -262,7 +262,30 @@ the farmers praise the girl      →  agricolae puellam laudant
 the dog of the girl              →  canis puellae
 the boy gives money to the girl  →  puer pecuniam puellae dat
 the sailor walks with the friend →  nauta cum amico ambulat
+I work                           →  laboro
+the boy does not work            →  puer non laborat
+the boy praised the farmer       →  puer agricolam laudavit
+the good girls praise the farmer →  bonae puellae agricolam laudant
+the boys are happy               →  pueri laeti sunt
+I am happy                       →  laetus sum
+the boy sees him                 →  puer eum videt
 ```
+
+Five things had to be added before that list was true, and each one is a place
+English and Latin disagree about what a word is for:
+
+| | |
+| --- | --- |
+| **pronouns** | A subject pronoun translates to *nothing*: Latin puts the person in the ending and writes *ego* only for emphasis, so "I work" is one word. Before this it failed outright for want of a Latin word for "I". Object pronouns *are* written, and are supplied already in their case. |
+| **the past** | "praised" is *praise* with a d and *prais* with an ed, and only the lexicon knows which — so the verb is looked for under every form it might be hiding behind rather than one guess. |
+| **the copula** | *sum* takes a complement, not an object, and the complement is nominative and agrees with the subject: "the boy is good" is *puer bonus est*, never *puer bonum est*. The agreement comes from the subject, not from the complement's own words — "the boys are happy" has nothing plural in *happy*. |
+| **the negative** | "does not work" is *non laborat*. The auxiliary carries nothing Latin needs and the negative is a word of its own, placed before the verb. |
+| **the noun of a phrase** | The head is the **last** word that can be a noun, because that is where English puts it. Taking the first match made *good* the head of "the good boy" and dropped *boy* on the floor — *bonus agricolam laudat*, a sentence about nobody. |
+
+One more, found by that last rule: Whitaker's prints adjectives compressed, the
+way a paper dictionary does — `laetus, laeta -um, laetior -or -us` — with the
+neuter as a bare ending and the comparative thrown in. Passed on as they stand
+they produced *laetaes*, which is not a word in any language.
 
 Ambiguity is the whole difficulty, and the sentence resolves it. *puellae* is
 genitive, dative and nominative plural at once: a sentence with a verb and an
