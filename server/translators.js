@@ -357,13 +357,15 @@ async function myMemory(text, from, to) {
 }
 
 /** Apertium's own codes, and the pairs it actually has installed. */
-const APERTIUM_CODES = { es: 'spa', en: 'eng', fr: 'fra' };
+const APERTIUM_CODES = { es: 'spa', en: 'eng', fr: 'fra', la: 'lat' };
 const APERTIUM_PAIRS = new Set(['spa|eng', 'eng|spa', 'spa|fra', 'fra|spa']);
 
 async function apertium(text, from, to) {
   const pair = `${APERTIUM_CODES[from]}|${APERTIUM_CODES[to]}`;
-  // English–French is not one of them. Pivoting through Spanish would double
-  // the damage of an engine that is already the floor, so it simply declines.
+  // Neither English–French nor English–Latin is one of them. Pivoting through
+  // Spanish would double the damage of an engine that is already the floor, so
+  // it simply declines — by name, so the log says which pair was missing
+  // rather than "eng|undefined".
   if (!APERTIUM_PAIRS.has(pair)) throw new Error(`Apertium has no ${pair} pair`);
 
   const translated = await translateChunks(text, LINGVA_CHUNK, async (part) => {

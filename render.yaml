@@ -1,0 +1,66 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# ProfeGPT is a Node server, not a static site: the chat, both dictionaries, the
+# translator and the teacher's lock all need it. GitHub Pages and Netlify's
+# static hosting cannot run it.
+#
+# Two things here are not defaults and matter:
+#
+#   numInstances: 1 — the allowance, the teacher's lock and the dictionary
+#   caches are all held in memory. A second instance gets its own copy of each,
+#   so a locked room would be unlocked for half the class and everyone's free
+#   questions would double.
+#
+#   Every key is `sync: false`, which means Render prompts for it rather than
+#   storing it here. Nothing secret belongs in a file that is in a public repo.
+services:
+  - type: web
+    name: profegpt
+    runtime: node
+    plan: free
+    region: oregon
+    numInstances: 1
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+
+      # Keeps browser identities — and therefore each visitor's allowance —
+      # across a restart. Without it a restart hands everybody a fresh five.
+      - key: SESSION_SECRET
+        generateValue: true
+
+      # Behind Render's load balancer, so X-Forwarded-For can be believed.
+      - key: TRUST_PROXY
+        value: "1"
+
+      # CHANGE THESE. The defaults are in the source, and the repo is public:
+      # anyone who reads it can lock the site or narrow it to Spanish.
+      - key: TEACHER_PASSCODE
+        sync: false
+      - key: RESTRICT_PASSCODE
+        sync: false
+      - key: RELEASE_PASSCODE
+        sync: false
+
+      # Get one. Anonymous access to rae-api.com is 100 lookups a day, which a
+      # single class exhausts before lunch. Free at https://rae-api.com/login
+      - key: RAE_API_KEY
+        sync: false
+
+      # Translation. The public Lingva instances are volunteer-run and several
+      # are behind a Cloudflare challenge; point this at one that answers, or
+      # at a self-hosted one. Without a working instance, French and Latin
+      # translation fall to MyMemory alone — see the README.
+      - key: LINGVA_INSTANCES
+        sync: false
+
+      # Off-topic chat only. Everything about the languages themselves is
+      # answered from the site's own data and needs no key at all.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false

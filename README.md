@@ -894,12 +894,27 @@ Whatever you pick, it needs to be **one instance**. The allowance, the teacher's
 lock and the dictionary cache are all held in memory, so a second instance would
 have its own copy of each — a locked site would be unlocked for half the class.
 
-### Render, as an example
+### Render
 
-1. Push the repo, then *New → Web Service* and point it at it.
-2. Build command `npm install`, start command `npm start`.
-3. Leave instance count at 1.
-4. Set the environment variables below.
+There is a `render.yaml` in the repo, so this is a Blueprint rather than a form
+to fill in:
+
+1. *New → Blueprint* on Render, and point it at this repository.
+2. It reads `render.yaml` and prompts for the keys marked `sync: false`.
+3. Deploy.
+
+The Blueprint pins **one instance** and a `/api/health` check. The instance
+count is not a performance choice — see below.
+
+To do it by hand instead: build `npm install`, start `npm start`, instance
+count 1, and set the variables below.
+
+**Change the three passcodes before anyone has the URL.** `TEACHER_PASSCODE`,
+`RESTRICT_PASSCODE` and `RELEASE_PASSCODE` all have defaults, and the defaults
+are in the source of a public repository — anyone who reads it can lock your
+site or narrow it to Spanish. The English-interface passcode in
+`public/js/lib/i18n.js` is client-side and therefore public by construction; it
+keeps a class honest, and nothing more.
 
 The server already reads `PORT` from the environment, binds on all interfaces,
 and exposes `GET /api/health` for a health check.
@@ -913,7 +928,10 @@ and exposes `GET /api/health` for a health check.
 | `GEMINI_API_KEY` | Free tier, ~20 requests a day. Fine as the first tier, not as the only one. |
 | `OPENROUTER_API_KEY` | The overflow, and in practice where most traffic lands. Free models only. |
 | `RAE_API_KEY` | **Get one.** Anonymous dictionary access is 100 lookups a day, which one class will exhaust. Free at <https://rae-api.com/login>. |
-| `TEACHER_PASSCODE` | Change it from the default before anyone else has the URL. |
+| `TEACHER_PASSCODE` | **Change it.** The default is in a public repo. |
+| `RESTRICT_PASSCODE` | **Change it.** Same reason — it narrows the site to Spanish. |
+| `RELEASE_PASSCODE` | **Change it.** Same reason — it opens the subjects again. |
+| `LINGVA_INSTANCES` | Worth setting. Without a working instance, French and Latin translation falls to MyMemory alone. |
 | `CHAT_FREE_LIMIT` | Off-topic questions per visitor per window. Default 5. |
 
 ### Things that will surprise you otherwise
