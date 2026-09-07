@@ -196,6 +196,9 @@ const SPANISH = {
     unsureWord: two(
       'El traductor no conocía esta palabra y la dejó como estaba.',
       'The translator did not know this word and left it as it was.'),
+    wordByWord: two(
+      'Esto no es una frase: es el texto palabra por palabra, con la función de cada una. La gramática queda fuera del traductor — móntala tú.',
+      'This is not a sentence — it is the text word by word, with what each one is doing. The grammar is beyond the translator; you assemble it.'),
     uncertainLatin: two(
       'Ningún motor traduce latín con fiabilidad. Esto viene de una memoria de traducción, no de la gramática del sitio: compruébalo palabra por palabra.',
       'No engine translates Latin reliably. This came from a translation memory rather than from the site’s own grammar — check it word by word.'),
@@ -459,6 +462,9 @@ const FRENCH = {
     unsureWord: deux(
       'Le traducteur ne connaissait pas ce mot et l’a laissé tel quel.',
       'The translator did not know this word and left it as it was.'),
+    wordByWord: deux(
+      'Ceci n’est pas une phrase : c’est le texte mot à mot, avec la fonction de chacun. La grammaire dépasse le traducteur — à vous de l’assembler.',
+      'This is not a sentence — it is the text word by word, with what each one is doing. The grammar is beyond the translator; you assemble it.'),
     uncertainLatin: deux(
       'Aucun moteur ne traduit le latin de façon fiable. Ceci vient d’une mémoire de traduction, pas de la grammaire du site : vérifiez mot à mot.',
       'No engine translates Latin reliably. This came from a translation memory rather than from the site’s own grammar — check it word by word.'),
@@ -742,6 +748,9 @@ const LATIN = {
     unsureWord: latine(
       'Interpres hoc verbum non novit et intactum reliquit.',
       'The translator did not know this word and left it as it was.'),
+    wordByWord: latine(
+      'Haec sententia non est: verbum de verbo, cum munere cuiusque. Grammatica interpretem superat — tu compone.',
+      'This is not a sentence — it is the text word by word, with what each one is doing. The grammar is beyond the translator; you assemble it.'),
     uncertainLatin: latine(
       'Nulla machina Latine fideliter vertit. Hoc ex memoria versionum venit, non ex grammatica huius situs — verbum de verbo cave.',
       'No engine translates Latin reliably. This came from a translation memory rather than from the site’s own grammar — check it word by word.'),

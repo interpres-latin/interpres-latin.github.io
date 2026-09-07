@@ -319,12 +319,17 @@ result = await translate('the dog of the girl', 'en', 'es');
 ok('Spanish still goes straight there', result.text === 'el perro de la niña', JSON.stringify(result));
 ok('and a direct answer is not marked uncertain', !result.uncertain, JSON.stringify(result));
 
-// --- Latin has no pivot, because no pair reaches it -----------------------
+// --- Latin has no Apertium pivot, because no pair reaches it --------------
+// The chain no longer fails outright for Latin — the glossary of dictionary
+// forms is always available, and is the point of it — so what is asserted here
+// is that Apertium declined and something of ours answered instead.
 plan = { lingva: null, mymemory: null, apertium: { 'eng|cat': 'la noia' } };
-let noLatinRoute = null;
-try { await translate('the girl', 'en', 'la'); } catch (error) { noLatinRoute = error; }
-ok('Latin declines rather than inventing a route', noLatinRoute !== null);
-ok('and names the pair it has not got', /eng\|lat/.test(noLatinRoute?.message || ''), noLatinRoute?.message);
+const beforePivot = asked.length;
+result = await translate('the girl', 'en', 'la');
+ok('Latin never reaches an Apertium pivot',
+  !asked.slice(beforePivot).some((url) => url.includes('apertium')),
+  asked.slice(beforePivot).join(' '));
+ok('and the site answers it itself', result.engine === 'Whitaker\u2019s Words', JSON.stringify(result));
 
 // --- a common phrase is not a name, whatever Wikipedia also calls it ------
 // Wikipedia has an article called "I Am", and "I am tired" was coming back as
@@ -372,7 +377,8 @@ plan = {
 // `asked` accumulates over the whole file, so only this call's requests count.
 const beforeLatin = asked.length;
 result = await translate('the girl', 'en', 'la');
-ok('Latin does not go to DeepL', result.engine === 'MyMemory', JSON.stringify(result));
+ok('Latin is answered by the site\u2019s own Latin, not DeepL',
+  result.engine === 'Whitaker\u2019s Words', JSON.stringify(result));
 ok('and DeepL is never even asked for it',
   !asked.slice(beforeLatin).some((url) => url.includes('deepl')),
   asked.slice(beforeLatin).join(' '));

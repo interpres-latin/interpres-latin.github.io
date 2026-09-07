@@ -86,7 +86,9 @@ function hostsToTry() {
 import { alreadyIdiomatic, findIdioms, wantsProgressive } from './idioms.js';
 import { throttle, USER_AGENT } from './throttle.js';
 import { deepl } from './deepl.js';
-import { latinRules, LATIN_RULES_ENGINE } from './latin-translate.js';
+import {
+  latinRules, englishToLatinGloss, latinToEnglishGloss, LATIN_RULES_ENGINE,
+} from './latin-translate.js';
 
 const WIKIPEDIA = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
@@ -573,9 +575,20 @@ async function apertium(text, from, to) {
  * handles the sentence shapes a class writes and declines everything else, at
  * which point the free engines take over as before. See latin-translate.js.
  *
+ * The two glossaries are the last resort for Latin, and they sit in different
+ * places on purpose. Going *into* Latin, a heap of half-translated words is
+ * something a reader could copy out believing it, so the glossary of dictionary
+ * forms goes above the free engines. Coming *out* of Latin, MyMemory is
+ * occasionally right and a correct sentence beats a correct list, so the
+ * word-by-word decoding waits at the very bottom. Neither can be wrong about
+ * the grammar, because neither claims any.
+ *
  * translate-model.js is kept and still tested, and is not in this list.
  */
-const ENGINES = [namedEntity, deepl, latinRules, lingva, myMemory, apertium];
+const ENGINES = [
+  namedEntity, deepl, latinRules, englishToLatinGloss,
+  lingva, myMemory, apertium, latinToEnglishGloss,
+];
 
 /**
  * Swap a word-for-word rendering of an idiom for the equivalent idiom.
@@ -664,15 +677,19 @@ export async function translate(text, from, to) {
        * sentence, so a Latin translation the rules engine did not build is
        * marked uncertain whatever it looks like.
        */
-      const guessedLatin = (to === 'la' || from === 'la') && result.engine !== LATIN_RULES_ENGINE;
+      const guessedLatin = (to === 'la' || from === 'la')
+        && result.engine !== LATIN_RULES_ENGINE;
+
+      // A gloss is never a sentence, and must not be read as one.
+      const why = result.wordByWord ? 'wordByWord' : (guessedLatin ? 'latin' : (result.uncertain ? 'memory' : null));
 
       return {
         ...result,
         text: tidied,
         notes: withIdioms.notes,
         unsure: stillThere,
-        uncertain: result.uncertain === true || guessedLatin,
-        uncertainWhy: guessedLatin ? 'latin' : (result.uncertain ? 'memory' : null),
+        uncertain: result.uncertain === true || guessedLatin || result.wordByWord === true,
+        uncertainWhy: why,
       };
     } catch (error) {
       failures.push(error.message);

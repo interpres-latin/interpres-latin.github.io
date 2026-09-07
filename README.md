@@ -329,10 +329,42 @@ so where the dictionary offers none and the word has that shape, the citation is
 built from the word itself. And "…, I really do" is a whole English clause
 carrying no content, which Latin says with one adverb: *vere*.
 
-**It still declines rather than guesses.** Relative pronouns, indirect
-statement, the ablative absolute — anything past the sentence shapes a first- or
-second-year class writes — throw, and the chain falls through to the engines
-below. A translator that quietly invented Latin would be worse than one that
+**It still declines rather than guesses**, and it now declines *by name*.
+Relative pronouns, indirect statement and the ablative absolute are recognised
+and refused rather than merely survived — which matters more than it sounds,
+because every word of *urbe capta milites redierunt* is placeable and the
+sentence was coming out as "Take returned the soldiers to the city",
+confidently and completely wrong.
+
+### When the grammar is beyond it, the vocabulary is not
+
+Those three constructions still have to answer something, and what they used to
+answer was a translation memory that renders Latin as *Ego sum mortis*. So there
+are two glossaries beneath everything else, and they sit in different places on
+purpose.
+
+**Out of Latin, word by word** — every form with the grammar actually on it, and
+*all* its readings, since *urbe* being ablative or dative is exactly what the
+reader needs to weigh:
+
+```
+urbe — city (abl. sg. / dat. sg.) · capta — take (nom. pl. / acc. pl.) ·
+milites — soldier (nom. pl. / acc. pl.) · redierunt — return (3rd pl. perfect)
+```
+
+This waits at the very bottom of the chain, because MyMemory's Latin-into-
+English is occasionally right and a correct sentence beats a correct list.
+
+**Into Latin, a glossary of dictionary forms** — and this one sits *above* the
+free engines, which is not symmetry but measurement. Asked for "the boy who
+praises the farmer is happy", MyMemory returns *boy qui derae agricola est
+happy*: Latin words and English ones in a heap, which a reader could copy out
+believing it. A list of dictionary forms is less than a translation and worth
+more, because it is true.
+
+Both are labelled on the page as what they are — not a sentence, and not to be
+copied as one. Neither can be wrong about the grammar, because neither claims
+any. A translator that quietly invented Latin would be worse than one that
 admits the sentence is beyond it, because the reader cannot tell the difference
 and is here to learn. Latin output is still checked word by word afterwards, as
 it always was.

@@ -295,6 +295,8 @@ export async function latinToEnglish(text) {
     fail(`unknown Latin: ${tokens.filter((_, i) => !parsed[i].length).join(', ')}`);
   }
 
+  refuseWhatItCannotSee(tokens, parsed);
+
   // The finite verb, taken from the end: Latin puts it there, and a word that
   // could be either reads better as the verb when nothing else can be.
   const finiteAt = (i) => parsed[i].find((reading) => reading.pos === 'verb'
@@ -424,6 +426,48 @@ export async function latinToEnglish(text) {
   }
 
   return assembleEnglish(verb, phrases, { wish, particles });
+}
+
+/**
+ * The three constructions this cannot parse, refused by name.
+ *
+ * Refusing matters more than it sounds. Every word of "urbe capta milites
+ * redierunt" is placeable — an ablative here, a participle there — so the guard
+ * against dropping words was satisfied and the sentence came out as "Take
+ * returned the soldiers to the city", confidently and completely wrong. A
+ * construction the rules do not model has to be recognised as such, not merely
+ * survived.
+ */
+function refuseWhatItCannotSee(tokens, parsed) {
+  const RELATIVES = new Set(['qui', 'quae', 'quod', 'quem', 'quam', 'quos', 'quas',
+    'cuius', 'cui', 'quo', 'qua', 'quibus', 'quorum', 'quarum']);
+
+  for (const token of tokens) {
+    if (RELATIVES.has(fold(token))) fail('a relative clause is beyond the rules translator');
+  }
+
+  // An infinitive with an accusative beside it is indirect statement: "he says
+  // that the farmer works" is *agricolam laborare*, and read as a plain
+  // sentence it becomes nonsense about a farmer being worked.
+  const hasInfinitive = parsed.some((readings) => readings.some((reading) => reading.inflection.mood === 'infinitive'
+    || (reading.pos === 'verb' && !reading.inflection.person && reading.inflection.tense)));
+  const hasAccusative = parsed.some((readings) => readings.some((reading) => reading.inflection.case === 'accusative'));
+  if (hasInfinitive && hasAccusative) fail('indirect statement is beyond the rules translator');
+
+  /**
+   * An ablative absolute: a noun and a participle, both ablative, agreeing, and
+   * with no preposition in front of them to explain why.
+   */
+  for (let i = 0; i < parsed.length - 1; i += 1) {
+    if (LATIN_PREPOSITIONS[fold(tokens[i])]) continue;
+    const noun = parsed[i].find((reading) => reading.pos === 'noun' && reading.inflection.case === 'ablative');
+    if (!noun) continue;
+
+    const participle = parsed[i + 1].some((reading) => String(reading.pos).startsWith('verb participle')
+      && reading.inflection.case === 'ablative'
+      && reading.inflection.number === noun.inflection.number);
+    if (participle) fail('an ablative absolute is beyond the rules translator');
+  }
 }
 
 /**
@@ -1154,6 +1198,120 @@ async function taggedPhrases(tokens) {
  * The chain's entry point. Latin only, and it declines everything else by name
  * so the log says which pair it was asked for.
  */
+/* ------------------------------------------------- word by word, as a last resort */
+
+/**
+ * When the grammar is beyond it, the vocabulary still is not.
+ *
+ * A relative clause, an indirect statement, an ablative absolute — the rules
+ * translator refuses all three, and what it falls to is a translation memory
+ * that answers Latin with *Ego sum mortis*. A word-by-word decoding beats that,
+ * and beats it honestly: Whitaker's knows each word's case and tense for
+ * certain, and it is only the shape of the sentence that is unknown.
+ *
+ * **It is not a sentence and does not pretend to be.** The words stay in Latin
+ * order, each with the grammar that is actually on it, so a reader can do the
+ * assembling the translator could not. Presenting this as a translation would
+ * be the same lie as MyMemory's, in better handwriting.
+ */
+export async function latinWordByWord(text) {
+  const tokens = tokenise(text).filter(isWord);
+  if (!tokens.length) fail('nothing to translate');
+  if (tokens.length > 20) fail('too long to gloss');
+
+  const glossed = [];
+  for (const token of tokens) {
+    const surface = fold(token);
+
+    const particle = PARTICLES[surface];
+    if (particle?.english) { glossed.push(`${token} — ${particle.english}`); continue; }
+    if (PREPOSITION_ENGLISH[surface]) {
+      glossed.push(`${token} — ${PREPOSITION_ENGLISH[surface]}`);
+      continue;
+    }
+
+    const analyses = await analyse(token).catch(() => null);
+    if (!analyses?.length) { glossed.push(`${token} — ?`); continue; }
+
+    /**
+     * Which reading to show when a form has several.
+     *
+     * A noun before a verb, unless the word stands last, where Latin puts its
+     * verb — *canis* is "dog" far more often than "you sing", and glossing it
+     * as a verb in "canis puellae" was simply unhelpful. The locative is
+     * skipped for the same reason it is skipped upstream: it is real, and it is
+     * never what a beginner's sentence means.
+     */
+    const last = token === tokens[tokens.length - 1];
+    const ranked = [...analyses].sort((one, other) => {
+      const rank = (item) => {
+        if (item.pos === 'noun') return last ? 1 : 0;
+        if (item.pos === 'adjective') return last ? 2 : 1;
+        return last ? 0 : 2;
+      };
+      return rank(one) - rank(other);
+    });
+
+    const analysis = ranked[0];
+    const gloss = glossFor(surface, analysis) ?? '?';
+    glossed.push(`${token} — ${gloss}${describe(analysis.inflections)}`);
+  }
+
+  return glossed.join(' · ');
+}
+
+/**
+ * The grammar actually on a form, short enough to sit beside it.
+ *
+ * *Every* case it could be, not the first one listed. A gloss is for decoding,
+ * and *urbe* being ablative or dative is exactly the thing the reader needs to
+ * weigh — picking one silently would be guessing at the grammar in a fallback
+ * whose whole point is that the grammar is beyond us.
+ */
+function describe(inflections) {
+  const list = (inflections ?? []).filter((one) => one.case !== 'locative');
+  if (!list.length) return '';
+
+  const cases = [...new Set(list.filter((one) => one.case)
+    .map((one) => `${one.case.slice(0, 3)}.${one.number === 'plural' ? ' pl.' : ' sg.'}`))];
+  if (cases.length) return ` (${cases.slice(0, 3).join(' / ')})`;
+
+  const finite = list.find((one) => one.person);
+  if (!finite) return '';
+  const number = finite.number === 'plural' ? 'pl.' : 'sg.';
+  return ` (${[finite.person, number, finite.tense].filter(Boolean).join(' ')})`;
+}
+
+/**
+ * The other way round, and deliberately *less* than a translation.
+ *
+ * Word-by-word English into Latin would mean guessing at cases, and in Latin
+ * the case is the grammar — a guessed case is a confidently wrong sentence that
+ * reads like a right one. So this hands back dictionary forms, the way a
+ * glossary at the back of a textbook does, and leaves the sentence to the
+ * reader who knows what they meant.
+ */
+export async function englishGlossary(text) {
+  const tokens = tokenise(text).filter(isWord).map(fold)
+    .filter((token) => !ARTICLES.has(token));
+  if (!tokens.length) fail('nothing to translate');
+  if (tokens.length > 20) fail('too long to gloss');
+
+  const glossed = [];
+  for (const token of tokens) {
+    const singular = looksPlural(token)
+      ? (singularsOf(token).find((one) => latinFor(one).length) ?? token)
+      : token;
+
+    const candidates = [singular, ...verbCandidates(token)];
+    const found = candidates.map((one) => latinFor(one)[0]).find(Boolean);
+    glossed.push(found ? `${token} — ${found}` : `${token} — ?`);
+  }
+
+  if (glossed.every((entry) => entry.endsWith('— ?'))) fail('no Latin for any of it');
+  return glossed.join(' · ');
+}
+
 /** What this engine calls itself, so the chain can tell its work from a guess. */
 export const LATIN_RULES_ENGINE = 'Whitaker’s Words';
 
@@ -1165,4 +1323,28 @@ export async function latinRules(text, from, to) {
     return { text: await englishToLatin(text), engine: LATIN_RULES_ENGINE };
   }
   throw new Error(`the rules translator is Latin only, not ${from}|${to}`);
+}
+
+/**
+ * The glossary, for English into Latin — and it sits *above* the free engines.
+ *
+ * Not symmetry for its own sake: measured. Asked for "the boy who praises the
+ * farmer is happy", MyMemory returns *boy qui derae agricola est happy* — Latin
+ * words and English ones in a heap, which a reader could copy out believing it.
+ * A list of dictionary forms is less than a translation and is worth more,
+ * because it is true.
+ */
+export async function englishToLatinGloss(text, from, to) {
+  if (from !== 'en' || to !== 'la') throw new Error(`the glossary is en|la only, not ${from}|${to}`);
+  return { text: await englishGlossary(text), engine: LATIN_RULES_ENGINE, wordByWord: true };
+}
+
+/**
+ * The word-by-word decoding, for Latin into English — and it sits at the very
+ * bottom, because MyMemory's Latin *into* English is occasionally right, and a
+ * correct sentence beats a correct list.
+ */
+export async function latinToEnglishGloss(text, from, to) {
+  if (from !== 'la' || to !== 'en') throw new Error(`the gloss is la|en only, not ${from}|${to}`);
+  return { text: await latinWordByWord(text), engine: LATIN_RULES_ENGINE, wordByWord: true };
 }
