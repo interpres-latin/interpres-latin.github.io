@@ -31,7 +31,7 @@
  */
 
 import { analyse } from './latin.js';
-import { courseGloss, latinFor, singularsOf } from './latin-lexicon.js';
+import { courseGloss, latinFor, latinCandidates, singularsOf } from './latin-lexicon.js';
 import { formOf, declineAdjective } from '../public/js/lib/decliner-la.js';
 import { conjugate } from '../public/js/lib/conjugator-la.js';
 
@@ -71,6 +71,58 @@ const ENGLISH_PREPOSITIONS = {
 };
 
 const ARTICLES = new Set(['a', 'an', 'the']);
+
+/**
+ * Words a glossary must know, which a vocabulary list has no reason to carry.
+ *
+ * Pronouns above all: Latin drops them from sentences, so the course never
+ * lists them, and a glossary that answers "i — ?" three times in one sentence
+ * is not worth printing.
+ */
+const FUNCTION_GLOSS = {
+  i: 'ego', you: 'tu', he: 'is', she: 'ea', it: 'id', we: 'nos', they: 'ei',
+  me: 'me', him: 'eum', her: 'eam', us: 'nos', them: 'eos',
+  my: 'meus', your: 'tuus', his: 'eius', our: 'noster', their: 'eorum',
+  who: 'qui', which: 'qui', what: 'quid', that: 'ille', this: 'hic',
+  as: 'ut', so: 'ita', very: 'valde', also: 'etiam', always: 'semper',
+  never: 'numquam', now: 'nunc', then: 'tum', here: 'hic', there: 'ibi',
+  yes: 'ita', no: 'non', and: 'et', or: 'aut', but: 'sed',
+  not: 'non', can: 'possum', must: 'debeo', will: 'volo', may: 'possum',
+  am: 'sum', is: 'est', are: 'sunt', was: 'erat', were: 'erant', be: 'sum',
+  been: 'sum', do: 'facio', does: 'facit', did: 'fecit', have: 'habeo',
+  has: 'habet', had: 'habebat', anymore: 'iam', longer: 'diutius',
+  more: 'magis', most: 'maxime', less: 'minus', all: 'omnis', some: 'aliquis',
+  every: 'omnis', many: 'multi', few: 'pauci', again: 'iterum', still: 'adhuc',
+  because: 'quod', if: 'si', when: 'ubi', while: 'dum', where: 'ubi',
+  why: 'cur', how: 'quomodo', with: 'cum', without: 'sine', for: 'pro',
+  from: 'ex', to: 'ad', in: 'in', on: 'in', at: 'ad', of: 'de',
+};
+
+/**
+ * English contractions, opened out before anything looks at them.
+ *
+ * "can't" is one token to a tokeniser and two words to a language, and glossing
+ * it whole means glossing nothing: "i — ? · can't — ? · it — ?" is a row of
+ * question marks where a reader wanted help.
+ */
+const CONTRACTIONS = {
+  "can't": ['can', 'not'], cannot: ['can', 'not'], "won't": ['will', 'not'],
+  "don't": ['do', 'not'], "doesn't": ['does', 'not'], "didn't": ['did', 'not'],
+  "isn't": ['is', 'not'], "aren't": ['are', 'not'], "wasn't": ['was', 'not'],
+  "weren't": ['were', 'not'], "haven't": ['have', 'not'], "hasn't": ['has', 'not'],
+  "hadn't": ['had', 'not'], "i'm": ['i', 'am'], "it's": ['it', 'is'],
+  "i've": ['i', 'have'], "i'd": ['i', 'would'], "i'll": ['i', 'will'],
+  "you're": ['you', 'are'], "they're": ['they', 'are'], "we're": ['we', 'are'],
+  "he's": ['he', 'is'], "she's": ['she', 'is'], "that's": ['that', 'is'],
+};
+
+/** Open every contraction in a list of tokens. */
+function openContractions(tokens) {
+  return tokens.flatMap((token) => CONTRACTIONS[token] ?? [token]);
+}
+
+/** A glossary is per-word work, so the only real limit is the input cap. */
+const GLOSS_LIMIT = 120;
 
 /**
  * Little words that are not nouns and not verbs, and each one's job.
@@ -715,7 +767,7 @@ async function adjectiveLike(english) {
   const direct = await latinWord(english, 'adjective');
   if (direct) return { citation: adjectiveCitation(direct.analysis.principalParts), surface: direct.surface };
 
-  for (const candidate of latinFor(english)) {
+  for (const candidate of await latinCandidates(english)) {
     if (!/(?:us|a|um)$/.test(candidate)) continue;
     const stem = candidate.replace(/(?:us|a|um)$/, '');
     if (!stem) continue;
@@ -733,7 +785,7 @@ function declineLike(adjective, gender, wantedCase, number) {
 /** Find the Latin word for an English one, of the part of speech wanted. */
 async function latinWord(english, wantedPos) {
   if (!english) return null;
-  for (const candidate of latinFor(english)) {
+  for (const candidate of await latinCandidates(english)) {
     const analyses = await analyse(candidate).catch(() => null);
     if (!analyses?.length) continue;
 
@@ -1217,7 +1269,10 @@ async function taggedPhrases(tokens) {
 export async function latinWordByWord(text) {
   const tokens = tokenise(text).filter(isWord);
   if (!tokens.length) fail('nothing to translate');
-  if (tokens.length > 20) fail('too long to gloss');
+  // No length limit worth failing on. Capping this at twenty words is exactly
+  // how a twenty-seven word sentence fell past the glossary and into MyMemory's
+  // Malagasy; a long sentence is the case that needs decoding most.
+  if (tokens.length > GLOSS_LIMIT) fail('too long even to gloss');
 
   const glossed = [];
   for (const token of tokens) {
@@ -1292,10 +1347,10 @@ function describe(inflections) {
  * reader who knows what they meant.
  */
 export async function englishGlossary(text) {
-  const tokens = tokenise(text).filter(isWord).map(fold)
+  const tokens = openContractions(tokenise(text).filter(isWord).map(fold))
     .filter((token) => !ARTICLES.has(token));
   if (!tokens.length) fail('nothing to translate');
-  if (tokens.length > 20) fail('too long to gloss');
+  if (tokens.length > GLOSS_LIMIT) fail('too long even to gloss');
 
   const glossed = [];
   for (const token of tokens) {
@@ -1303,11 +1358,18 @@ export async function englishGlossary(text) {
       ? (singularsOf(token).find((one) => latinFor(one).length) ?? token)
       : token;
 
-    const candidates = [singular, ...verbCandidates(token)];
-    const found = candidates.map((one) => latinFor(one)[0]).find(Boolean);
+    if (FUNCTION_GLOSS[token]) { glossed.push(`${token} — ${FUNCTION_GLOSS[token]}`); continue; }
+
+    let found = null;
+    for (const guess of [singular, ...verbCandidates(token)]) {
+      const [first] = await latinCandidates(guess);
+      if (first) { found = first; break; }
+    }
     glossed.push(found ? `${token} — ${found}` : `${token} — ?`);
   }
 
+  // Only if there was nothing at all to say. With a dictionary behind it rather
+  // than a word list, that should not happen for English.
   if (glossed.every((entry) => entry.endsWith('— ?'))) fail('no Latin for any of it');
   return glossed.join(' · ');
 }

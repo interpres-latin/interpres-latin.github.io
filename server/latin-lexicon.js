@@ -20,6 +20,7 @@
 
 import { allWords } from '../public/js/data/stages-la.js';
 import { COMMON_VERBS, MODEL_VERBS, IRREGULARS } from '../public/js/data/verbs-la.js';
+import { throttle, USER_AGENT } from './throttle.js';
 
 const fold = (word) => String(word ?? '').trim().toLowerCase();
 
@@ -48,6 +49,11 @@ const SUPPLEMENT = [
   ['amo', 'love'], ['moneo', 'warn'], ['rego', 'rule'], ['audio', 'hear'],
   ['capio', 'take'], ['do', 'give'], ['duco', 'lead'], ['mitto', 'send'],
   ['porto', 'carry'], ['specto', 'watch'], ['voco', 'call'], ['supero', 'overcome'],
+  ['persona', 'person'], ['heros', 'hero'], ['mundus', 'world'], ['memoria', 'memory'],
+  ['discrimen', 'crisis'], ['telum', 'missile'], ['gens', 'people'], ['populus', 'nation'],
+  ['memini', 'remember'], ['obliviscor', 'forget'], ['morior', 'die'], ['vivo', 'live'],
+  ['cupio', 'want'], ['opto', 'wish'], ['peto', 'seek'], ['puto', 'think'],
+  ['scio', 'know'], ['credo', 'believe'], ['sentio', 'feel'], ['spero', 'hope'],
 ];
 
 /** Latin surface form → the course's own English gloss. */
@@ -142,3 +148,77 @@ export function knowsEnglish(english) {
 }
 
 export const LEXICON_SIZE = { latin: latinToCourse.size, english: englishToLatin.size };
+
+/* ------------------------------------------------ a real dictionary behind it */
+
+/**
+ * English → Latin from Wiktionary's translation tables.
+ *
+ * The lists above are a vocabulary, not a dictionary: 630 words, hand-written,
+ * and every word missing from them was a bug to be fixed by hand — *person*,
+ * *remember*, *hero*, *lid*. That is not a gap to keep patching, it is the
+ * wrong shape. Wiktionary's English entries carry `{{t|la|…}}` translations for
+ * a vocabulary orders of magnitude larger, free and already the source of the
+ * English glosses this site shows elsewhere.
+ *
+ * The course list is still asked first, because a class taught *villa* for
+ * "house" should be given *villa*. This answers everything after it.
+ */
+const wiktionaryCache = new Map();
+
+/** Macrons are a teaching aid; Whitaker's and the decliner want them off. */
+function stripMacrons(word) {
+  return word.normalize('NFD').replace(/[̀-ͯ]/g, '').normalize('NFC');
+}
+
+async function fromWiktionary(english) {
+  const key = fold(english);
+  if (wiktionaryCache.has(key)) return wiktionaryCache.get(key);
+
+  const url = new URL('https://en.wiktionary.org/w/api.php');
+  url.searchParams.set('action', 'parse');
+  url.searchParams.set('page', key);
+  url.searchParams.set('prop', 'wikitext');
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('formatversion', '2');
+  url.searchParams.set('origin', '*');
+
+  let found = [];
+  try {
+    const response = await throttle('wikimedia', 180, () => fetch(url, {
+      headers: { accept: 'application/json', 'user-agent': USER_AGENT },
+      signal: AbortSignal.timeout(12000),
+    }));
+    if (response.ok) {
+      const wikitext = (await response.json())?.parse?.wikitext ?? '';
+      found = [...wikitext.matchAll(/\{\{t\+?\|la\|([^}|]+)/g)]
+        .map((match) => stripMacrons(match[1].trim()))
+        .filter((word) => /^[\p{L}\s-]+$/u.test(word));
+      found = [...new Set(found)];
+    }
+  } catch {
+    // Offline, or Wiktionary is having a day. The course list already answered
+    // everything it could; this simply adds nothing.
+  }
+
+  wiktionaryCache.set(key, found);
+  return found;
+}
+
+/**
+ * Every Latin candidate for an English word: the course first, then the
+ * dictionary. Async, because the second half is a lookup.
+ */
+export async function latinCandidates(english) {
+  const known = latinFor(english);
+  if (known.length) return known;
+
+  const looked = await fromWiktionary(english);
+  if (looked.length) return looked;
+
+  for (const singular of singularsOf(english)) {
+    const asSingular = await fromWiktionary(singular);
+    if (asSingular.length) return asSingular;
+  }
+  return [];
+}

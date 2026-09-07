@@ -219,7 +219,24 @@ function nameCandidates(text) {
  * the other language — in one request rather than one per phrase.
  * @returns {Promise<Map<string, string>>} phrase as written → established name
  */
-async function officialNames(phrases, from, to) {
+/**
+ * The same lookup, but reporting the names Wikipedia knows *and has no name for
+ * in the other language*.
+ *
+ * `officialNames` drops those, correctly — there is nothing to substitute. A
+ * glossary wants them anyway: Latin Wikipedia has an article on the First World
+ * War and none on the Cuban Missile Crisis, and "there is no Latin name for
+ * this" is a fact about Latin worth telling a reader, where "cuban — ?" is only
+ * a fact about our vocabulary list.
+ *
+ * @returns {Promise<Map<string, string|null>>} phrase → name, or null if the
+ *          article exists and the other language has no version of it
+ */
+async function namesAndGaps(phrases, from, to) {
+  return officialNames(phrases, from, to, { keepGaps: true });
+}
+
+async function officialNames(phrases, from, to, { keepGaps = false } = {}) {
   const found = new Map();
   if (!phrases.length) return found;
 
@@ -249,15 +266,19 @@ async function officialNames(phrases, from, to) {
 
   const pages = new Map();
   for (const page of Object.values(query.pages || {})) {
-    const link = page?.langlinks?.[0]?.['*'];
-    if (link && isProperName(page.title)) pages.set(page.title, link);
+    // A missing page is not a name at all; a page with no langlink is a name
+    // the other language has never given itself a word for.
+    if (page?.missing !== undefined) continue;
+    if (!isProperName(page.title)) continue;
+    pages.set(page.title, page?.langlinks?.[0]?.['*'] ?? null);
   }
 
   for (const phrase of phrases) {
     const resolved = redirected.get(normalised.get(phrase) ?? phrase)
       ?? normalised.get(phrase) ?? phrase;
+    if (!pages.has(resolved)) continue;
     const link = pages.get(resolved);
-    if (link) found.set(phrase, link);
+    if (link || keepGaps) found.set(phrase, link);
   }
 
   return found;
@@ -591,6 +612,26 @@ const ENGINES = [
 ];
 
 /**
+ * Latin is answered by this site or not at all.
+ *
+ * Lingva, MyMemory and Apertium are struck out of the chain for Latin entirely,
+ * because none of them can do it and one of them is worse than useless: asked
+ * for Latin, MyMemory returns *Malagasy*. "…the First World War hero who died
+ * in the Cuban Missile Crisis" came back as "…maherifo Worlde, izay maty tao
+ * amin'ny Krizin'ny Balafomanga Kiobana", which is a real translation into a
+ * language nobody asked for, wearing enough Latin to pass a glance.
+ *
+ * So the Latin chain is the rules translator, then the glossary, and nothing
+ * else — procedural from end to end, and the two things left cannot be wrong
+ * about grammar they never claim. Wikipedia stays, because looking up what
+ * Latin actually calls a thing is not a guess.
+ */
+function enginesFor(from, to) {
+  if (from !== 'la' && to !== 'la') return ENGINES;
+  return [namedEntity, latinRules, englishToLatinGloss, latinToEnglishGloss];
+}
+
+/**
  * Swap a word-for-word rendering of an idiom for the equivalent idiom.
  *
  * Most idioms already survive translation — "raining cats and dogs" comes back
@@ -641,7 +682,7 @@ export async function translate(text, from, to) {
   const failures = [];
   let guess = null;
 
-  for (const engine of ENGINES) {
+  for (const engine of enginesFor(from, to)) {
     try {
       const result = await engine(text, from, to);
       if (!result.text.trim()) continue;
@@ -649,6 +690,36 @@ export async function translate(text, from, to) {
       // Wikipedia already answers with the established name; the translators
       // need the names put back afterwards.
       if (engine === namedEntity) return { ...result, notes: [] };
+
+      /**
+       * A gloss is a list of words, not a sentence, so names are not spliced
+       * into it — they are listed at the front, whole.
+       *
+       * Splitting "the Cuban Missile Crisis" into its words and glossing them
+       * one at a time is exactly the wrong thing to do with a name, and it is
+       * what produced "cuban — ?". Wikipedia knows what Latin calls the First
+       * World War; where it knows nothing, the name is still kept together and
+       * said to have no Latin form, which is a fact about Latin rather than a
+       * failure of the lookup.
+       */
+      if (result.wordByWord) {
+        const named = from === 'en'
+          ? await namesAndGaps(nameCandidates(text), from, to).catch(() => new Map())
+          : new Map();
+
+        // Longest first, and nothing contained inside a longer one: "World War
+        // hero" is not a second name just because "First World War" is one.
+        const kept = [];
+        for (const phrase of [...named.keys()].sort((a, b) => b.length - a.length)) {
+          if (kept.some((longer) => normalise(longer).includes(normalise(phrase)))) continue;
+          kept.push(phrase);
+        }
+
+        const heads = kept.map((phrase) => `${phrase} — ${named.get(phrase) ?? '(no Latin name)'}`);
+        const body = [...heads, result.text].filter(Boolean).join(' · ');
+
+        return { ...result, text: body.trim(), notes: [], uncertainWhy: 'wordByWord' };
+      }
 
       const translateSpan = async (span) => (await engine(span, from, to)).text;
 

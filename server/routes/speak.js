@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    const { audio, cached } = await speak(word);
+    const { audio, cached } = await speak(word, study);
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Content-Length', String(audio.length));
     // A word sounds the same tomorrow, and the browser cache spares the

@@ -36,8 +36,26 @@ const API = 'https://api.elevenlabs.io/v1/text-to-speech';
  */
 const DEFAULT_VOICE = 'Xb7hH8MSUJpSbSDYk0k2';
 
-/** The multilingual model; the English-only ones mangle every language here. */
-const MODEL = 'eleven_multilingual_v2';
+/**
+ * A model that can be *told* the language, rather than left to infer it.
+ *
+ * eleven_multilingual_v2 takes no language code, so it guesses from the text —
+ * and one word is not much to guess from. Given "couvercle" it produced
+ * "couvercol", an English speaker sounding out French spelling, which is worse
+ * than useless to somebody learning how the word is said. The v2.5 models
+ * accept `language_code`, and the site always knows which language it is on.
+ */
+const MODEL = 'eleven_turbo_v2_5';
+
+/**
+ * What to tell the engine each side of the site is in.
+ *
+ * Latin has no code of its own — no model has Latin — and Italian is the
+ * nearest phonology to the ecclesiastical pronunciation. It is an
+ * approximation, and the page says so beside the button rather than leaving a
+ * reader to assume otherwise.
+ */
+const SPEECH_LANGUAGE = { es: 'es', fr: 'fr', la: 'it', en: 'en' };
 
 /** 64 kbps mono is ample for one spoken word and a quarter the bytes. */
 const FORMAT = 'mp3_44100_64';
@@ -71,7 +89,7 @@ function voice() {
  * @returns {Promise<{audio: Buffer, cached: boolean}>}
  * @throws {Error & {status?: number, spent?: boolean}}
  */
-export async function speak(word) {
+export async function speak(word, study = 'es') {
   const key = process.env.ELEVENLABS_API_KEY?.trim();
   if (!key) {
     const error = new Error('No speech key configured');
@@ -86,7 +104,8 @@ export async function speak(word) {
     throw error;
   }
 
-  const id = `${voice()}:${text.toLowerCase()}`;
+  const language = SPEECH_LANGUAGE[study] ?? 'en';
+  const id = `${voice()}:${language}:${text.toLowerCase()}`;
   const hit = cache.get(id);
   if (hit) return { audio: hit, cached: true };
 
@@ -97,7 +116,7 @@ export async function speak(word) {
       'Content-Type': 'application/json',
       Accept: 'audio/mpeg',
     },
-    body: JSON.stringify({ text, model_id: MODEL }),
+    body: JSON.stringify({ text, model_id: MODEL, language_code: language }),
     signal: AbortSignal.timeout(20000),
   });
 
