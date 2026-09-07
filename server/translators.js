@@ -84,7 +84,7 @@ function hostsToTry() {
 }
 
 import { alreadyIdiomatic, findIdioms } from './idioms.js';
-import { USER_AGENT } from './throttle.js';
+import { throttle, USER_AGENT } from './throttle.js';
 
 const WIKIPEDIA = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
@@ -372,8 +372,20 @@ async function myMemory(text, from, to) {
   let confident = true;
 
   const translated = await translateChunks(text, MYMEMORY_CHUNK, async (part) => {
-    const url = `${MYMEMORY}?q=${encodeURIComponent(part)}&langpair=${from}|${to}`;
-    const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    const url = new URL(MYMEMORY);
+    url.searchParams.set('q', part);
+    url.searchParams.set('langpair', `${from}|${to}`);
+    // MyMemory rations anonymous use by IP, and a deployed site shares its IP
+    // with whatever else the host has on it — which is why translation worked
+    // on a laptop and answered 429 on Render. Naming a contact address is
+    // MyMemory's own way of asking for the larger allowance.
+    if (process.env.MYMEMORY_EMAIL) url.searchParams.set('de', process.env.MYMEMORY_EMAIL);
+
+    // Spaced for the same reason the dictionary is: a class arrives at once.
+    const response = await throttle('mymemory', 120, () => fetch(url, {
+      headers: { 'User-Agent': USER_AGENT },
+      signal: AbortSignal.timeout(15000),
+    }));
     if (!response.ok) throw new Error(`MyMemory responded ${response.status}`);
 
     const body = await response.json();

@@ -1097,6 +1097,7 @@ and exposes `GET /api/health` for a health check.
 | `RESTRICT_PASSCODE` | **Change it.** Same reason — it narrows the site to Spanish. |
 | `RELEASE_PASSCODE` | **Change it.** Same reason — it opens the subjects again. |
 | `LINGVA_INSTANCES` | Worth setting. Without a working instance, French and Latin translation falls to MyMemory alone. |
+| `MYMEMORY_EMAIL` | Worth setting **on the deployed site**. MyMemory rations anonymous use by IP and a host's IP is shared, so translation can work locally and answer 429 in production — which is exactly what Render did. Naming a contact address is MyMemory's own way of asking for the larger allowance, 1,000 → 10,000 words a day. It is sent with every translation, so use an address you don't mind them having. |
 | `CHAT_FREE_LIMIT` | Off-topic questions per visitor per window. Default 5. |
 
 ### Things that will surprise you otherwise
