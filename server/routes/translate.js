@@ -68,6 +68,11 @@ router.post('/', async (req, res) => {
         la: 'Could not translate just now. Try again.',
         es: 'No se pudo traducir ahora mismo. Inténtalo de nuevo.',
       }[study],
+      // Why each engine declined. Not shown to a reader — the page uses
+      // `error` — but a translator that works on a laptop and fails on the
+      // deployed site is otherwise diagnosable only from server logs, and the
+      // engines fail for reasons that depend on which IP is asking.
+      detail: error.message,
     });
   }
 });
