@@ -220,9 +220,14 @@ export function mountLanguageSwitch(container) {
 
   build();
   window.addEventListener('langchange', paint);
-  window.addEventListener('studychange', build);
   // A teacher narrowing the subjects has to reach a page that is already open.
   const stopWatching = onRestrictionChange(build);
   window.addEventListener('beforeunload', stopWatching);
-  return paint;
+
+  // Deliberately *not* wired to studychange. The interface language settles
+  // after the subject does, and a listener here would run first and rebuild
+  // the switch against the old one — leaving LA and EN on screen with neither
+  // marked, because the language it was comparing them to was still ES. The
+  // router calls this once the language has caught up. See app.js.
+  return build;
 }

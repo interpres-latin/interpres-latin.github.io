@@ -31,7 +31,7 @@ const links = document.querySelector('.nav__links');
 const toggle = document.querySelector('.nav__toggle');
 
 mountThemeToggle(document.querySelector('.nav__theme'));
-mountLanguageSwitch(document.querySelector('.langswitch'));
+const refreshLanguageSwitch = mountLanguageSwitch(document.querySelector('.langswitch'));
 mountSiteLock(document.querySelector('.nav__lock'));
 restoreLock();
 
@@ -166,7 +166,11 @@ window.addEventListener('langchange', () => {
 // which is every bit as much of a rebuild. The chrome language follows first,
 // since ES is no longer one of the options once the site is about French.
 window.addEventListener('studychange', () => {
+  // Order matters: the interface language has to settle before the switch is
+  // rebuilt, or it paints LA and EN against a language that is still ES and
+  // marks neither of them as the one you are reading.
   followStudyLanguage();
+  refreshLanguageSwitch();
   paintChrome();
 
   // Drop the query as well. Every page keeps what you looked at in the URL —
