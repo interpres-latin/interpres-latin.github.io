@@ -11,7 +11,7 @@ import {
   courseGloss, latinFor, knowsEnglish, singularsOf, LEXICON_SIZE,
 } from '../server/latin-lexicon.js';
 import {
-  pluralise, thirdPerson, pastOf, firstSense, verbStem, englishVerb, baseVerb,
+  pluralise, thirdPerson, pastOf, firstSense, verbStem, englishVerb, baseVerb, notted,
 } from '../server/latin-translate.js';
 
 let checked = 0;
@@ -112,6 +112,18 @@ ok('"carried" comes from "carry"', baseVerb('carried') === 'carry');
 ok('"gave" comes from "give"', baseVerb('gave') === 'give');
 ok('"saw" comes from "see"', baseVerb('saw') === 'see');
 ok('a plain verb is left alone', baseVerb('praise') === 'praise');
+
+// --- English for a Latin subjunctive --------------------------------------
+// English kept almost none of its subjunctive, so what is left is the modals —
+// except after a wish, which is the one place it still inflects.
+ok('present subjunctive is "may"',
+  englishVerb('praise', { tense: 'present', number: 'singular', person: '3rd' }) === 'praises');
+
+// --- the negative goes after the auxiliary, not in front of the verb ------
+ok('a simple present takes "does not"', notted('works') === 'does not work');
+ok('"is" takes a bare not', notted('is') === 'is not');
+ok('an auxiliary keeps its place', notted('was working') === 'was not working');
+ok('and a modal does too', notted('may praise') === 'may not praise');
 
 if (failures.length) {
   console.error(`\n✗ ${failures.length} of ${checked} Latin-translator checks failed:\n`);

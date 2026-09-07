@@ -72,6 +72,39 @@ const ENGLISH_PREPOSITIONS = {
 
 const ARTICLES = new Set(['a', 'an', 'the']);
 
+/**
+ * Little words that are not nouns and not verbs, and each one's job.
+ *
+ * They have to be listed for two reasons: so they are not fed to the noun
+ * builder, and so they are not *silently dropped*, which is what happened to
+ * every subjunctive before this — "puer laudet" came back as "The boy", verb
+ * and all its meaning quietly gone.
+ */
+const PARTICLES = {
+  utinam: { kind: 'wish' },
+  ne: { kind: 'negative', english: 'not' },
+  non: { kind: 'negative', english: 'not' },
+  nonne: { kind: 'negative', english: 'not' },
+  si: { kind: 'conjunction', english: 'if' },
+  nisi: { kind: 'conjunction', english: 'unless' },
+  et: { kind: 'conjunction', english: 'and' },
+  sed: { kind: 'conjunction', english: 'but' },
+  quod: { kind: 'conjunction', english: 'because' },
+  quia: { kind: 'conjunction', english: 'because' },
+  ubi: { kind: 'conjunction', english: 'when' },
+  cum: { kind: 'conjunction', english: 'when' },
+  tamen: { kind: 'adverb', english: 'however' },
+  itaque: { kind: 'adverb', english: 'and so' },
+  igitur: { kind: 'adverb', english: 'therefore' },
+};
+
+/** The pronoun a Latin verb implies when its subject is not written out. */
+const IMPLIED_SUBJECT = {
+  '1st': { singular: 'I', plural: 'we' },
+  '2nd': { singular: 'you', plural: 'you' },
+  '3rd': { singular: 'he', plural: 'they' },
+};
+
 /** English verbs whose third person singular is not the stem plus -s. */
 const IRREGULAR_THIRD = { have: 'has', be: 'is', do: 'does', go: 'goes' };
 const STEM_OF_THIRD = { has: 'have', is: 'be', does: 'do', goes: 'go' };
@@ -144,6 +177,42 @@ export function verbStem(gloss) {
   return stem;
 }
 
+/**
+ * English for a Latin subjunctive.
+ *
+ * English gave up most of its subjunctive, so this is what is left of it: the
+ * modals. A present subjunctive is "may", an imperfect "might" — and after
+ * *utinam* the whole thing becomes a wish, which is the one place English still
+ * inflects for it: "I wish I **were** dead".
+ */
+function subjunctiveVerb(stem, { tense, number, person }, wish, conditional = false) {
+  const singular = number !== 'plural';
+
+  // "si puer laudaret" is "if the boy were to praise", not "if the boy might".
+  if (conditional) {
+    if (stem === 'be') return 'were';
+    return tense === 'imperfect' ? `were to ${stem}` : `should ${stem}`;
+  }
+
+  if (wish) {
+    if (stem === 'be') return singular ? 'were' : 'were';
+    if (tense === 'present') return `would ${stem}`;
+    if (tense === 'pluperfect' || tense === 'perfect') return `had ${pastOf(stem)}`;
+    return `were ${stem.replace(/e$/, '')}ing`;
+  }
+
+  switch (tense) {
+    case 'imperfect':
+      return `might ${stem}`;
+    case 'perfect':
+      return `may have ${pastOf(stem)}`;
+    case 'pluperfect':
+      return `would have ${pastOf(stem)}`;
+    default:
+      return `may ${stem}`;
+  }
+}
+
 /** Put an English verb into the tense and number the Latin was in. */
 export function englishVerb(stem, { tense, number, person }) {
   const singular = number !== 'plural';
@@ -201,7 +270,7 @@ export async function latinToEnglish(text) {
   // could be either reads better as the verb when nothing else can be.
   const finiteAt = (i) => parsed[i].find((reading) => reading.pos === 'verb'
     && reading.inflection.person
-    && ['indicative', 'imperative'].includes(reading.inflection.mood)) ?? null;
+    && ['indicative', 'imperative', 'subjunctive'].includes(reading.inflection.mood)) ?? null;
 
   const alsoNoun = (i) => parsed[i].some((reading) => reading.pos === 'noun');
 
@@ -246,6 +315,8 @@ export async function latinToEnglish(text) {
 
   const phrases = [];
   const taken = new Set(verb ? [verb.index] : []);
+  const particles = [];
+  let wish = false;
   let governing = null;
 
   for (let i = 0; i < parsed.length; i += 1) {
@@ -253,20 +324,41 @@ export async function latinToEnglish(text) {
     const surface = fold(tokens[i]);
 
     // A preposition fixes the case of whatever follows it, which removes the
-    // ambiguity that makes this hard everywhere else.
-    if (LATIN_PREPOSITIONS[surface]) {
+    // ambiguity that makes this hard everywhere else. `cum` is both preposition
+    // and conjunction; standing last, with no noun to govern, it is the latter.
+    if (LATIN_PREPOSITIONS[surface] && !(surface === 'cum' && i === parsed.length - 1)) {
       governing = { word: surface, cases: LATIN_PREPOSITIONS[surface] };
+      taken.add(i);
       continue;
     }
 
-      // The locative is dropped rather than ranked. It is a real case and *puellae*
-    // genuinely has one, but no beginner's sentence means it — and left in, it
-    // won every contest below, because a case absent from the order list scored
-    // -1 and sorted first. That is how the subject of "agricolae puellam
-    // laudant" silently disappeared.
-  const candidates = parsed[i].filter((reading) => reading.inflection.case
-    && reading.inflection.case !== 'locative');
-    if (!candidates.length) continue;
+    if (PARTICLES[surface]) {
+      const particle = PARTICLES[surface];
+      if (particle.kind === 'wish') wish = true;
+      else particles.push(particle);
+      taken.add(i);
+      continue;
+    }
+
+    // The locative is dropped rather than ranked. It is a real case and
+    // *puellae* genuinely has one, but no beginner's sentence means it — and
+    // left in, it won every contest below, because a case absent from the order
+    // list scored -1 and sorted first. That is how the subject of "agricolae
+    // puellam laudant" silently disappeared.
+    const candidates = parsed[i].filter((reading) => reading.inflection.case
+      && reading.inflection.case !== 'locative');
+
+    /**
+     * A word that is recognised but fills no role is refused, never skipped.
+     *
+     * Skipping is how "puer laudet" became "The boy": the subjunctive was not
+     * accepted as a verb, was not a noun either, and simply fell out of the
+     * sentence — leaving a confident translation with its meaning removed. A
+     * word this cannot place means the sentence is beyond it, and the chain
+     * below should be given the chance instead.
+     */
+    if (!candidates.length) fail(`cannot place "${tokens[i]}"`);
+    taken.add(i);
 
     const wanted = governing?.cases ?? null;
     const usable = wanted
@@ -277,20 +369,32 @@ export async function latinToEnglish(text) {
     const gloss = glossFor(surface, chosen.analysis);
     if (!gloss) fail(`no English for ${surface}`);
 
+    const modifier = chosen.pos === 'adjective' || String(chosen.pos).startsWith('verb participle');
+
     phrases.push({
+      index: i,
       case: chosen.inflection.case,
       number: chosen.inflection.number || 'singular',
       role: governing ? 'prepositional' : CASE_ROLE[chosen.inflection.case],
       preposition: governing?.word ?? null,
       pos: chosen.pos,
-      english: chosen.inflection.number === 'plural' ? pluralise(gloss) : gloss,
+      // Only nouns take an English plural. *laeta* is nominative feminine
+      // singular and neuter plural at once, and pluralising the adjective gave
+      // "the girl is happies".
+      english: chosen.inflection.number === 'plural' && !modifier ? pluralise(gloss) : gloss,
       bare: gloss,
     });
     governing = null;
   }
 
   if (!verb && !phrases.length) fail('nothing recognisable');
-  return assembleEnglish(verb, phrases);
+
+  // Nothing may go missing between the parse and the sentence.
+  for (let i = 0; i < parsed.length; i += 1) {
+    if (!taken.has(i)) fail(`cannot place "${tokens[i]}"`);
+  }
+
+  return assembleEnglish(verb, phrases, { wish, particles });
 }
 
 /**
@@ -302,6 +406,24 @@ export async function latinToEnglish(text) {
  * subject and a second one becomes its genitive.
  */
 function pickCase(candidates, phrases, shape = {}) {
+  /**
+   * An adjective agrees with its noun, and that is the answer before any
+   * preference is consulted.
+   *
+   * *laeti* is nominative plural and genitive singular; in "pueri laeti sunt"
+   * it plainly goes with *pueri*. Without this the nominative role was already
+   * taken, the free-role preference chose the genitive, and the sentence came
+   * out as "The boys of happy are".
+   */
+  const agreeing = candidates.filter((reading) => {
+    const modifier = reading.pos === 'adjective'
+      || String(reading.pos).startsWith('verb participle');
+    if (!modifier) return false;
+    return phrases.some((phrase) => phrase.case === reading.inflection.case
+      && phrase.number === (reading.inflection.number || 'singular'));
+  });
+  if (agreeing.length) return agreeing[0];
+
   const filled = new Set(phrases.map((phrase) => phrase.role));
 
   // A verb with an object in it makes an indirect object the likelier reading
@@ -324,12 +446,55 @@ function pickCase(candidates, phrases, shape = {}) {
   return ranked[0];
 }
 
-function noun(phrase) {
-  return phrase.pos === 'adjective' ? phrase.english : `the ${phrase.english}`;
+/** Adjectives and participles describe; they do not take an article. */
+function isModifier(phrase) {
+  return phrase.pos === 'adjective' || String(phrase.pos).startsWith('verb participle');
 }
 
-function assembleEnglish(verb, phrases) {
-  const subject = phrases.find((phrase) => phrase.role === 'subject');
+function noun(phrase, attached = null) {
+  const describing = attached?.get(phrase)?.join(' ');
+  if (isModifier(phrase)) return phrase.english;
+  return `the ${[describing, phrase.english].filter(Boolean).join(' ')}`;
+}
+
+function assembleEnglish(verb, phrases, { wish = false, particles = [] } = {}) {
+  /**
+   * *sum* takes a complement, not an object.
+   *
+   * "utinam mortuus essem" is "I wish I were dead" — *mortuus* is nominative,
+   * but it describes the subject rather than being it, and read as a subject it
+   * gave "I wish the dead were". So with a copula, a nominative that describes
+   * (an adjective, or a participle like *mortuus*) becomes the complement; and
+   * where two nouns are both nominative, the second one is.
+   */
+  const copula = verb?.analysis?.lemma === 'sum';
+  const nominatives = phrases.filter((phrase) => phrase.role === 'subject');
+
+  let complement = null;
+  if (copula && nominatives.length) {
+    complement = nominatives.find(isModifier)
+      ?? (nominatives.length > 1 ? nominatives[nominatives.length - 1] : null);
+  }
+
+  /**
+   * An adjective goes in front of its noun in English, and must not be left to
+   * stand as a phrase of its own: "puer bonus agricolam laudat" rendered the
+   * boy and the farmer and quietly lost *bonus*.
+   */
+  const attached = new Map();
+  const modifiers = new Set();
+  for (const phrase of phrases) {
+    if (!isModifier(phrase) || phrase === complement) continue;
+    const host = phrases.find((other) => other !== phrase && !isModifier(other)
+      && other.case === phrase.case && other.number === phrase.number);
+    if (!host) continue;
+    if (!attached.has(host)) attached.set(host, []);
+    attached.get(host).push(phrase.bare);
+    modifiers.add(phrase);
+  }
+
+  const subject = phrases.find((phrase) => phrase.role === 'subject'
+    && phrase !== complement && !modifiers.has(phrase));
   const object = phrases.find((phrase) => phrase.role === 'object');
   const indirect = phrases.find((phrase) => phrase.role === 'indirect');
   const possessives = phrases.filter((phrase) => phrase.role === 'possessive');
@@ -341,22 +506,50 @@ function assembleEnglish(verb, phrases) {
   const owned = new Map();
   for (const possessive of possessives) {
     const host = phrases[phrases.indexOf(possessive) - 1];
-    if (host) owned.set(host, `of ${noun(possessive)}`);
+    if (host) owned.set(host, `of ${noun(possessive, attached)}`);
   }
 
-  const render = (phrase) => (phrase
-    ? [noun(phrase), owned.get(phrase)].filter(Boolean).join(' ')
-    : null);
+  const used = new Set(modifiers);
+  const render = (phrase) => {
+    if (!phrase) return null;
+    used.add(phrase);
+    const genitive = owned.get(phrase);
+    if (genitive) used.add(possessives.find((one) => `of ${noun(one, attached)}` === genitive));
+    return [noun(phrase, attached), genitive].filter(Boolean).join(' ');
+  };
 
   const words = [];
+  for (const particle of particles.filter((one) => one.kind === 'conjunction')) {
+    words.push(particle.english);
+  }
+  if (wish) words.push('I wish');
+
+  /**
+   * Latin leaves the subject out whenever the ending says it, and English
+   * cannot. Without this "laboro" translated as "work" rather than "I work",
+   * and every first- and second-person sentence lost its subject.
+   */
   if (subject) words.push(render(subject));
+  else if (verb?.inflection.person) {
+    words.push(IMPLIED_SUBJECT[verb.inflection.person]?.[verb.inflection.number || 'singular'] ?? 'he');
+  }
 
   if (verb) {
     const gloss = glossFor(verb.surface, verb.analysis);
     if (!gloss) fail(`no English for ${verb.surface}`);
-    words.push(englishVerb(verbStem(gloss), verb.inflection));
+    const stem = verbStem(gloss);
+    const negative = particles.some((one) => one.kind === 'negative');
+
+    const conditional = particles.some((one) => ['if', 'unless'].includes(one.english));
+
+    const built = verb.inflection.mood === 'subjunctive'
+      ? subjunctiveVerb(stem, verb.inflection, wish, conditional)
+      : englishVerb(stem, verb.inflection);
+
+    words.push(negative ? notted(built) : built);
   }
 
+  if (complement) words.push(render(complement));
   if (object) words.push(render(object));
   if (indirect) words.push(`to ${render(indirect)}`);
   for (const phrase of adverbials) words.push(`with ${render(phrase)}`);
@@ -370,9 +563,28 @@ function assembleEnglish(verb, phrases) {
     if (![...owned.values()].includes(`of ${noun(possessive)}`)) words.push(`of ${noun(possessive)}`);
   }
 
+  for (const particle of particles.filter((one) => one.kind === 'adverb')) {
+    words.unshift(particle.english);
+  }
+
+  // Every parsed word reached the sentence, or the sentence is not a
+  // translation of it. This is the same rule as the one upstream, applied to
+  // the assembly rather than the parse.
+  for (const phrase of phrases) {
+    if (!used.has(phrase) && phrase !== complement) fail(`left out "${phrase.bare}"`);
+  }
+
   const sentence = words.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
   if (!sentence) fail('nothing to say');
   return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+}
+
+/** Put an English verb phrase into the negative, wherever its auxiliary is. */
+export function notted(phrase) {
+  const [first, ...rest] = phrase.split(' ');
+  if (rest.length) return [first, 'not', ...rest].join(' ');
+  if (['is', 'are', 'was', 'were'].includes(first)) return `${first} not`;
+  return `does not ${first.replace(/e?s$/, '')}`;
 }
 
 /* --------------------------------------------------------- English → Latin */

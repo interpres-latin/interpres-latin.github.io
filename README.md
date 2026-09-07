@@ -217,7 +217,38 @@ canis puellae                →  The dog of the girl
 servus in villa laborat      →  The slave works in the house
 puer puellae pecuniam dat    →  The boy gives the money to the girl
 servi laborabant             →  The slaves were working
+puer bonus agricolam laudat  →  The good boy praises the farmer
+laboro                       →  I work
+puer non laborat             →  The boy does not work
 ```
+
+**The subjunctive, and the mood English mostly lost.** A subjunctive is a finite
+verb like any other, and it was not being treated as one — it was not accepted
+as the verb, was not a noun either, and *fell out of the sentence*, so "puer
+laudet" translated as "The boy". English keeps just enough to say it with:
+
+```
+puer laudet                  →  The boy may praise
+si puer laudaret             →  If the boy were to praise
+utinam puer laudet           →  I wish the boy would praise
+utinam mortuus essem         →  I wish I were dead
+puella laeta est             →  The girl is happy
+```
+
+That last pair needed two more rules. *sum* takes a complement rather than an
+object, so a nominative that describes — an adjective, or a participle like
+*mortuus* — belongs after the verb and not in front of it; read as a subject it
+gave "I wish the dead were". And an adjective **agrees** with its noun, which is
+the answer before any preference is consulted: *laeti* is nominative plural and
+genitive singular, and in "pueri laeti sunt" it plainly goes with *pueri*.
+Without that the free case was taken instead and the sentence read "The boys of
+happy are".
+
+**Nothing may be silently dropped.** Every one of those bugs had the same shape:
+a word was parsed, could not be placed, and was skipped — leaving a confident
+translation with a piece of its meaning removed, and no sign to the reader that
+anything had gone. A word this cannot account for now throws, at the parse and
+again at the assembly, and the chain below gets its turn instead.
 
 **English → Latin is the harder way**, because English hides what Latin states,
 and the little words carry it instead: what precedes the verb is the subject,
