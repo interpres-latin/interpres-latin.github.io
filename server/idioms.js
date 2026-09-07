@@ -34,9 +34,23 @@ const ES_IDIOMS = [
     meaning: { en: 'good luck (said to a performer)', es: 'buena suerte (a un actor)' },
   },
   {
-    en: ['raining cats and dogs', 'rain cats and dogs'],
+    // Not a metaphor, but the same failure: a rule-based engine reads the
+    // imperative "test me" as reflexive and returns "me pruebo", "I test
+    // myself". The table exists for phrases an engine gets word-for-word
+    // wrong, and this is one.
+    en: ['test me', 'put me to the test'],
+    es: 'poner a prueba',
+    say: { en: 'test me', es: 'ponme a prueba' },
+    meaning: { en: 'go on, try me', es: 'a ver si puedo' },
+  },
+  {
+    en: ['raining cats and dogs', 'rain cats and dogs', 'rains cats and dogs'],
     es: 'llover a cántaros',
     say: { en: "it's raining cats and dogs", es: 'llueve a cántaros' },
+    // The form to use when the engine has already written the auxiliary. Its
+    // absence is what produced "está llueve a cántaros": a finite clause
+    // pasted into a slot that wanted a gerund.
+    progressive: { es: 'lloviendo a cántaros' },
     meaning: { en: 'to rain very heavily', es: 'llover muchísimo' },
   },
   {
@@ -193,7 +207,13 @@ const FR_IDIOMS = [
     meaning: { en: 'good luck (said to a performer)', fr: 'bonne chance (à un artiste)' },
   },
   {
-    en: ['raining cats and dogs', 'rain cats and dogs'],
+    en: ['test me', 'put me to the test'],
+    fr: 'mettre à l’épreuve',
+    say: { en: 'test me', fr: 'mets-moi à l’épreuve' },
+    meaning: { en: 'go on, try me', fr: 'vas-y, essaie' },
+  },
+  {
+    en: ['raining cats and dogs', 'rain cats and dogs', 'rains cats and dogs'],
     fr: 'pleuvoir des cordes',
     say: { en: "it's raining cats and dogs", fr: 'il pleut des cordes' },
     meaning: { en: 'to rain very heavily', fr: 'pleuvoir très fort' },
@@ -394,6 +414,7 @@ export function findIdioms(text, from, to) {
     found.push({
       phrase: item.phrase,
       say: item.entry.say[to],
+      progressive: item.entry.progressive?.[to] ?? null,
       meaning: item.entry.meaning,
       source: item.entry.say[from],
     });
@@ -438,6 +459,28 @@ export function idiomSignature(phrase) {
 export function alreadyIdiomatic(text, say) {
   const haystack = fold(text);
   return idiomSignature(say).some((signature) => signature && haystack.includes(signature));
+}
+
+/**
+ * Auxiliaries that leave a gerund-shaped hole after them.
+ *
+ * The stored idiom is a finite clause, so dropping it in after an auxiliary the
+ * engine has already written gives "está llueve a cántaros" — the complaint
+ * this whole mechanism exists to answer, reappearing one layer down. Where an
+ * idiom has a progressive form, that is what belongs in this slot.
+ */
+const AUXILIARY = {
+  // Spanish only. French does not build its present this way — its equivalent
+  // is the periphrastic "être en train de", and an idiom dropped in after one
+  // gives "il est en train de en train de pleuvoir". Where a language has no
+  // clean progressive slot it has no entry here, and the finite form stands.
+  es: /\b(est[áa]|est[áa]n|estaba|estaban|estoy|est[áa]s|estamos|va a|iba a)\s*$/i,
+};
+
+/** Whether `before` ends in an auxiliary that the idiom must agree with. */
+export function wantsProgressive(before, to) {
+  const pattern = AUXILIARY[to];
+  return Boolean(pattern && pattern.test(String(before ?? '').trimEnd()));
 }
 
 export const IDIOM_COUNT = ES_IDIOMS.length + FR_IDIOMS.length;

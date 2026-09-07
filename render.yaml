@@ -66,6 +66,12 @@ services:
       - key: MYMEMORY_EMAIL
         sync: false
 
+      # The best translator in the chain, and the first one asked. Free tier is
+      # 500k characters a month. Without it French and Spanish fall to the
+      # model, and then to MyMemory.
+      - key: DEEPL_API_KEY
+        sync: false
+
       # Off-topic chat only. Everything about the languages themselves is
       # answered from the site's own data and needs no key at all.
       - key: GEMINI_API_KEY

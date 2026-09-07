@@ -1,8 +1,10 @@
 /**
- * Translation runs on dedicated engines, never a language model.
+ * The translation chain: which engine answers, and in what order.
  *
  * Offline: fetch is stubbed, so these assert the fallback order and the
- * agreement rule rather than what a volunteer instance is doing today.
+ * agreement rule rather than what a volunteer instance is doing today. The
+ * model is stubbed out entirely by leaving no provider key configured, which
+ * is also the shape a deployment without keys has.
  */
 let checked = 0;
 const failures = [];
@@ -16,6 +18,14 @@ function ok(name, condition, detail = '') {
 // "lingva" so the stub below can tell which engine is being asked.
 process.env.LINGVA_INSTANCES = 'lingva-one.test,lingva-two.test,lingva-three.test';
 
+// No model, so the chain under test is the dedicated engines. DeepL is given a
+// free-tier-shaped key so the host it picks can be asserted.
+delete process.env.GEMINI_API_KEY;
+delete process.env.OPENROUTER_API_KEY;
+delete process.env.ANTHROPIC_API_KEY;
+delete process.env.GROQ_API_KEY;
+process.env.DEEPL_API_KEY = 'test-key:fx';
+
 const { translate, chunk, resetLingvaCooldowns } = await import('../server/translators.js');
 const LINGVA_COUNT = process.env.LINGVA_INSTANCES.split(',').length;
 
@@ -25,9 +35,10 @@ globalThis.fetch = async (url) => {
   const target = String(url);
   asked.push(target);
   const which = target.includes('wikipedia') ? 'wikipedia'
-    : target.includes('lingva') ? 'lingva'
-      : target.includes('mymemory') ? 'mymemory'
-        : 'apertium';
+    : target.includes('deepl') ? 'deepl'
+      : target.includes('lingva') ? 'lingva'
+        : target.includes('mymemory') ? 'mymemory'
+          : 'apertium';
   let answer = plan[which];
 
   // The real API reports how each queried title was normalised. The single-
@@ -314,6 +325,38 @@ let noLatinRoute = null;
 try { await translate('the girl', 'en', 'la'); } catch (error) { noLatinRoute = error; }
 ok('Latin declines rather than inventing a route', noLatinRoute !== null);
 ok('and names the pair it has not got', /eng\|lat/.test(noLatinRoute?.message || ''), noLatinRoute?.message);
+
+// --- DeepL answers before anything else ----------------------------------
+plan = {
+  deepl: { translations: [{ text: 'le chien de la fille' }] },
+  lingva: { translation: 'le chien de la jeune fille' },
+  mymemory: memory('un chien'),
+};
+result = await translate('the dog of the girl', 'en', 'fr');
+ok('DeepL is preferred', result.engine === 'DeepL', JSON.stringify(result));
+ok('and its text is used', result.text === 'le chien de la fille', result.text);
+ok('a free key goes to the free host',
+  asked.some((url) => url.includes('api-free.deepl.com')),
+  asked.filter((url) => url.includes('deepl')).join(' '));
+
+// --- DeepL has no Latin, so Latin passes it by ----------------------------
+plan = {
+  deepl: { translations: [{ text: 'SHOULD NOT BE USED' }] },
+  lingva: null,
+  mymemory: memory('puella'),
+};
+// `asked` accumulates over the whole file, so only this call's requests count.
+const beforeLatin = asked.length;
+result = await translate('the girl', 'en', 'la');
+ok('Latin does not go to DeepL', result.engine === 'MyMemory', JSON.stringify(result));
+ok('and DeepL is never even asked for it',
+  !asked.slice(beforeLatin).some((url) => url.includes('deepl')),
+  asked.slice(beforeLatin).join(' '));
+
+// --- a spent DeepL quota falls through rather than failing ----------------
+plan = { deepl: null, lingva: null, mymemory: memory('le chien de la fille') };
+result = await translate('the dog of the girl', 'en', 'fr');
+ok('a refused DeepL hands over', result.engine === 'MyMemory', JSON.stringify(result));
 
 // --- agreement ignores case and punctuation -------------------------------
 plan = { lingva: null, mymemory: memory('Good morning.', 'good morning'), apertium: null };

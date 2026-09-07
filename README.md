@@ -160,7 +160,7 @@ class looking words up would have exhausted a day's allowance before lunch.
 | Example sentences | [Tatoeba](https://tatoeba.org) — real sentences by native speakers, already paired with English translations (CC BY) | free, unmetered |
 | English glosses | [Wiktionary](https://en.wiktionary.org) (CC BY-SA) | free, unmetered |
 | Definitions | RAE, via rae-api.com | 5,000/day with a key |
-| Translation | a model first, then Lingva, MyMemory and Apertium beneath it | free tiers, then free and unmetered |
+| Translation | DeepL, then a model, then Lingva, MyMemory and Apertium beneath | free tiers, then free and unmetered |
 
 A model is woken only when Tatoeba has nothing for a word, and the template
 frame is the last resort after that. Seven lookups across common and uncommon
@@ -172,6 +172,7 @@ No model, at any point. Four dedicated engines, tried in order:
 
 | | | |
 | --- | --- | --- |
+| 0.2 | **DeepL** | A real translation engine, and the best one here for French and Spanish — what Lingva was supposed to be, answering to a published contract rather than to whether Google feels like serving a volunteer's proxy today. Free tier is 500,000 characters a month. **No Latin**, which is why the model is in the chain at all. |
 | 0.5 | **a model** | Gemini, then OpenRouter — whichever free tier answers. The only engine here that translates French well and the only one at all that translates Latin well. It goes first, and everything below it stays as the floor. See **Why a model, after all** below. |
 | 0 | **Wikipedia** | for names and titles. Machine translation renders them literally: "Cuban Missile Crisis" becomes *"crisis de los misiles cubanos"*, which says the missiles were Cuban when they were Soviet. Wikipedia's cross-language links hold the name each language actually uses — *Crisis de los misiles de Cuba*. |
 | 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES`, and one that fails is rested for a minute rather than re-asked on every translation. |
@@ -1152,6 +1153,7 @@ and exposes `GET /api/health` for a health check.
 | `RESTRICT_PASSCODE` | **Change it.** Same reason — it narrows the site to Spanish. |
 | `RELEASE_PASSCODE` | **Change it.** Same reason — it opens the subjects again. |
 | `LINGVA_INSTANCES` | Worth setting. Without a working instance, French and Latin translation falls to MyMemory alone. |
+| `DEEPL_API_KEY` | The single biggest quality difference on the French and Spanish sides — it is asked first and is better than everything under it. Free tier, 500k characters a month; a key ending `:fx` is routed to the free host automatically. It has no Latin. |
 | `MYMEMORY_EMAIL` | Worth setting **on the deployed site**. MyMemory rations anonymous use by IP and a host's IP is shared, so translation can work locally and answer 429 in production — which is exactly what Render did. Naming a contact address is MyMemory's own way of asking for the larger allowance, 1,000 → 10,000 words a day. It is sent with every translation, so use an address you don't mind them having. |
 | `CHAT_FREE_LIMIT` | Off-topic questions per visitor per window. Default 5. |
 

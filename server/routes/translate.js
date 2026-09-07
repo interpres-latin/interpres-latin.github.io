@@ -4,7 +4,9 @@ import { checkLatin } from '../latin-check.js';
 
 export const router = Router();
 
-const MAX_INPUT = 5000;
+// 500, matching the box on the page. A translator for a lesson is for
+// sentences, not essays, and every engine below charges by the character.
+const MAX_INPUT = 500;
 
 const cache = new Map();
 const CACHE_TTL = 1000 * 60 * 60 * 12;

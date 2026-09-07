@@ -27,7 +27,7 @@ const LANGUAGES = () => ({
   },
 });
 
-const MAX_CHARS = 5000;
+const MAX_CHARS = 500;
 
 /** Any capitalisation, any spacing. */
 const GRADUATION = /^\s*graduation\s*2028\s*$/i;

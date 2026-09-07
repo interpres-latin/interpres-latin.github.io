@@ -83,9 +83,10 @@ function hostsToTry() {
   return LINGVA_HOSTS.filter((host) => (restingUntil.get(host) ?? 0) <= now);
 }
 
-import { alreadyIdiomatic, findIdioms } from './idioms.js';
+import { alreadyIdiomatic, findIdioms, wantsProgressive } from './idioms.js';
 import { throttle, USER_AGENT } from './throttle.js';
 import { modelTranslate } from './translate-model.js';
+import { deepl } from './deepl.js';
 
 const WIKIPEDIA = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
@@ -248,11 +249,16 @@ async function officialName(phrase, from, to) {
 }
 
 /** Replace `find` in `text`, keeping the capitalisation that was already there. */
-function substitute(text, find, replacement) {
+function substitute(text, find, replacement, { progressive = null, to = null } = {}) {
   const pattern = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-  return text.replace(pattern, (match) => (/^\p{Ll}/u.test(match)
-    ? replacement.charAt(0).toLowerCase() + replacement.slice(1)
-    : replacement));
+  return text.replace(pattern, (match, offset) => {
+    // An auxiliary already standing in front of the slot wants the gerund, not
+    // a finite clause — "está lloviendo a cántaros", never "está llueve".
+    const chosen = progressive && wantsProgressive(text.slice(0, offset), to)
+      ? progressive
+      : replacement;
+    return /^\p{Ll}/u.test(match) ? chosen.charAt(0).toLowerCase() + chosen.slice(1) : chosen;
+  });
 }
 
 /** Drop names contained inside a longer one that also matched. */
@@ -494,16 +500,21 @@ async function apertium(text, from, to) {
 /**
  * The order translation is attempted in.
  *
- * The model sits above the dedicated engines rather than below them, which
- * reverses this project's original rule. That rule held while Lingva worked;
- * it does not survive Lingva's disappearance, because what remains cannot
- * translate French or Latin accurately and a study aid that is confidently
- * wrong is worse than one that is slow. Wikipedia still goes first — an
- * established name is a fact to look up, not a phrase to translate — and every
- * free engine stays underneath, so a spent quota costs quality rather than
+ * Wikipedia first — an established name is a fact to look up, not a phrase to
+ * translate. Then DeepL, which is a real translation engine and the best one
+ * here for French and Spanish, answering to a published contract rather than to
+ * whether Google feels like serving a volunteer's proxy today.
+ *
+ * Then the model, which sits above the remaining dedicated engines rather than
+ * below them — a reversal of this project's original rule. That rule held while
+ * Lingva worked. It does not survive Lingva's disappearance, and it does not
+ * survive Latin at all: DeepL has no Latin, nothing dedicated does, and a model
+ * is not merely the best option there but the only one.
+ *
+ * Everything free stays underneath, so a spent quota costs quality rather than
  * service. See translate-model.js for what is done about a model's bad habits.
  */
-const ENGINES = [namedEntity, modelTranslate, lingva, myMemory, apertium];
+const ENGINES = [namedEntity, deepl, modelTranslate, lingva, myMemory, apertium];
 
 /**
  * Swap a word-for-word rendering of an idiom for the equivalent idiom.
@@ -534,12 +545,15 @@ async function restoreIdioms(source, translated, from, to, translateSpan) {
     // The engine already said it idiomatically — leave its grammar alone.
     if (alreadyIdiomatic(result, idiom.say)) continue;
 
-    const literal = await translateSpan(idiom.phrase).catch(() => null);
+    // Trimmed: an engine that returns " llueve gatos y perros" for the span
+    // alone will not match the same words inside the sentence, and the repair
+    // silently does nothing.
+    const literal = (await translateSpan(idiom.phrase).catch(() => null))?.trim();
     if (!literal) continue;
     if (alreadyIdiomatic(literal, idiom.say)) continue;
     if (normalise(literal) === normalise(idiom.say)) continue;
 
-    result = substitute(result, literal, idiom.say);
+    result = substitute(result, literal, idiom.say, { progressive: idiom.progressive, to });
   }
 
   return { text: result, notes };
@@ -575,7 +589,10 @@ export async function translate(text, from, to, { model = true } = {}) {
       const withIdioms = await restoreIdioms(text, named, from, to, translateSpan)
         .catch(() => ({ text: named, notes: [] }));
 
-      return { ...result, text: withIdioms.text, notes: withIdioms.notes };
+      // Engines and substitutions both leave stray spacing behind; a reader
+      // should never see the seam.
+      const tidied = withIdioms.text.replace(/[ \t]{2,}/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
+      return { ...result, text: tidied, notes: withIdioms.notes };
     } catch (error) {
       failures.push(error.message);
       if (error.guess?.trim() && !guess) guess = error.guess;
