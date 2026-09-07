@@ -181,7 +181,7 @@ No model, at any point. Four dedicated engines, tried in order:
 | | | |
 | --- | --- | --- |
 | 0.3 | **the rules translator** | Latin only, and built here out of Whitaker's Words, the decliner, the conjugator and the course vocabulary. Nothing on the open web translates Latin, so the site does it itself. See **Translating Latin without an engine** below. |
-| 0.2 | **DeepL** | A real translation engine, and the best one here for French and Spanish — what Lingva was supposed to be, answering to a published contract rather than to whether Google feels like serving a volunteer's proxy today. Free tier is 500,000 characters a month. **No Latin**, which is why the model is in the chain at all. |
+| 0.2 | **DeepL** | A real translation engine, and the best one here for French and Spanish — what Lingva was supposed to be, answering to a published contract rather than to whether Google feels like serving a volunteer's proxy today. Free tier is 500,000 characters a month. **No Latin**, which is why the rules translator exists. |
 | 0 | **Wikipedia** | for names and titles. Machine translation renders them literally: "Cuban Missile Crisis" becomes *"crisis de los misiles cubanos"*, which says the missiles were Cuban when they were Soviet. Wikipedia's cross-language links hold the name each language actually uses — *Crisis de los misiles de Cuba*. |
 | 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES`, and one that fails is rested for a minute rather than re-asked on every translation. |
 | 2 | **MyMemory** | a crowd translation memory. Believed outright when the answer is its own machine translation, and otherwise only when its stored candidates agree with each other. |
@@ -200,11 +200,30 @@ puella* for "the dog of the girl" and *puella complens the Farmer* for "the boy
 praises the farmer". For a while a model filled the gap; models are out of the
 translation chain now, and Latin cannot simply be left broken.
 
-So the site translates Latin itself, from parts it already had. **Whitaker's
-Words** parses every form and supplies principal parts and gender; the
-**decliner** and **conjugator** build the forms back up; the **course
-vocabulary** — 571 Cambridge pairs, plus about sixty core words the course
-happens to skip, *agricola* among them — answers which word means which.
+So the site translates Latin itself, from parts it already had. Four sources, each doing the one thing it is good at:
+
+| | |
+| --- | --- |
+| **Whitaker's Words** | morphology. Given a form it says the case, number, tense and mood, which is the thing nothing else here can do. |
+| **the decliner and conjugator** | building the forms back up, from principal parts. |
+| **the course vocabulary** | which word means which — 571 Cambridge pairs, plus about sixty core words the course skips, *agricola* among them. Asked first, so a class taught *villa* for "house" is given *villa*. |
+| **Wiktionary** | everything the course list does not have, which is most of the language. Its `{{t|la|…}}` translation tables answer English→Latin; its Latin entries gloss Latin→English; and its `la-noun` headwords state the declension. |
+
+**Why four and not one.** Each of them is wrong about something, and the others
+know it. Whitaker's writes for a parser, so *laudo* is "recommend" before it is
+"praise" and *carmen* is "card for wool" before it is "song". Its genitives
+cannot always be built on: it gives the syncopated *filius, fili*, so a decliner
+working back from it makes the stem "fil" and renders "son" as *filum*, thread.
+Wiktionary has none of that trouble and cannot parse an inflected form at all.
+The course list is the most reliable of the three and covers 571 words.
+
+**Choosing between readings** is most of the remaining work, and three rules do
+it. Closed classes before open ones — the language has a few dozen pronouns and
+thousands of verbs, so a form that could be either is almost always the pronoun,
+which is what stopped *id* being read as "go". Then how common Whitaker's says
+the word is, which is a field it ships and which settles *sum* against *sumo*.
+Then how ordinary the form is: a plain present indicative active before a
+pluperfect passive subjunctive, a nominative singular before a vocative plural.
 
 **Latin → English is nearly assembly**, because Latin says its grammar out
 loud. A noun in the accusative *is* the object; it does not have to be inferred
@@ -355,12 +374,20 @@ milites — soldier (nom. pl. / acc. pl.) · redierunt — return (3rd pl. perfe
 This waits at the very bottom of the chain, because MyMemory's Latin-into-
 English is occasionally right and a correct sentence beats a correct list.
 
-**Into Latin, a glossary of dictionary forms** — and this one sits *above* the
+**Into Latin, the words in Latin order** — and this one sits *above* the
 free engines, which is not symmetry but measurement. Asked for "the boy who
 praises the farmer is happy", MyMemory returns *boy qui derae agricola est
 happy*: Latin words and English ones in a heap, which a reader could copy out
-believing it. A list of dictionary forms is less than a translation and worth
-more, because it is true.
+believing it. Dictionary forms in the right order are less than a translation
+and worth more, because they are true.
+
+The order is not guesswork even where the grammar is. Latin drops a pronoun
+subject its verb already carries, so *ego* goes; the verb goes last, because
+neutral Latin is subject–object–verb and leaving *est* where English put it
+gives a sentence that reads like English wearing Latin words; and a modal
+follows the verb it governs. "It is not worth it" comes out *id non pretium id
+est* rather than a column of "word — word". A word with no Latin stays visible
+in brackets rather than vanishing out of the middle of a sentence.
 
 Both are labelled on the page as what they are — not a sentence, and not to be
 copied as one. Neither can be wrong about the grammar, because neither claims
@@ -670,7 +697,7 @@ What changes:
 | the header switch | **ES \| EN** becomes **FR \| EN** — English is still behind the same passcode |
 | the translator | French ↔ English, with French idioms and French Wikipedia for names |
 | the conjugator | French tables, and the three tabs become **-er / -ir / -re** |
-| the dictionary | the **Wiktionnaire**, with the Académie française linked beside it |
+| the dictionary | a free French dictionary, credited where its licence requires it |
 | the tutor | French grammar, French verb forms, answers in French |
 | the interface | every string, in French or English |
 | the allowance | **shared** — the same five off-topic questions per window |
@@ -753,18 +780,19 @@ missing row.
 
 ### Where French definitions come from
 
-**Not the Académie française, and the page says so.** The Académie publishes no
-API: `api.dictionnaire-academie.fr` does not resolve, and
-dictionnaire-academie.fr serves a JavaScript search whose results are not in the
-HTML it returns. Scraping it would be fragile and unkind.
+**There is no queryable authority for French** the way the RAE is for Spanish.
+The obvious candidate publishes no API, its search is a POST so no URL carries a
+word, and its entries live at opaque ids resolvable only by running its
+JavaScript. Scraping that would be fragile and unkind.
 
 So definitions come from the **Wiktionnaire** — French definitions of French
 words, CC BY-SA — which `server/dictionary-fr.js` reads as wikitext and
 normalises into exactly the shape the RAE route already returns, so the page and
 the tutor never learn which dictionary answered. Every entry carries a link to
-the Académie's own article, and a notice saying plainly where the text came
-from, on the same principle as the Spanish side: a dictionary that quietly
-changes authority is worse than one that admits what it is.
+a single line at the foot of an entry naming the source and its licence, which
+CC BY-SA requires. It is a footer rather than a banner: the page does not
+lecture the reader about where its words came from, and does not hide it
+either.
 
 Example sentences come from Tatoeba as before, asked for French rather than
 Spanish; the English gloss beside the headword comes from the French section of
@@ -813,7 +841,36 @@ matters: *Where is the station?* is *Où est la gare ?* through Catalan against
 a word it could not translate at all.
 
 **Latin gets no pivot**, because there is no language between it and English
-that Apertium can reach — it has no Latin pair in any direction.
+that Apertium can reach — it has no Latin pair in any direction. Nor does Latin
+use Lingva, MyMemory or Apertium at all any more: asked for Latin, MyMemory
+returns *Malagasy*, and "…the First World War hero who died in the Cuban Missile
+Crisis" came back as "…maherifo Worlde, izay maty tao amin'ny Krizin'ny
+Balafomanga Kiobana" — a real translation into a language nobody asked for,
+wearing enough Latin to pass a glance. The Latin chain is this site's own code
+from end to end.
+
+### Phrases Latin says its own way
+
+Word-by-word is the wrong tool for an idiom, and no amount of grammar fixes it.
+"How much does this cost" is five English words and two Latin ones — *quanti
+constat* — because Latin puts the price in the genitive and has no word for "how
+much" at all. Glossed a word at a time it comes out *quomodo multus magis hic
+consto*, which is not a sentence in any language.
+
+So `server/latin-idioms.js` holds about thirty of them, checked **before** the
+rules translator, because a rule applied to an idiom is confident nonsense:
+
+```
+how much does this cost  →  quanti constat
+it is not worth it       →  non tanti est
+I can't take it anymore  →  non iam ferre possum
+I love you               →  te amo
+```
+
+It is hand-written and unapologetically so. An idiom is by definition the thing
+a general rule gets wrong, and the site already keeps one of these for Spanish
+and French — this is the one place a list is the right shape rather than a gap
+waiting to be filled.
 
 Lingva is still the engine that would make French good rather than merely
 present, and Lingva instances are volunteer-run. Of eighteen once listed
@@ -1048,6 +1105,34 @@ shares the nominative. Read as a two-termination adjective it produces
 
 `npm test` checks 121 reference forms against the standard paradigms.
 
+### Hearing the word
+
+A dictionary that cannot say the word out loud is half a dictionary for anybody
+learning to speak, and these three languages are exactly the ones where the
+spelling does not tell you the sound: *chaleureux*, *corazón*, *puella*. A
+speaker button sits beside the headword — filled cone, stroked waves, the same
+drawing logic as the padlock, because an all-outline speaker is mush at 16px.
+
+**The budget is the shape of the feature.** The free ElevenLabs tier is 10,000
+characters a month for the whole site, so only single words are spoken, every
+clip is cached by word and by the browser, and a class of twenty-five looking up
+*chaleureux* spends ten characters once rather than two hundred and fifty. The
+guard against sentences lives next to the spending rather than only at the
+route, because a length cap alone lets "the quick brown fox jumps over it"
+through at 33 characters.
+
+**The engine is told which language it is speaking.** It used to be left to
+infer it from the text, and one word is not much to infer from: *couvercle* came
+back as "couvercol", an English speaker sounding out French spelling. The v2.5
+models take a language code and the site always knows which side it is on.
+
+**Latin says what it is, beside the button.** No speech model has Latin, so it
+is Italian phonology — closer to church Latin than to the classical
+pronunciation a Cambridge course teaches. Better to say so than to let somebody
+learn it wrong.
+
+Without a key the button removes itself rather than standing there failing.
+
 ### The stages page
 
 The Cambridge Latin Course teaches in numbered stages and students revise by
@@ -1190,13 +1275,22 @@ server/
                         does not draw a 429
   translators.js        the engine chain; every engine takes the pair as codes
   idioms.js             one idiom table per language
-  dictionary-fr.js   ·fr the Wiktionnaire, parsed from wikitext
+  deepl.js              the best engine in the chain, and the first asked
+  speech.js             pronunciation: one word, cached, told which language
+  dictionary-fr.js   ·fr a free dictionary, parsed from wikitext
   latin.js           ·la Whitaker's Words: principal parts, and the parse of
                          any form, ranked by how common each headword is
   latin-check.js     ·la parses a translation and corrects a wrong case
+  latin-translate.js ·la the rules translator, both directions, and the
+                         word-by-word fallback beneath it
+  latin-lexicon.js   ·la which Latin word means which English one — the course
+                         list, then Wiktionary
+  latin-idioms.js    ·la the phrases Latin says its own way
+  env.js                reads .env without a dependency
   providers/            gemini.js, groq.js, anthropic.js, openrouter.js
   routes/
     translate.js        dedicated engines, never a model
+    speak.js            one spoken word, refusing anything that is not one
     dictionary.js       picks a dictionary by `study`, then normalises both
                         into one shape; rejects what is not a word before
                         spending a request on it
@@ -1242,26 +1336,34 @@ public/
 test/
   conjugator.test.js       204 reference forms checked against RAE paradigms
   conjugator-fr.test.js ·fr 163 checked against the Bescherelle paradigms
-  latin.test.js         ·la 172 on the declension and conjugation engines, the
-                                number a corrected case takes, and the course data
+  latin.test.js         ·la 308 on the declension and conjugation engines, the
+                                number a corrected case takes, the course data,
+                                and every stage reachable six ways
+  latin-translate.test.js ·la 105 on the two-way lexicon, the English word
+                                shapes, clause splitting and the idiom table
   markdown.test.js          20 on the renderer, mostly that tables are tables
   conjugator-view.test.js  981 that the page's tense lists match every engine,
                                and that every verb in every index conjugates
-  tutor.test.js             52 checks on intent routing and the form index
-  tutor-fr.test.js      ·fr  64 that the French pack drives the same router
-  tutor-la.test.js      ·la  38 on the Latin pack and its two extra intents
-  corpus.test.js            13 checks on sentence ranking and gloss extraction
-  translators.test.js       42 checks on engine order, names, the agreement rule
-                               and the rest a failing Lingva instance is given
-  idioms.test.js            17 checks on idiom pairing in both directions
+  tutor.test.js             70 checks on intent routing and the form index
+  tutor-fr.test.js      ·fr  70 that the French pack drives the same router
+  tutor-la.test.js      ·la  44 on the Latin pack and its two extra intents
+  corpus.test.js            24 checks on sentence ranking and gloss extraction
+  translators.test.js       75 checks on engine order, names, the agreement
+                               rule, the DeepL and Latin routes, and what a
+                               failing Lingva instance is given
+  translate-model.test.js   27 on the guards around a model that no longer
+                               translates — kept, because the module is
+  speech.test.js            17 on what may be spoken and what is refused
+                               before a character of the month is spent
+  idioms.test.js            31 checks on idiom pairing in both directions
   quota.test.js             18 checks on the sliding window and refunds
   identity.test.js          15 checks on per-browser identity and its signature
-  lock.test.js              20 on the padlock's two switches, against a real
-                               express app, and that neither reaches the other
+  lock.test.js              21 on the padlock, against a real express app, and
+                               that the two switches never reach each other
   openrouter.test.js        20 checks on the guards that keep OpenRouter free
 ```
 
-`npm test` runs all 1,856, offline, in a couple of seconds.
+`npm test` runs all 2,213, offline, in a couple of seconds.
 
 ## The conjugation engine
 
@@ -1289,7 +1391,7 @@ is fetched and merged over it when the verb is in the dictionary — so the form
 you see are authoritative where RAE has them, and generated where it doesn't.
 The badge on the verb card tells you which.
 
-Neither French nor Latin has an equivalent to merge — the Académie française
+Neither French nor Latin has an equivalent to merge — no French authority
 publishes no API, and Whitaker's is a parser rather than a table of paradigms —
 so there the local engine *is* the table and the badge is left off rather than
 claiming an authority behind it.
