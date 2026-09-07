@@ -314,9 +314,10 @@ function buildTranslator(root) {
       return;
     }
     scheduleTranslate();
+    scheduleSettled();
   }
 
-  async function translate(force = false) {
+  async function translate(force = false, settled = false) {
     const text = input.value.trim();
     if (!text) return;
 
@@ -348,7 +349,11 @@ function buildTranslator(root) {
     status.append(el('span', { class: 'spinner' }), ` ${t('translator.working')}`);
 
     try {
-      const data = await postJson('/api/translate', { text, from: state.from, study: studyLang() }, { signal: controller.signal });
+      const data = await postJson(
+        '/api/translate',
+        { text, from: state.from, study: studyLang(), settled: settled || force },
+        { signal: controller.signal },
+      );
       if (controller.signal.aborted) return;
       output.textContent = data.translation || '';
       paintNotes(data.notes);
@@ -371,10 +376,21 @@ function buildTranslator(root) {
     }
   }
 
+  /**
+   * Two passes, because the good translator costs something.
+   *
+   * The first fires quickly and is answered by the free engines, so the box
+   * still fills in as you type. The second fires only once typing has actually
+   * stopped, and that is the one a model is allowed to answer — otherwise every
+   * half-finished prefix would spend a slice of a day's free quota on a
+   * sentence nobody asked about. Pressing the button or ⌘⏎ skips the wait.
+   */
   const scheduleTranslate = debounce(() => translate(), 650);
+  const scheduleSettled = debounce(() => translate(false, true), 1800);
 
   swap.addEventListener('click', () => {
     scheduleTranslate.cancel();
+    scheduleSettled.cancel();
     state.pending?.abort();
 
     // Keep what is on screen: the translation becomes the new source text.

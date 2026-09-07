@@ -85,6 +85,7 @@ function hostsToTry() {
 
 import { alreadyIdiomatic, findIdioms } from './idioms.js';
 import { throttle, USER_AGENT } from './throttle.js';
+import { modelTranslate } from './translate-model.js';
 
 const WIKIPEDIA = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
@@ -490,7 +491,19 @@ async function apertium(text, from, to) {
   throw new Error(`Apertium has no ${pair} pair`);
 }
 
-const ENGINES = [namedEntity, lingva, myMemory, apertium];
+/**
+ * The order translation is attempted in.
+ *
+ * The model sits above the dedicated engines rather than below them, which
+ * reverses this project's original rule. That rule held while Lingva worked;
+ * it does not survive Lingva's disappearance, because what remains cannot
+ * translate French or Latin accurately and a study aid that is confidently
+ * wrong is worse than one that is slow. Wikipedia still goes first — an
+ * established name is a fact to look up, not a phrase to translate — and every
+ * free engine stays underneath, so a spent quota costs quality rather than
+ * service. See translate-model.js for what is done about a model's bad habits.
+ */
+const ENGINES = [namedEntity, modelTranslate, lingva, myMemory, apertium];
 
 /**
  * Swap a word-for-word rendering of an idiom for the equivalent idiom.
@@ -536,11 +549,17 @@ async function restoreIdioms(source, translated, from, to, translateSpan) {
  * Translate, trying each engine until one answers.
  * @returns {Promise<{text: string, engine: string, notes: Array}>}
  */
-export async function translate(text, from, to) {
+/**
+ * @param {object} [options]
+ * @param {boolean} [options.model] whether the model may be asked. False while
+ *        a sentence is still being typed — see routes/translate.js.
+ */
+export async function translate(text, from, to, { model = true } = {}) {
   const failures = [];
   let guess = null;
 
   for (const engine of ENGINES) {
+    if (engine === modelTranslate && !model) continue;
     try {
       const result = await engine(text, from, to);
       if (!result.text.trim()) continue;

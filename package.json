@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node test/conjugator.test.js && node test/conjugator-fr.test.js && node test/latin.test.js && node test/conjugator-view.test.js && node test/markdown.test.js && node test/tutor.test.js && node test/tutor-fr.test.js && node test/tutor-la.test.js && node test/quota.test.js && node test/identity.test.js && node test/lock.test.js && node test/corpus.test.js && node test/translators.test.js && node test/idioms.test.js && node test/openrouter.test.js"
+    "test": "node test/conjugator.test.js && node test/conjugator-fr.test.js && node test/latin.test.js && node test/conjugator-view.test.js && node test/markdown.test.js && node test/tutor.test.js && node test/tutor-fr.test.js && node test/tutor-la.test.js && node test/quota.test.js && node test/identity.test.js && node test/lock.test.js && node test/corpus.test.js && node test/translate-model.test.js && node test/translators.test.js && node test/idioms.test.js && node test/openrouter.test.js"
   },
   "engines": {
     "node": ">=20"
