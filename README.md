@@ -160,7 +160,7 @@ class looking words up would have exhausted a day's allowance before lunch.
 | Example sentences | [Tatoeba](https://tatoeba.org) — real sentences by native speakers, already paired with English translations (CC BY) | free, unmetered |
 | English glosses | [Wiktionary](https://en.wiktionary.org) (CC BY-SA) | free, unmetered |
 | Definitions | RAE, via rae-api.com | 5,000/day with a key |
-| Translation | DeepL, then Lingva, MyMemory and Apertium beneath it — **never a model** | a free tier, then free and unmetered |
+| Translation | DeepL, a rules translator for Latin, then Lingva, MyMemory and Apertium — **never a model** | a free tier, then free and unmetered |
 
 A model is woken only when Tatoeba has nothing for a word, and the template
 frame is the last resort after that. Seven lookups across common and uncommon
@@ -172,6 +172,7 @@ No model, at any point. Four dedicated engines, tried in order:
 
 | | | |
 | --- | --- | --- |
+| 0.3 | **the rules translator** | Latin only, and built here out of Whitaker's Words, the decliner, the conjugator and the course vocabulary. Nothing on the open web translates Latin, so the site does it itself. See **Translating Latin without an engine** below. |
 | 0.2 | **DeepL** | A real translation engine, and the best one here for French and Spanish — what Lingva was supposed to be, answering to a published contract rather than to whether Google feels like serving a volunteer's proxy today. Free tier is 500,000 characters a month. **No Latin**, which is why the model is in the chain at all. |
 | 0 | **Wikipedia** | for names and titles. Machine translation renders them literally: "Cuban Missile Crisis" becomes *"crisis de los misiles cubanos"*, which says the missiles were Cuban when they were Soviet. Wikipedia's cross-language links hold the name each language actually uses — *Crisis de los misiles de Cuba*. |
 | 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES`, and one that fails is rested for a minute rather than re-asked on every translation. |
@@ -182,6 +183,64 @@ Apertium is the **floor**, not the usual answer. Spanish normally lands on
 Lingva; it only reaches Apertium when everything above it has declined, which at
 the time of writing is all the time. Judge the translator's quality when Lingva
 is back.
+
+### Translating Latin without an engine
+
+Latin is the one language nothing will translate. DeepL has no pair for it,
+Apertium has no route to it in any direction, and MyMemory returns *dog de
+puella* for "the dog of the girl" and *puella complens the Farmer* for "the boy
+praises the farmer". For a while a model filled the gap; models are out of the
+translation chain now, and Latin cannot simply be left broken.
+
+So the site translates Latin itself, from parts it already had. **Whitaker's
+Words** parses every form and supplies principal parts and gender; the
+**decliner** and **conjugator** build the forms back up; the **course
+vocabulary** — 571 Cambridge pairs, plus about sixty core words the course
+happens to skip, *agricola* among them — answers which word means which.
+
+**Latin → English is nearly assembly**, because Latin says its grammar out
+loud. A noun in the accusative *is* the object; it does not have to be inferred
+from where it is sitting. Every word is parsed, each case is read as the role it
+marks, and the pieces are laid out in English order:
+
+```
+puer agricolam laudat        →  The boy praises the farmer
+canis puellae                →  The dog of the girl
+servus in villa laborat      →  The slave works in the house
+puer puellae pecuniam dat    →  The boy gives the money to the girl
+servi laborabant             →  The slaves were working
+```
+
+**English → Latin is the harder way**, because English hides what Latin states,
+and the little words carry it instead: what precedes the verb is the subject,
+what follows it is the object, "of" is a genitive, "to" a dative, "with" an
+ablative. Each word is looked up, put into the case its role calls for, and
+emitted in conventional Latin order — subject, then the rest, then the verb:
+
+```
+the boy praises the farmer       →  puer agricolam laudat
+the farmers praise the girl      →  agricolae puellam laudant
+the dog of the girl              →  canis puellae
+the boy gives money to the girl  →  puer pecuniam puellae dat
+the sailor walks with the friend →  nauta cum amico ambulat
+```
+
+Ambiguity is the whole difficulty, and the sentence resolves it. *puellae* is
+genitive, dative and nominative plural at once: a sentence with a verb and an
+object wants "gives the money **to the girl**", a phrase with neither wants "the
+dog **of the girl**". *canis* is both "dog" and "you sing", so a word that is
+also a noun is only read as the verb when it stands last or when nothing else
+can be one. Going the other way, English gives one cheap signal worth more than
+it looks — a word after "the" is a noun — without which "the dog of the girl"
+came out as *puellae canit*.
+
+**It declines rather than guesses.** Subordinate clauses, participles, indirect
+statement, relative pronouns — anything past the sentence shapes a first- or
+second-year class writes — throw, and the chain falls through to the engines
+below. A translator that quietly invented Latin would be worse than one that
+admits the sentence is beyond it, because the reader cannot tell the difference
+and is here to learn. Latin output is still checked word by word afterwards, as
+it always was.
 
 ### No model translates
 
@@ -196,18 +255,12 @@ that: a real engine, better than a model at French and Spanish, billed by the
 character against a large allowance rather than by the request against a small
 one.
 
-**The cost is Latin, and it is a real one.** DeepL has no Latin pair and no
-dedicated engine has; MyMemory returns *dog de puella* for "the dog of the girl"
-and *puella complens the Farmer* for "the boy praises the farmer". Latin
-translation is only as good as MyMemory until something better exists. What
-saves it from being misleading rather than merely poor is the check that was
-already there: every Latin word is parsed through Whitaker's, and a word the
-engine left in English is struck through and named — see **The Latin side**.
+The cost was Latin, which no dedicated engine translates — and rather than
+leave that broken, the site now translates Latin itself out of the morphology
+it already had. See **Translating Latin without an engine** above.
 
-`server/translate-model.js` is kept and still tested. Putting `modelTranslate`
-back into the `ENGINES` list in `server/translators.js`, after `deepl` so it only
-ever sees what DeepL cannot, is the whole of the change — and Latin alone would
-be the reason to make it.
+`server/translate-model.js` is kept and still tested, and is not in the
+`ENGINES` list.
 
 The translator also waits **900ms** after you stop typing rather than 650. Every
 pause is a DeepL request against a shared monthly allowance, so a beat more

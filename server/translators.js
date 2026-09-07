@@ -86,6 +86,7 @@ function hostsToTry() {
 import { alreadyIdiomatic, findIdioms, wantsProgressive } from './idioms.js';
 import { throttle, USER_AGENT } from './throttle.js';
 import { deepl } from './deepl.js';
+import { latinRules } from './latin-translate.js';
 
 const WIKIPEDIA = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
@@ -529,14 +530,16 @@ async function apertium(text, from, to) {
  * which fires as you type — would drain it on sentences nobody asked about.
  * The chain is dedicated engines only, which is where this project started.
  *
- * The cost of that is Latin, and it is a real cost rather than a theoretical
- * one: DeepL has no Latin pair, no dedicated engine has, and MyMemory's Latin
- * returns "dog de puella" for *the dog of the girl*. Latin translation is only
- * as good as MyMemory until something better exists. translate-model.js is kept
- * and still tested; putting `modelTranslate` back in this list — after `deepl`,
- * so it only ever sees what DeepL cannot — is the whole of the change.
+ * Latin has no engine anywhere — DeepL has no pair for it and MyMemory returns
+ * "dog de puella" for *the dog of the girl* — so the site builds its own out of
+ * the parts it already has: Whitaker's Words for the morphology, the decliner
+ * and conjugator for the forms, the course's own vocabulary for the words. It
+ * handles the sentence shapes a class writes and declines everything else, at
+ * which point the free engines take over as before. See latin-translate.js.
+ *
+ * translate-model.js is kept and still tested, and is not in this list.
  */
-const ENGINES = [namedEntity, deepl, lingva, myMemory, apertium];
+const ENGINES = [namedEntity, deepl, latinRules, lingva, myMemory, apertium];
 
 /**
  * Swap a word-for-word rendering of an idiom for the equivalent idiom.
