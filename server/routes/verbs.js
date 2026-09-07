@@ -116,9 +116,34 @@ function normalize(conjugations) {
   return table;
 }
 
+/**
+ * A verb, rather than whatever was in the box. Same guard as the dictionary's,
+ * and for the same reason: "../../etc/passwd" is not a failed lookup, and
+ * sending it to the RAE produced a 502 blaming the RAE.
+ */
+const LOOKS_LIKE_A_VERB = /^[\p{L}][\p{L}\p{M}'’-]*$/u;
+
+/**
+ * Spanish only, and now it says so.
+ *
+ * This asks the RAE, which is the authority for Spanish and knows nothing of
+ * the others — French and Latin are conjugated by their own rules engines in
+ * the browser, and the page only calls this where its engine is marked
+ * authoritative. Nothing reaches it with another subject today, but silence
+ * here is dangerous rather than merely untidy: Latin *moneo* came back 200
+ * with a Spanish table, because *monear* is a Spanish verb. A wrong answer
+ * that looks right is worse than an error.
+ */
 router.get('/conjugations', async (req, res) => {
+  if (req.query.study && req.query.study !== 'es') {
+    return res.status(400).json({ error: 'Esta tabla es solo de español.' });
+  }
+
   const verb = String(req.query.verb ?? '').trim().toLowerCase().slice(0, 40);
   if (!verb) return res.status(400).json({ error: 'Falta el verbo.' });
+  if (!LOOKS_LIKE_A_VERB.test(verb)) {
+    return res.status(400).json({ error: 'Busca un verbo: solo letras, sin símbolos.' });
+  }
 
   const cached = cache.get(verb);
   if (cached && Date.now() - cached.at < CACHE_TTL) return res.json(cached.payload);
