@@ -429,13 +429,24 @@ export async function answer(question, { language = null, force = false, study =
     const phrase = translationPhrase(translateMatch[1]);
     if (!phrase) return respond(pack.CAPABILITIES[lang]);
 
-    // "how do you say the subjunctive" is a grammar question wearing this
-    // shape; the same guard step 5b uses, applied before the engines.
+    /**
+     * A grammar term asked about this way is still a translation request.
+     *
+     * This used to hand back the topic and nothing else, on the reasoning that
+     * "the subjunctive" is a grammar question wearing a translation's clothes.
+     * It is not: "how do you say the subjunctive" asks what the words are, and
+     * "what is the subjunctive" asks what it does — the site answers that one
+     * already. So the translation leads, and the topic follows it, because a
+     * reader who asked about the subjunctive is not worse off for being handed
+     * the note on it as well.
+     *
+     * The bare shape — "the subjunctive in Spanish", with nothing asking for a
+     * translation — is genuinely ambiguous and still resolves to the topic.
+     * That is step 5b, below.
+     */
     const asTopic = pack.TOPICS
       .map((topic) => ({ topic, score: scoreTopic(pack, topic, fold(phrase)) }))
       .sort((a, b) => b.score - a.score)[0];
-
-    if (asTopic?.score >= 100) return respond(topicAnswer(asTopic.topic, lang));
 
     askedSomethingSpecific = true;
     const from = INTENTS.intoEnglishLanguage?.test(text) ? pack.code : 'en';
@@ -448,8 +459,13 @@ export async function answer(question, { language = null, force = false, study =
         const defined = await dictionaryAnswer(pack, blocks.translation, lang).catch(() => null);
         if (defined) return respond([...blocks, ...defined]);
       }
+      if (asTopic?.score >= 100) return respond([...blocks, ...topicAnswer(asTopic.topic, lang)]);
       return respond(blocks);
     }
+
+    // The engines could not answer, but the phrase names something the site
+    // explains. Better that than nothing.
+    if (asTopic?.score >= 100) return respond(topicAnswer(asTopic.topic, lang));
   }
 
   const defineMatch = INTENTS.define.exec(text);

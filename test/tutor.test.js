@@ -85,6 +85,21 @@ for (const [question, pattern, name] of cases) {
   ok(`routes "${question}" → ${name}`, result.confident && pattern.test(body), body.slice(0, 160));
 }
 
+// --- a grammar term asked as a translation ---------------------------------
+// Online this answers "el subjuntivo" and then the topic. Offline — which is
+// how these run — the engines cannot be reached, and the point of this check is
+// that the reader still gets the note rather than a shrug.
+const saidSubjunctive = await answer('how do you say the subjunctive');
+ok('"how do you say the subjunctive" still answers with the engines down',
+  saidSubjunctive.confident, text(saidSubjunctive.blocks).slice(0, 120));
+ok('and what it answers with is the topic',
+  /subjunctive/i.test(text(saidSubjunctive.blocks)), text(saidSubjunctive.blocks).slice(0, 120));
+
+// The bare shape is ambiguous and stays a topic either way.
+const bareSubjunctive = await answer('the subjunctive in spanish');
+ok('"the subjunctive in Spanish" is a topic', bareSubjunctive.confident
+  && /mood/i.test(text(bareSubjunctive.blocks)), text(bareSubjunctive.blocks).slice(0, 120));
+
 // --- tense and person narrowing -------------------------------------------
 const subjunctive = await answer('conjuga tener en subjuntivo');
 ok('subjunctive request returns subjunctive forms',

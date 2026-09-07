@@ -51,6 +51,14 @@ backwards: every verb there is stored with its English gloss, so *to say* finds
 Multi-sense glosses are indexed under each sense, and under the bare verb too,
 since a reader is as likely to type *say* as *to say*.
 
+**"How do you say X" translates X, even when X is a grammar term.** It used to
+hand back the topic instead — asking how to say *the subjunctive* got an essay
+on the subjunctive and never the words *el subjuntivo*. Those are two different
+questions and the site answers both: "how do you say" asks what the words are,
+"what is" asks what it does. The translation leads and the note follows it,
+since a reader who asked about the subjunctive is not worse off for getting
+both.
+
 Grammar questions wearing the same shape stay grammar questions. *the subjunctive
 in Spanish* is scored as a topic on the phrase alone — the trailing "in Spanish"
 is what made it look like a translation request — and *to be in Spanish* gets ser
