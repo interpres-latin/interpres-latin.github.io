@@ -303,8 +303,34 @@ is Latin, and is not what was asked. Nothing on the open web translates Latin
 reliably, so a Latin translation this engine did not build is marked uncertain
 whatever it looks like, and the page says which kind of doubt it is.
 
-**It declines rather than guesses.** Subordinate clauses, participles, indirect
-statement, relative pronouns — anything past the sentence shapes a first- or
+**Subordinate clauses, and the subjunctive.** A sentence is cut at the words
+that mark a clause — *I wish*, *if*, *when*, *because*, *so that*, *although* —
+and at its commas, and each clause is built on its own in the mood its marker
+calls for:
+
+```
+I wish I were dead                   →  utinam mortuus essem
+I wish the boy were happy            →  utinam puer laetus esset
+if the boy praises, the farmer works →  si puer laudat agricola laborat
+when the girl works, the boy sleeps  →  ubi puella laborat puer dormit
+the boy works because he is happy    →  puer laborat quod laetus est
+```
+
+The mood is decided inside the clause, because only there is it known whether
+the thing is real. "If the boy praises" is a plain condition and stays
+indicative; "I wish I were dead" is about what is *not* the case, and English
+marks that the same way Latin does — with a past form that has nothing to do
+with the past. That is the imperfect subjunctive, *essem*.
+
+Two smaller things fell out of building it. *mortuus* is the participle of
+*morior*, which Whitaker's files as a verb, so asking for an adjective found no
+word for "dead" — a participle in *-us* declines exactly as an adjective does,
+so where the dictionary offers none and the word has that shape, the citation is
+built from the word itself. And "…, I really do" is a whole English clause
+carrying no content, which Latin says with one adverb: *vere*.
+
+**It still declines rather than guesses.** Relative pronouns, indirect
+statement, the ablative absolute — anything past the sentence shapes a first- or
 second-year class writes — throw, and the chain falls through to the engines
 below. A translator that quietly invented Latin would be worse than one that
 admits the sentence is beyond it, because the reader cannot tell the difference

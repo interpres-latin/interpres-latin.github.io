@@ -658,6 +658,34 @@ export function adjectiveCitation(principalParts) {
  */
 const SUM = 'sum, esse, fui, futurus';
 
+/**
+ * An adjective, or something that behaves like one.
+ *
+ * *mortuus* is the participle of *morior* and Whitaker's files it as a verb, so
+ * asking for an adjective found nothing and "I wish I were dead" had no word
+ * for "dead". A participle in *-us* declines exactly as a first-and-second
+ * declension adjective does, so where the dictionary offers no adjective and
+ * the word has that shape, its citation is built from the word itself.
+ */
+async function adjectiveLike(english) {
+  const direct = await latinWord(english, 'adjective');
+  if (direct) return { citation: adjectiveCitation(direct.analysis.principalParts), surface: direct.surface };
+
+  for (const candidate of latinFor(english)) {
+    if (!/(?:us|a|um)$/.test(candidate)) continue;
+    const stem = candidate.replace(/(?:us|a|um)$/, '');
+    if (!stem) continue;
+    return { citation: `${stem}us, ${stem}a, ${stem}um`, surface: candidate };
+  }
+  return null;
+}
+
+/** Decline whichever of the two shapes `adjectiveLike` handed back. */
+function declineLike(adjective, gender, wantedCase, number) {
+  const built = declineAdjective(adjective.citation);
+  return built?.table?.[gender || 'masculine']?.[number]?.[wantedCase] ?? null;
+}
+
 /** Find the Latin word for an English one, of the part of speech wanted. */
 async function latinWord(english, wantedPos) {
   if (!english) return null;
@@ -677,14 +705,153 @@ function looksPlural(english) {
   return singularsOf(english).some((singular) => latinFor(singular).length > 0);
 }
 
+/**
+ * The English words that start a subordinate clause, and what Latin does with
+ * each one.
+ *
+ * `subjunctive` is the mood the clause takes regardless; `unreal` marks the
+ * ones whose mood depends on whether the clause is about something that did
+ * not happen — "if the boy praises" is indicative, "if the boy were praising"
+ * is not.
+ */
+const CLAUSE_MARKERS = [
+  { english: /^i wish\b/, lead: 'utinam', subjunctive: true, unreal: true },
+  { english: /^if only\b/, lead: 'utinam', subjunctive: true, unreal: true },
+  { english: /^(?:so that|in order that|in order to)\b/, lead: 'ut', subjunctive: true },
+  { english: /^(?:lest|so that not)\b/, lead: 'ne', subjunctive: true },
+  { english: /^(?:although|though)\b/, lead: 'quamquam' },
+  { english: /^unless\b/, lead: 'nisi', unreal: true },
+  { english: /^if\b/, lead: 'si', unreal: true },
+  { english: /^(?:when|whenever)\b/, lead: 'ubi' },
+  { english: /^while\b/, lead: 'dum' },
+  { english: /^(?:because|since)\b/, lead: 'quod' },
+  { english: /^and\b/, lead: 'et' },
+  { english: /^but\b/, lead: 'sed' },
+];
+
+/**
+ * Tags that add emphasis and no content: "…, I really do".
+ *
+ * English says these with a whole clause and Latin with one adverb, so they are
+ * recognised rather than pushed through a clause builder that would rightly
+ * refuse them for having no verb of their own.
+ */
+const EMPHATIC_TAGS = {
+  'i really do': 'vere', 'i really am': 'vere', 'i do': 'vere',
+  'i really did': 'vere', really: 'vere', indeed: 'vere', truly: 'vere',
+};
+
+/**
+ * Cut an English sentence into clauses at the words that mark them.
+ *
+ * @returns {Array<{lead: string|null, subjunctive: boolean, unreal: boolean, text: string}>}
+ */
+export function splitEnglishClauses(text) {
+  const clean = String(text ?? '').toLowerCase().replace(/[.!?]+\s*$/, '').trim();
+  if (!clean) return [];
+
+  const clauses = [];
+  let rest = clean;
+  let pending = { lead: null, subjunctive: false, unreal: false };
+
+  while (rest) {
+    // The earliest marker that is not at position zero ends the current clause;
+    // one at position zero opens it.
+    let cutAt = -1;
+    let found = null;
+
+    for (let i = 0; i < rest.length; i += 1) {
+      if (i > 0 && !/\s|,/.test(rest[i - 1])) continue;
+      const tail = rest.slice(i);
+      const marker = CLAUSE_MARKERS.find((one) => one.english.test(tail));
+      if (!marker) continue;
+      if (i === 0) {
+        pending = {
+          lead: marker.lead,
+          subjunctive: Boolean(marker.subjunctive),
+          unreal: Boolean(marker.unreal),
+        };
+        rest = tail.replace(marker.english, '').trim();
+        i = -1;
+        continue;
+      }
+      cutAt = i;
+      found = marker;
+      break;
+    }
+
+    // A comma ends a clause too, and the one after it is a main clause unless
+    // it opens with a marker of its own — "if the boy praises, the farmer
+    // works" is two clauses and only the first is conditional.
+    const comma = rest.indexOf(',');
+    if (comma !== -1 && (cutAt === -1 || comma < cutAt)) {
+      cutAt = comma;
+      found = null;
+    }
+
+    const head = (cutAt === -1 ? rest : rest.slice(0, cutAt)).replace(/[,;]\s*$/, '').trim();
+    if (head) clauses.push({ ...pending, text: head });
+
+    if (cutAt === -1) break;
+    pending = {
+      lead: found?.lead ?? null,
+      subjunctive: Boolean(found?.subjunctive),
+      unreal: Boolean(found?.unreal),
+    };
+    rest = found
+      ? rest.slice(cutAt).replace(found.english, '').trim()
+      : rest.slice(cutAt + 1).trim();
+  }
+
+  return clauses;
+}
+
+/**
+ * English to Latin, clause by clause.
+ *
+ * Each clause is built on its own, in the mood its marker calls for, and they
+ * are joined in the order English gave them — which is the order Latin wants
+ * too for the shapes here: the *si* clause before its main clause, the *quod*
+ * clause after the statement it explains.
+ */
 export async function englishToLatin(text) {
-  const tokens = tokenise(text).filter(isWord).map(fold);
+  const clauses = splitEnglishClauses(text);
+  if (!clauses.length) fail('nothing to translate');
+  if (clauses.length > 3) fail('too many clauses for the rules translator');
+
+  const built = [];
+  for (const clause of clauses) {
+    const tag = EMPHATIC_TAGS[clause.text];
+    if (tag) { built.push(tag); continue; }
+
+    const tokens = tokenise(clause.text).filter(isWord).map(fold);
+    built.push(await buildClause(tokens, {
+      subjunctive: clause.subjunctive,
+      unreal: clause.unreal,
+      lead: clause.lead,
+    }));
+  }
+
+  const sentence = built.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+  if (!sentence) fail('nothing to say');
+  return sentence;
+}
+
+/**
+ * One clause, in the mood and tense the sentence around it calls for.
+ *
+ * This was the whole of `englishToLatin` until clauses arrived. It still does
+ * all the work; what changed is that it is told which mood to build in, so a
+ * subordinate clause can come out subjunctive.
+ */
+async function buildClause(tokens, { subjunctive = false, unreal = false, lead = null } = {}) {
   if (!tokens.length) fail('nothing to translate');
-  if (tokens.length > 12) fail('too long for the rules translator');
+  if (tokens.length > 14) fail('too long for the rules translator');
 
   // Tense markers are little words in English and endings in Latin, so they are
   // read off and removed before anything else is looked at.
   let tense = 'praesens';
+  let past = false;
   const content = [];
 
   /**
@@ -725,12 +892,13 @@ export async function englishToLatin(text) {
     if (article) { determined.add(content.length); article = false; }
     if (token === 'will') { tense = 'futurum'; continue; }
     if (['was', 'were'].includes(token)) {
+      past = true;
       // "was working" is imperfect; "was happy" is the copula in the past.
       if (/ing$/.test(tokens[i + 1] ?? '')) tense = 'imperfectum';
       else { copula = true; tense = 'imperfectum'; }
       continue;
     }
-    if (['has', 'have', 'had'].includes(token)) { tense = 'perfectum'; continue; }
+    if (['has', 'have', 'had'].includes(token)) { tense = 'perfectum'; past = true; continue; }
     if (['is', 'are', 'am', 'be'].includes(token)) {
       // "is working" is a tense; "is happy" is *sum* with a complement.
       if (!/ing$/.test(tokens[i + 1] ?? '')) copula = true;
@@ -817,13 +985,28 @@ export async function englishToLatin(text) {
     const number = subjectPerson?.number ?? (subject?.number ?? 'singular');
     const cell = PERSON_CELL[person]?.[number] ?? 's3';
 
-    const form = table?.indicativus?.[tense]?.[cell];
+    /**
+     * The mood, decided here because only here is it known whether the clause
+     * is about something that did not happen.
+     *
+     * "if the boy praises" is a plain condition and stays indicative; "I wish I
+     * were dead" is a wish about what is not the case, and English marks it the
+     * same way Latin does — with a past form that is not about the past. That
+     * is the imperfect subjunctive: *essem*.
+     */
+    const useSubjunctive = subjunctive || (unreal && past);
+    const mood = useSubjunctive ? 'coniunctivus' : 'indicativus';
+    const wanted = useSubjunctive ? (past ? 'imperfectum' : 'praesens') : tense;
+
+    const form = table?.[mood]?.[wanted]?.[cell];
     if (!form) fail(`cannot conjugate ${verb.surface}`);
-    if (negated) pieces.push('non');
+    // `ne` is itself the negative in a subjunctive clause; `non` before it too
+    // would say it twice.
+    if (negated && lead !== 'ne') pieces.push('non');
     pieces.push(form);
   }
 
-  const sentence = pieces.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+  const sentence = [lead, ...pieces].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
   if (!sentence) fail('nothing to say');
   return sentence;
 }
@@ -886,7 +1069,7 @@ async function nounPhrase(tokens, wantedCase, preposition = null, agreeWith = nu
       ? (singularsOf(token).find((one) => latinFor(one).length) ?? token)
       : token;
     const asNoun = await latinWord(singular, 'noun');
-    const asAdjective = await latinWord(singular, 'adjective');
+    const asAdjective = await adjectiveLike(singular);
     if (!asNoun && !asAdjective) fail(`no Latin for "${token}"`);
     resolved.push({ token, asNoun, asAdjective });
   }
@@ -908,8 +1091,7 @@ async function nounPhrase(tokens, wantedCase, preposition = null, agreeWith = nu
     if (!agreeWith) fail(`no noun in "${words.join(' ')}"`);
     const only = resolved.find((one) => one.asAdjective);
     if (!only) fail(`no noun in "${words.join(' ')}"`);
-    const parts = only.asAdjective.analysis.principalParts;
-    const form = adjectiveForm(parts, agreeWith.gender, wantedCase, number);
+    const form = declineLike(only.asAdjective, agreeWith.gender, wantedCase, number);
     if (!form) fail(`cannot decline ${only.asAdjective.surface}`);
     return { number, gender: agreeWith.gender, words: [preposition, form].filter(Boolean) };
   }
@@ -928,8 +1110,7 @@ async function nounPhrase(tokens, wantedCase, preposition = null, agreeWith = nu
     if (i === headAt) continue;
     const { token, asAdjective } = resolved[i];
     if (!asAdjective) fail(`cannot place "${token}"`);
-    const adjectiveParts = asAdjective.analysis.principalParts;
-    const built = adjectiveForm(adjectiveParts, gender, wantedCase, number);
+    const built = declineLike(asAdjective, gender, wantedCase, number);
     if (!built) fail(`cannot decline ${asAdjective.surface}`);
     rendered.push(built);
   }
