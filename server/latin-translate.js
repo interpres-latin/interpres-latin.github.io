@@ -31,7 +31,10 @@
  */
 
 import { analyse } from './latin.js';
-import { courseGloss, latinFor, latinCandidates, singularsOf } from './latin-lexicon.js';
+import {
+  courseGloss, latinFor, latinCandidates, singularsOf, latinGlossOf, primeLatinGlosses,
+  latinNounParts,
+} from './latin-lexicon.js';
 import { formOf, declineAdjective } from '../public/js/lib/decliner-la.js';
 import { conjugate } from '../public/js/lib/conjugator-la.js';
 
@@ -253,6 +256,29 @@ function frequencyRank(analysis) {
   return FREQUENCY_RANK[String(analysis?.frequency ?? '').toLowerCase()] ?? 3;
 }
 
+/**
+ * How out-of-the-way a form is, as a number to sort by.
+ *
+ * A word is far likelier to be a plain present indicative active than a
+ * pluperfect passive subjunctive, and likelier to be a nominative singular than
+ * a vocative plural. Whitaker's lists every reading a form *could* have, with
+ * no view about which one a sentence probably means; this supplies the view.
+ */
+function complexityRank(inflection) {
+  const mood = { indicative: 0, imperative: 1, subjunctive: 2, infinitive: 3, participle: 3 };
+  const voice = { active: 0, passive: 2 };
+  const tense = { present: 0, imperfect: 1, perfect: 1, future: 2, pluperfect: 3, futureperfect: 4 };
+  const grammaticalCase = {
+    nominative: 0, accusative: 0, genitive: 1, dative: 1, ablative: 1, vocative: 3, locative: 4,
+  };
+
+  return (mood[inflection.mood] ?? 1)
+    + (voice[inflection.voice] ?? 0)
+    + (tense[String(inflection.tense).toLowerCase()] ?? 1)
+    + (grammaticalCase[inflection.case] ?? 0)
+    + (inflection.number === 'plural' ? 0.5 : 0);
+}
+
 function rankPos(pos, last) {
   const order = last
     ? ['verb', 'pronoun', 'adverb', 'noun', 'adjective']
@@ -324,7 +350,11 @@ export function firstSense(definition) {
  * because a class taught "works" should be told "works" and not "labour, toil".
  */
 function glossFor(surface, analysis) {
-  const gloss = courseGloss(surface) ?? courseGloss(analysis?.lemma) ?? analysis?.definition;
+  const gloss = courseGloss(surface)
+    ?? courseGloss(analysis?.lemma)
+    ?? latinGlossOf(surface)
+    ?? latinGlossOf(analysis?.lemma)
+    ?? analysis?.definition;
   // Trimmed even when it came from the course list: those carry alternatives
   // too — *villa* is glossed "house, villa" — and a translation wants one word.
   return firstSense(gloss);
@@ -332,7 +362,15 @@ function glossFor(surface, analysis) {
 
 /** A verb gloss reduced to its bare stem: "works" → "work", "to praise" → "praise". */
 export function verbStem(gloss) {
-  let stem = String(gloss ?? '').replace(/^to\s+/, '').trim();
+  /**
+   * "to praise", "I defend", "praises" — three ways a gloss can be written and
+   * all three have to come back as the bare stem.
+   *
+   * The Cambridge lists give the first person for the verbs Books II and III
+   * teach in it: *defendo* is glossed "I defend". Left in, that produced "The
+   * soldier I defends the city".
+   */
+  let stem = String(gloss ?? '').replace(/^(?:to|i)\s+/i, '').trim();
   if (STEM_OF_THIRD[stem]) return STEM_OF_THIRD[stem];
   if (/ies$/.test(stem)) stem = `${stem.slice(0, -3)}y`;
   else if (/(?:[sxz]|ch|sh|o)es$/.test(stem)) stem = stem.slice(0, -2);
@@ -434,7 +472,8 @@ async function readingsOf(word) {
   if (!analyses?.length) return [];
 
   const ranked = [...analyses].sort((one, other) => (rankPos(one.pos, false) - rankPos(other.pos, false))
-    || (frequencyRank(one) - frequencyRank(other)));
+    || (frequencyRank(one) - frequencyRank(other))
+    || (complexityRank(one.inflections?.[0] ?? {}) - complexityRank(other.inflections?.[0] ?? {})));
   return ranked.flatMap((analysis) => (analysis.inflections ?? []).map((inflection) => ({
     // The inflection knows it is a participle where the headword only says
     // "verb", and a participle behaves like an adjective. Losing that turned
@@ -464,6 +503,14 @@ export async function latinToEnglish(text) {
   if (tokens.length > 12) fail('too long for the rules translator');
 
   const parsed = await Promise.all(tokens.map(readingsOf));
+
+  // Glosses for the words as written *and* for the dictionary forms behind
+  // them: Wiktionary answers "filiam" with its morphology and "filia" with its
+  // meaning, and the meaning is what a translation needs.
+  await primeLatinGlosses([
+    ...tokens.map(fold),
+    ...parsed.flat().map((reading) => reading.analysis?.lemma).filter(Boolean),
+  ]);
   if (parsed.some((readings) => !readings.length)) {
     fail(`unknown Latin: ${tokens.filter((_, i) => !parsed[i].length).join(', ')}`);
   }
@@ -488,7 +535,8 @@ export async function latinToEnglish(text) {
     return [...finite].sort((one, other) => {
       const command = (reading) => (reading.inflection.mood === 'imperative' ? 1 : 0);
       return (command(one) - command(other))
-        || (frequencyRank(one.analysis) - frequencyRank(other.analysis));
+        || (frequencyRank(one.analysis) - frequencyRank(other.analysis))
+        || (complexityRank(one.inflection) - complexityRank(other.inflection));
     })[0];
   };
 
@@ -731,7 +779,18 @@ function pickCase(candidates, phrases, shape = {}) {
     const freeA = filled.has(CASE_ROLE[a.inflection.case]) ? 1 : 0;
     const freeB = filled.has(CASE_ROLE[b.inflection.case]) ? 1 : 0;
     if (freeA !== freeB) return freeA - freeB;
-    return rank(a) - rank(b);
+    // Part of speech before frequency. *amicus* is "friendly" more often than
+    // "friend" by Whitaker's count, but "cum amico" is a person, not a quality,
+    // and letting frequency win rendered it "with friend" — an adjective, so no
+    // article, so not English either.
+    // Part of speech before case. *mensa* is a table in the ablative and also
+    // the participle of *metior* in the accusative plural; "in" governs both
+    // cases, so ranking the case first chose the participle and rendered "in
+    // table" — a measured thing, with no article, in no language.
+    return (rankPos(a.pos, false) - rankPos(b.pos, false))
+      || (rank(a) - rank(b))
+      || (frequencyRank(a.analysis) - frequencyRank(b.analysis))
+      || (complexityRank(a.inflection) - complexityRank(b.inflection));
   });
   return ranked[0];
 }
@@ -956,7 +1015,21 @@ async function latinWord(english, wantedPos) {
     if (!analyses?.length) continue;
 
     const match = analyses.find((analysis) => analysis.pos === wantedPos) ?? null;
-    if (match) return { analysis: match, surface: candidate };
+    if (!match) continue;
+
+    // Whitaker's genitive is not always one a decliner can work back from; see
+    // latinNounParts. Where Wiktionary states the declension, it wins.
+    if (wantedPos === 'noun') {
+      const stated = await latinNounParts(match.lemma ?? candidate);
+      if (stated) {
+        return {
+          analysis: { ...match, principalParts: [stated.nominative, stated.genitive] },
+          surface: candidate,
+        };
+      }
+    }
+
+    return { analysis: match, surface: candidate };
   }
   return null;
 }
@@ -1160,7 +1233,21 @@ async function buildClause(tokens, { subjunctive = false, unreal = false, lead =
       else { copula = true; tense = 'imperfectum'; }
       continue;
     }
-    if (['has', 'have', 'had'].includes(token)) { tense = 'perfectum'; past = true; continue; }
+    /**
+     * "has" is an auxiliary only when a past participle follows it.
+     *
+     * "the master has the house" is *dominus villam habet* — a sentence about
+     * owning, not a perfect tense — and swallowing "has" as a tense marker left
+     * the clause with no verb at all, so it came out as "domina villa".
+     */
+    if (['has', 'have', 'had'].includes(token)) {
+      const next = tokens[i + 1] ?? '';
+      if (/ed$/.test(next) || Object.values(ENGLISH_PAST).includes(next)) {
+        tense = 'perfectum';
+        past = true;
+        continue;
+      }
+    }
     if (['is', 'are', 'am', 'be'].includes(token)) {
       // "is working" is a tense; "is happy" is *sum* with a complement.
       if (!/ing$/.test(tokens[i + 1] ?? '')) copula = true;
@@ -1288,6 +1375,9 @@ function isPastForm(token) {
  */
 export function verbCandidates(token) {
   const guesses = [token];
+  // "has" is not "ha" with an s on it. The irregular third persons have to be
+  // named, or "the master has the house" looks for a Latin verb called "ha".
+  if (STEM_OF_THIRD[token]) guesses.push(STEM_OF_THIRD[token]);
   for (const [stem, past] of Object.entries(ENGLISH_PAST)) if (past === token) guesses.push(stem);
   if (/ied$/.test(token)) guesses.push(`${token.slice(0, -3)}y`);
   if (/ed$/.test(token) && token.length > 3) guesses.push(token.slice(0, -1), token.slice(0, -2));
