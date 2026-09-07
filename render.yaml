@@ -11,8 +11,15 @@
 #   so a locked room would be unlocked for half the class and everyone's free
 #   questions would double.
 #
-#   Every key is `sync: false`, which means Render prompts for it rather than
-#   storing it here. Nothing secret belongs in a file that is in a public repo.
+#   Most keys are `sync: false`, which means Render prompts for them rather
+#   than storing them here.
+#
+#   Three are written out in full — the DeepL and ElevenLabs keys and the
+#   MyMemory contact address — because this repository is **private**. That is
+#   the only reason it is acceptable, and it is load-bearing: making the
+#   repository public again publishes all three, and git history keeps them
+#   even if the lines are later deleted. Rotate them before that day, not
+#   after. The passcodes and the model keys stay out of the file.
 services:
   - type: web
     name: profegpt
@@ -60,23 +67,22 @@ services:
       # MyMemory rations anonymous use by IP, and Render's is shared with
       # whatever else it is running — which is why translation worked locally
       # and answered 429 here. Naming a contact address is MyMemory's own way
-      # of asking for the larger allowance, 1,000 → 10,000 words a day. The
-      # value is not in this file: it is sent to MyMemory with every request,
-      # and the repo is public.
+      # of asking for the larger allowance, 1,000 → 10,000 words a day. It is
+      # sent to MyMemory with every request.
       - key: MYMEMORY_EMAIL
-        sync: false
+        value: REDACTED
 
       # The best translator in the chain, and the first one asked. Free tier is
       # 500k characters a month. Without it French and Spanish fall to the
       # model, and then to MyMemory.
       - key: DEEPL_API_KEY
-        sync: false
+        value: REDACTED
 
       # Pronunciation on the dictionary page. Free tier is 10,000 characters a
       # month for the whole site, so clips are cached and only single words are
       # ever spoken. Without it the speaker button removes itself.
       - key: ELEVENLABS_API_KEY
-        sync: false
+        value: REDACTED
       # Optional: a premade voice id. Defaults to "Alice", a clear educator
       # voice. A free account cannot use voice-library voices.
       - key: ELEVENLABS_VOICE_ID
