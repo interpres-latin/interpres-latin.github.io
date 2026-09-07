@@ -11,15 +11,14 @@
 #   so a locked room would be unlocked for half the class and everyone's free
 #   questions would double.
 #
-#   Most keys are `sync: false`, which means Render prompts for them rather
-#   than storing them here.
+#   Every key is `sync: false`, which means Render holds the value and this file
+#   only names it. Nothing secret belongs in a file that is in a repository,
+#   private or not.
 #
-#   Three are written out in full — the DeepL and ElevenLabs keys and the
-#   MyMemory contact address — because this repository is **private**. That is
-#   the only reason it is acceptable, and it is load-bearing: making the
-#   repository public again publishes all three, and git history keeps them
-#   even if the lines are later deleted. Rotate them before that day, not
-#   after. The passcodes and the model keys stay out of the file.
+#   Three of them were written out in full for a while — DeepL, ElevenLabs and
+#   the MyMemory address — and git history keeps what a file once held. Removing
+#   the lines hides them from the current checkout and from nothing else, so
+#   those three want rotating whenever it is convenient.
 services:
   - type: web
     name: profegpt
@@ -43,8 +42,8 @@ services:
       - key: TRUST_PROXY
         value: "1"
 
-      # CHANGE THESE. The defaults are in the source, and the repo is public:
-      # anyone who reads it can lock the site or narrow it to Spanish.
+      # CHANGE THESE. The defaults are in the source, so anyone who can read the
+      # repository can seal the site or help themselves to French and Latin.
       - key: TEACHER_PASSCODE
         sync: false
       # Opens French and Latin for the browser that types it. Per-browser:
@@ -70,19 +69,19 @@ services:
       # of asking for the larger allowance, 1,000 → 10,000 words a day. It is
       # sent to MyMemory with every request.
       - key: MYMEMORY_EMAIL
-        value: REDACTED
+        sync: false
 
       # The best translator in the chain, and the first one asked. Free tier is
       # 500k characters a month. Without it French and Spanish fall to the
       # model, and then to MyMemory.
       - key: DEEPL_API_KEY
-        value: REDACTED
+        sync: false
 
       # Pronunciation on the dictionary page. Free tier is 10,000 characters a
       # month for the whole site, so clips are cached and only single words are
       # ever spoken. Without it the speaker button removes itself.
       - key: ELEVENLABS_API_KEY
-        value: REDACTED
+        sync: false
       # Optional: a premade voice id. Defaults to "Alice", a clear educator
       # voice. A free account cannot use voice-library voices.
       - key: ELEVENLABS_VOICE_ID
