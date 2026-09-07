@@ -83,7 +83,7 @@ function hostsToTry() {
   return LINGVA_HOSTS.filter((host) => (restingUntil.get(host) ?? 0) <= now);
 }
 
-import { findIdioms } from './idioms.js';
+import { alreadyIdiomatic, findIdioms } from './idioms.js';
 
 const WIKIPEDIA = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
@@ -410,6 +410,15 @@ const ENGINES = [namedEntity, lingva, myMemory, apertium];
  * Most idioms already survive translation — "raining cats and dogs" comes back
  * as "llueve a cántaros" — so only the ones that do not are listed, and only
  * those are touched.
+ *
+ * "Does not" has to mean *this* rendering, though, not this idiom in general.
+ * The stored form is a citation, and an engine that produced the idiom in some
+ * other inflection has got it right: replacing *está lloviendo a cántaros* with
+ * the citation form yields "está llueve a cántaros", which is worse than the
+ * literal translation the feature exists to repair. So the idiom is only put in
+ * where it is genuinely absent — checked twice, on the sentence and on the span
+ * — and the note is shown either way, since the pairing is the thing being
+ * taught.
  */
 async function restoreIdioms(source, translated, from, to, translateSpan) {
   const idioms = findIdioms(source, from, to);
@@ -419,11 +428,17 @@ async function restoreIdioms(source, translated, from, to, translateSpan) {
   const notes = [];
 
   for (const idiom of idioms) {
-    const literal = await translateSpan(idiom.phrase).catch(() => null);
-    if (literal && normalise(literal) !== normalise(idiom.say)) {
-      result = substitute(result, literal, idiom.say);
-    }
     notes.push({ source: idiom.source, target: idiom.say, meaning: idiom.meaning });
+
+    // The engine already said it idiomatically — leave its grammar alone.
+    if (alreadyIdiomatic(result, idiom.say)) continue;
+
+    const literal = await translateSpan(idiom.phrase).catch(() => null);
+    if (!literal) continue;
+    if (alreadyIdiomatic(literal, idiom.say)) continue;
+    if (normalise(literal) === normalise(idiom.say)) continue;
+
+    result = substitute(result, literal, idiom.say);
   }
 
   return { text: result, notes };

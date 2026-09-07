@@ -135,7 +135,12 @@ No model, at any point. Four dedicated engines, tried in order:
 | 0 | **Wikipedia** | for names and titles. Machine translation renders them literally: "Cuban Missile Crisis" becomes *"crisis de los misiles cubanos"*, which says the missiles were Cuban when they were Soviet. Wikipedia's cross-language links hold the name each language actually uses — *Crisis de los misiles de Cuba*. |
 | 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES`, and one that fails is rested for a minute rather than re-asked on every translation. |
 | 2 | **MyMemory** | a crowd translation memory, believed only when its candidates agree with each other. |
-| 3 | **Apertium** | open-source rule-based translation. Clumsy, but always up and it never invents content. Spanish only — it has no English–French or English–Latin pair, so those chains stop at MyMemory. |
+| 3 | **Apertium** | open-source rule-based translation. Clumsy — *Test me* comes back as *Me pruebo* — but always up and it never invents content. Spanish only: it has no English–French or English–Latin pair, so those chains stop at MyMemory. |
+
+Apertium is the **floor**, not the usual answer. Spanish normally lands on
+Lingva; it only reaches Apertium when everything above it has declined, which at
+the time of writing is all the time. Judge the translator's quality when Lingva
+is back.
 
 The agreement rule on MyMemory exists because its segments can be wrong in ways
 no score exposes: *"Buenos días, ¿cómo estás?"* comes back as *"Good morning
@@ -198,6 +203,22 @@ beside the translation as a note:
 Hand-written and hand-checked, like the grammar notes, and only the idioms a
 translator actually gets wrong are listed. Matching ignores case and accents,
 works inside a sentence, and is capped at two notes per translation.
+
+**"Gets wrong" has to mean this rendering, not this idiom in general.** The
+stored form is a citation — *llueve a cántaros*, third person present — and an
+engine that produced the idiom in some other inflection has got it right. Pasting
+the citation form over *está lloviendo a cántaros* gives **"está llueve a
+cántaros"**: worse than the literal translation the feature exists to repair, and
+wrong in a way a learner would copy.
+
+So the idiom is only put in where it is genuinely absent, checked on both the
+sentence and the span, by comparing the part of it that does not inflect. That
+is everything after the verb in Spanish; the French forms open with a pronoun, so
+the tail is checked too, and either hit counts. The test is deliberately
+generous — a false yes leaves the engine's wording alone and shows the note,
+which costs nothing, while a false no breaks the grammar.
+
+The note is shown either way. The pairing is the thing being taught.
 
 There is one table per language — 26 Spanish, 28 French, none for Latin, which
 is not a language anyone is translating idiom for idiom — rather than one table

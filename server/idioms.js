@@ -403,6 +403,43 @@ export function findIdioms(text, from, to) {
   return found;
 }
 
+/**
+ * The part of an idiom that does not inflect — its giveaway.
+ *
+ * The stored form is a citation: *llueve a cántaros*, third person present. A
+ * translator that renders the idiom correctly in some other form — *está
+ * lloviendo a cántaros* — has got it right, and swapping the citation form in
+ * would produce "está llueve a cántaros". So what is compared is everything
+ * after the verb, which is the half that stays put.
+ *
+ * Two-word idioms keep both words, since dropping the first would leave
+ * something far too common to match on: *pan comido* would become *comido*.
+ */
+export function idiomSignature(phrase) {
+  const words = fold(phrase).split(' ').filter(Boolean);
+  if (words.length < 3) return [words.join(' ')].filter(Boolean);
+
+  // Two readings of "the part that does not inflect", because one is not
+  // enough. Dropping the first word suits Spanish, whose citation form starts
+  // with the verb; the French ones start with a subject pronoun, so the verb
+  // survives that cut and the tail is what to match on instead. Either hit
+  // counts.
+  return [words.slice(1).join(' '), words.slice(-2).join(' ')];
+}
+
+/**
+ * Whether a translation already contains the idiom, in whatever form.
+ *
+ * Deliberately generous. A false yes means the idiom is left as the engine
+ * wrote it and only the note is shown; a false no means the citation form is
+ * pasted over a correctly inflected one and the grammar breaks. The first
+ * costs nothing, so the doubt goes that way.
+ */
+export function alreadyIdiomatic(text, say) {
+  const haystack = fold(text);
+  return idiomSignature(say).some((signature) => signature && haystack.includes(signature));
+}
+
 export const IDIOM_COUNT = ES_IDIOMS.length + FR_IDIOMS.length;
 
 /** Per language, for the tests and the README. */

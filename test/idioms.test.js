@@ -1,7 +1,7 @@
 /**
  * Idioms are paired with their equivalents, not flattened into plain language.
  */
-const { findIdioms, IDIOM_COUNT } = await import('../server/idioms.js');
+const { findIdioms, IDIOM_COUNT, alreadyIdiomatic, idiomSignature } = await import('../server/idioms.js');
 
 let checked = 0;
 const failures = [];
@@ -56,6 +56,34 @@ ok('at most two idioms are annotated', many.length <= 2, `${many.length}`);
 // --- every entry is complete ----------------------------------------------
 const table = findIdioms('', 'en', 'es');
 ok('an empty string finds nothing', table.length === 0);
+
+// --- an idiom the engine already got right is left alone -------------------
+// The stored form is a citation — *llueve a cántaros*, third person present. An
+// engine that produced the idiom in some other inflection has got it right, and
+// pasting the citation form over it yields "está llueve a cántaros", which is
+// worse than the literal rendering the feature exists to repair.
+for (const [translated, say, expected, why] of [
+  ['está lloviendo a cántaros', 'llueve a cántaros', true, 'same idiom, different inflection'],
+  ['llueve a cántaros', 'llueve a cántaros', true, 'exactly the stored form'],
+  ['Está lloviendo gatos y perros', 'llueve a cántaros', false, 'word for word — needs repair'],
+  ['costó un brazo y una pierna', 'costó un ojo de la cara', false, 'word for word'],
+  ['me costó un ojo de la cara', 'costó un ojo de la cara', true, 'idiom present, extra pronoun'],
+  ['es pan comido', 'pan comido', true, 'a two-word idiom keeps both words'],
+  ['fue muy fácil', 'pan comido', false, 'a paraphrase is not the idiom'],
+  // French citation forms open with a pronoun, so dropping one word still
+  // leaves an inflected verb — the tail has to be checked as well.
+  ['coûtait les yeux de la tête', 'ça a coûté les yeux de la tête', true, 'French, imperfect'],
+  ['ça a coûté un bras et une jambe', 'ça a coûté les yeux de la tête', false, 'French, word for word'],
+  ['il a cassé sa pipe', 'casser sa pipe', true, 'French, conjugated'],
+  ['il a donné un coup de pied dans le seau', 'casser sa pipe', false, 'French, word for word'],
+]) {
+  ok(`"${translated}" ${expected ? 'is' : 'is not'} already idiomatic (${why})`,
+    alreadyIdiomatic(translated, say) === expected);
+}
+
+ok('a signature drops the verb where the verb leads', idiomSignature('llueve a cántaros').includes('a cantaros'));
+ok('and keeps both words of a two-word idiom', idiomSignature('pan comido').includes('pan comido'));
+ok('a signature ignores accents', alreadyIdiomatic('LLUEVE A CANTAROS', 'llueve a cántaros'));
 
 if (failures.length) {
   console.error(`\n✗ ${failures.length} of ${checked} idiom checks failed:\n`);
