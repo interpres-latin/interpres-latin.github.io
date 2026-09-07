@@ -29,12 +29,20 @@
 /**
  * Lingva instances, tried in order.
  *
- * Volunteer-run, so this list ages: several of the once-standard hosts now sit
- * behind a Cloudflare challenge and answer 403 to everything. An entry may
- * carry a scheme, which is how a self-hosted instance is pointed at —
- * `LINGVA_INSTANCES=http://localhost:3100`.
+ * Volunteer-run, so this list ages, and most of it has now gone: of nineteen
+ * instances once listed publicly, thirteen no longer resolve at all and two
+ * (lingva.ml, lingva.garudalinux.org) sit behind a Cloudflare challenge that a
+ * server cannot pass. Those are dropped — they cost a request and can never
+ * answer.
+ *
+ * The two left are up and serving; it is Google refusing *them*, which is a
+ * thing that passes. Keeping them here is what lets the site pick the service
+ * back up on its own when it does.
+ *
+ * An entry may carry a scheme, which is how a self-hosted instance is pointed
+ * at — `LINGVA_INSTANCES=http://localhost:3100`.
  */
-const LINGVA_HOSTS = (process.env.LINGVA_INSTANCES || 'lingva.lunar.icu,lingva.ml,lingva.garudalinux.org')
+const LINGVA_HOSTS = (process.env.LINGVA_INSTANCES || 'lingva.lunar.icu,translate.plausibility.cloud')
   .split(',').map((host) => host.trim()).filter(Boolean)
   .map((host) => (/^https?:\/\//.test(host) ? host : `https://${host}`));
 
@@ -50,6 +58,17 @@ const LINGVA_HOSTS = (process.env.LINGVA_INSTANCES || 'lingva.lunar.icu,lingva.m
  */
 const LINGVA_COOLDOWN_MS = 60_000;
 const restingUntil = new Map();
+
+/**
+ * How long to wait for an instance.
+ *
+ * The default suits a public instance, which is either up or not. A
+ * self-hosted one on a free tier spins down when idle and takes the better part
+ * of a minute to wake, so a deployment that owns its own instance should raise
+ * this — see LINGVA_TIMEOUT_MS in the README.
+ */
+const LINGVA_TIMEOUT_MS = Number(process.env.LINGVA_TIMEOUT_MS) || 12_000;
+
 
 /**
  * Hosts worth asking now.
@@ -296,7 +315,7 @@ async function lingva(text, from, to) {
         const url = `${host}/api/v1/${from}/${to}/${encodeURIComponent(part)}`;
         const response = await fetch(url, {
           headers: { accept: 'application/json' },
-          signal: AbortSignal.timeout(12000),
+          signal: AbortSignal.timeout(LINGVA_TIMEOUT_MS),
         });
         if (!response.ok) throw new Error(`${host} responded ${response.status}`);
 

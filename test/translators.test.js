@@ -11,7 +11,13 @@ function ok(name, condition, detail = '') {
   if (!condition) failures.push(`${name}${detail ? `\n    ${detail}` : ''}`);
 }
 
+// Pinned before the module is imported, so these checks do not move every time
+// a volunteer instance dies and the shipped default is trimmed. The names carry
+// "lingva" so the stub below can tell which engine is being asked.
+process.env.LINGVA_INSTANCES = 'lingva-one.test,lingva-two.test,lingva-three.test';
+
 const { translate, chunk, resetLingvaCooldowns } = await import('../server/translators.js');
+const LINGVA_COUNT = process.env.LINGVA_INSTANCES.split(',').length;
 
 let plan = {};
 const asked = [];
@@ -247,7 +253,7 @@ plan = { wikipedia: null, lingva: null, mymemory: null, apertium: { responseData
 asked.length = 0;
 await translate('floor', 'en', 'es');
 const firstRun = asked.filter((url) => url.includes('lingva')).length;
-ok('every instance is tried the first time', firstRun >= 3, `${firstRun} asked`);
+ok('every instance is tried the first time', firstRun === LINGVA_COUNT, `${firstRun} of ${LINGVA_COUNT} asked`);
 
 asked.length = 0;
 await translate('ceiling', 'en', 'es');

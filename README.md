@@ -470,10 +470,10 @@ floor rather than a choice", and a double hop turns *Where is the library?* into
 value is being correct.
 
 That makes Lingva load-bearing for French in a way it is not for Spanish, and
-Lingva instances are volunteer-run: `lingva.ml` and `lingva.garudalinux.org`
-now answer 403 to everything from behind a Cloudflare challenge, and the ones
-that do work have bad afternoons. So a host that fails is **rested for a
-minute** before it is asked again.
+Lingva instances are volunteer-run. Of nineteen once listed publicly, thirteen
+no longer resolve at all and two sit behind a Cloudflare challenge a server
+cannot pass; the default list is now the two that are still serving. A host that
+fails is **rested for a minute** before it is asked again.
 
 That is worth more than it sounds. The translator fires on a debounce as you
 type, so re-asking a dead instance every time cost a timeout per keystroke-pause
@@ -482,8 +482,45 @@ translation pays 2.5s and every one after it takes 0.7s. Nothing is disabled
 permanently — the rest expiring is what puts a host back — and while they are
 all resting Lingva simply steps aside and the chain carries on beneath it.
 
-**Self-hosting is the durable answer**, and an entry may carry its own scheme
-to allow it:
+### When translation is down
+
+It is, at the time of writing, for French and Latin. Worth writing down what was
+checked, because the answer is not obvious and the temptation is to keep looking.
+
+| | |
+| --- | --- |
+| Apertium | 133 installed pairs — **no Latin, no English–French** |
+| Lingva | the surviving instances answer 500: the app is up, Google is refusing it |
+| SimplyTranslate | 200 with an empty translation — the same failure, same cause |
+| LibreTranslate | 51 languages, has French, **no Latin**; the main instance now needs a key |
+| MyMemory | answers, but nothing it returned passed the agreement rule |
+
+Lingva and SimplyTranslate are both Google front ends and both broke the same
+way, so it is the endpoint that whole category uses. **Self-hosting would not
+have helped**, which is worth knowing before spending an afternoon on it.
+
+MyMemory is the interesting near-miss. Its French is mostly right — *Où est la
+bibliothèque ?*, *Le chien de la fille* — but its three candidates never agree
+with each other, so the rule that exists to catch its bad days rejects its good
+ones too. Its Latin is not a near-miss: *I am tired* came back as *ego sum
+stultus*, which means "I am stupid".
+
+**The site degrades honestly.** Spanish is unaffected, since Apertium is a real
+translator rather than a proxy and nothing can rate-limit it. French and Latin
+say they could not translate rather than showing a guess, and everything else —
+both conjugators, the decliner, three dictionaries, the stages, the tutor —
+never touched a translation engine to begin with.
+
+The instances left in the default list are up and serving; it is Google refusing
+*them*, which is a thing that passes. Keeping them listed is what lets the site
+pick the service back up on its own.
+
+**If it stays down**, the only engine that covers both French and Latin is the
+Google Cloud Translation API — official, 500k characters a month free, and it
+wants a billing account. That is a deliberate cost, not an oversight.
+
+**Self-hosting**, if the machine allows it, is still the answer to rate limiting
+specifically, and an entry may carry its own scheme:
 
 ```bash
 docker run -d -p 3100:3000 --restart unless-stopped \
@@ -492,8 +529,9 @@ docker run -d -p 3100:3000 --restart unless-stopped \
 LINGVA_INSTANCES=http://localhost:3100,lingva.lunar.icu
 ```
 
-Listing a public instance after it keeps the site working while the container
-restarts.
+A self-hosted instance on a free tier spins down when idle and can take most of
+a minute to wake, which is longer than the default patience; `LINGVA_TIMEOUT_MS`
+raises it.
 
 ## The Latin side
 
@@ -760,6 +798,7 @@ cp .env.example .env      # then put your key in it
 | `RESTRICT_PASSCODE` | Narrows the site to Spanish from the padlock. Default `profe`. |
 | `RELEASE_PASSCODE` | Opens the other subjects again. Default `walsh`. |
 | `LINGVA_INSTANCES` | Comma-separated Lingva hosts, tried in order; an entry may carry a scheme, so a self-hosted instance is `http://localhost:3100`. See *[The French translator](#the-french-translator)*. |
+| `LINGVA_TIMEOUT_MS` | How long to wait for an instance. Default `12000`; raise it for a self-hosted one that spins down. |
 | `CHAT_WINDOW_MINUTES` | Length of that window. Default `30`. |
 
 Without a key:
