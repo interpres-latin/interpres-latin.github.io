@@ -1,13 +1,23 @@
 /**
  * The teacher's subject restriction.
  *
- * A separate switch from the padlock's lock, thrown through the same dialog:
- * one passcode opens the site up to French and Latin, another puts them away
- * again. Where the lock stops the class working at all, this leaves everything
- * working and offers only the language that is today's lesson.
+ * Which subjects this browser may have.
  *
- * It lives on the server beside the lock, so a teacher throwing it reaches
- * every browser in the room rather than only their own.
+ * The site offers Spanish and English to everybody. French and Latin are behind
+ * a passcode typed into the padlock, and opening them opens them **here only** —
+ * for the browser that typed the word, not for the room. That is the difference
+ * from the lock next door: the lock is a switch a teacher throws over everyone,
+ * this is a key a person is given. One student being shown French must not put
+ * French in front of the other twenty-four.
+ *
+ * So it lives in this browser's storage rather than on the server. The server
+ * knows only the word — a passcode checked in code that ships to every visitor
+ * is a passcode published to every visitor — and answers `opened: true` without
+ * recording anything.
+ *
+ * Clearing the site's storage is how a browser gives the key back. There is no
+ * passcode that takes the languages away again, because that would be a switch
+ * over other people's screens.
  *
  * The flag is kept here rather than in lib/study.js because study.js is
  * imported by almost everything, including the modules that talk to the
@@ -20,33 +30,23 @@ import { setStudyLang, studyLang } from './study.js';
 const listeners = new Set();
 
 /**
- * Remembered so the *next* page load can pick its wallpaper and its subject
- * before the server answers.
- *
- * Without it a returning reader whose stored subject is Latin gets a beat of
- * the Colosseum before being put back to Spanish. This is a hint for painting,
- * never the authority: the server decides, and says so a moment later.
+ * Where the key is kept, and read straight back on the next visit — including
+ * by the pre-paint script in index.html, which needs the subject before the
+ * first frame so a returning Latin reader does not get a beat of the Colosseum.
  */
 const REMEMBERED = 'profegpt:restricted';
 
-export function rememberedRestriction() {
+function readRemembered() {
   try {
     return localStorage.getItem(REMEMBERED) !== 'false';
   } catch {
+    // A private window, or storage switched off. Closed is the safe answer.
     return true;
   }
 }
 
-/**
- * Starts closed, and stays closed until the server says otherwise.
- *
- * The server's answer arrives a moment after the page does, and for that moment
- * something has to be assumed. Assuming "open" would show French and Latin to
- * every visitor for a beat before taking them away, which is both a flicker and
- * the wrong way round for a default whose whole point is that access is
- * granted rather than removed.
- */
-let restricted = true;
+/** Closed unless this browser has been given the key before. */
+let restricted = readRemembered();
 
 /** The subjects the site will currently offer. */
 export function allowedSubjects() {
@@ -61,7 +61,7 @@ export function subjectAllowed(code) {
   return allowedSubjects().includes(code);
 }
 
-/** Called by lib/site-lock.js as the server's answer comes back. */
+/** Called by lib/site-lock.js when the passcode is accepted. */
 export function setRestricted(next) {
   const value = Boolean(next);
   try { localStorage.setItem(REMEMBERED, String(value)); } catch { /* private window */ }

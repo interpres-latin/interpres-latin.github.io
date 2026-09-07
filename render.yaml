@@ -40,8 +40,8 @@ services:
       # anyone who reads it can lock the site or narrow it to Spanish.
       - key: TEACHER_PASSCODE
         sync: false
-      - key: RESTRICT_PASSCODE
-        sync: false
+      # Opens French and Latin for the browser that types it. Per-browser:
+      # the server keeps no state for it.
       - key: RELEASE_PASSCODE
         sync: false
 

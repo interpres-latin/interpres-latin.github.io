@@ -388,10 +388,33 @@ export async function answer(question, { language = null, force = false, study =
   // grammar topic that happens to share a word with it.
   let askedSomethingSpecific = false;
 
+  /**
+   * "How do you say X" — with or without naming the language.
+   *
+   * It used to insist the question ended "in Spanish", and refused otherwise.
+   * Nobody types that on a Spanish site: "how to say I'm gay" was handed to a
+   * model, which answered it well and charged a slot of the off-topic
+   * allowance for a question the site's own translator could have answered.
+   * The whole site is a translator between English and one other language, so
+   * an unnamed direction is not ambiguous — it is the obvious one.
+   *
+   * Only an explicit "in English" sends it the other way.
+   */
   const translateMatch = INTENTS.translateInto.exec(text);
-  if (translateMatch && INTENTS.intoStudyLanguage.test(text)) {
+  if (translateMatch) {
+    const phrase = translateMatch[1].trim();
+
+    // "how do you say the subjunctive" is a grammar question wearing this
+    // shape; the same guard step 5b uses, applied before the engines.
+    const asTopic = pack.TOPICS
+      .map((topic) => ({ topic, score: scoreTopic(pack, topic, fold(phrase)) }))
+      .sort((a, b) => b.score - a.score)[0];
+
+    if (asTopic?.score >= 100) return respond(topicAnswer(asTopic.topic, lang));
+
     askedSomethingSpecific = true;
-    const blocks = await translationAnswer(pack, translateMatch[1].trim(), 'en', lang).catch(() => null);
+    const from = INTENTS.intoEnglishLanguage?.test(text) ? pack.code : 'en';
+    const blocks = await translationAnswer(pack, phrase, from, lang).catch(() => null);
     if (blocks) return respond(blocks);
   }
 

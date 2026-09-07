@@ -129,7 +129,7 @@ export const PACK = {
     // the other word order: "ir conjugation", "tener conjugado"
     conjugateTrailing: /^([a-záéíóúüñ]+)\s+(?:conjugation|conjugated|conjugation table|conjugación|conjugado)\b/i,
     define: /(?:que significa|qué significa|significado de|define|definicion de|definición de|what does|what is the meaning of|meaning of)\s+["«'“]?([a-záéíóúüñ]+)["»'”]?/i,
-    translateInto: /(?:como se dice|cómo se dice|how do you say|how do i say|translate)\s+["«'“]?(.+?)["»'”]?\s*(?:en espanol|en español|in spanish|al espanol|al español)?\s*\??$/i,
+    translateInto: /(?:como se dice|cómo se dice|como digo|how do you say|how do i say|how to say|how would you say|how do u say|how say|translate)\s+["«'“]?(.+?)["»'”]?\s*(?:en espanol|en español|in spanish|al espanol|al español|in english|en ingles|en inglés|al ingles|al inglés)?\s*[.?!]*$/i,
     translateAny: /(?:traduce|traducir|translate)\s+["«'“]?(.+?)["»'”]?\s*$/i,
     whatForm: /(?:que es|qué es|que forma es|qué forma es|what form is|what is)\s+["«'“]?([a-záéíóúüñ]+)["»'”]?/i,
     /** Confirms that a "how do you say" really asked for the study language. */
@@ -137,6 +137,8 @@ export const PACK = {
     intoEnglish: /^\s*[\"«'“]?(.+?)[\"»'”]?\s+(?:in|into|en|al)\s+(?:english|ingl[eé]s)\s*[.?!]*$/i,
     bareEnglishVerb: /^\s*to\s+([a-z]+(?:\s+[a-z]+){0,2})\s*[.?!]*$/i,
     intoStudyLanguage: /(?:en espanol|en español|in spanish|al espanol|al español)/i,
+    /** Only an explicit "in English" sends a "how do you say" the other way. */
+    intoEnglishLanguage: /(?:in english|en ingl[eé]s|al ingl[eé]s)/i,
   },
 
   /** "el subjuntivo" is the same question as "subjuntivo". */

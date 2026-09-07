@@ -73,7 +73,9 @@ async function refresh() {
   try {
     const state = await getJson('/api/lock');
     applyState(Boolean(state.locked));
-    setRestricted(state.restricted);
+    // Deliberately nothing about the subjects here. Which languages this
+    // browser may have is its own business, kept in its own storage — the
+    // server holds no such state to ask for. See lib/restriction.js.
   } catch {
     // Server unreachable — leave whatever is on screen alone.
   }
@@ -113,8 +115,12 @@ function askForPasscode(anchor) {
     try {
       const state = await postJson('/api/lock', { passcode: field.value, locked: !locked });
       close();
-      applyState(Boolean(state.locked));
-      setRestricted(state.restricted);
+
+      // `opened` means the word was the one that hands over French and Latin.
+      // It is remembered here and nowhere else: this browser has the key, the
+      // rest of the room is unaffected.
+      if (state.opened) setRestricted(false);
+      else applyState(Boolean(state.locked));
     } catch {
       error.textContent = t('lock.wrong');
       field.value = '';

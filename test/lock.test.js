@@ -41,27 +41,30 @@ const send = async (passcode, body = {}) => {
 // --- it starts open --------------------------------------------------------
 let state = await read();
 ok('starts unlocked', state.locked === false);
-ok('and restricted, which is the default', state.restricted === true);
+ok('and says nothing about subjects, which are per-browser', state.restricted === undefined);
 
-// --- the restriction, which starts on and is opened rather than imposed ----
+// --- the word that hands one browser the other languages ------------------
 let result = await send('profe');
 ok('"profe" is accepted', result.status === 200, String(result.status));
-ok('and opens the other subjects', result.state.restricted === false);
+ok('and says the browser may open them', result.state.opened === true);
+ok('and does not seal anything', result.state.locked === false);
 ok('without locking the site', result.state.locked === false);
-ok('the opening is visible to everyone', (await read()).restricted === false);
+ok('and nothing was recorded for anyone else',
+  (await read()).restricted === undefined && (await read()).opened === undefined);
 
+// There is no word that takes the languages away again — that would be a
+// switch over other people's screens, which this deliberately is not.
 result = await send('walsh');
-ok('"walsh" puts them away again', result.state.restricted === true);
+ok('"walsh" is now just a wrong passcode', result.status === 403, String(result.status));
 ok('and still does not lock', result.state.locked === false);
 
 // Case and stray spaces are forgiven, as they are for the lock.
-ok('the passcode is case-insensitive', (await send('  PROFE ')).state.restricted === false);
-await send('walsh');
+ok('the passcode is case-insensitive', (await send('  PROFE ')).state.opened === true);
 
 // --- the lock, which is a different switch ---------------------------------
 result = await send('AP_Lit');
 ok('the teacher passcode locks', result.state.locked === true);
-ok('and leaves the restriction alone', result.state.restricted === true);
+ok('and does not open the subjects', result.state.opened === undefined);
 ok('a lock records when', typeof result.state.since === 'number');
 
 result = await send('AP_Lit');
@@ -71,15 +74,15 @@ ok('clearing the timestamp', result.state.since === null);
 // --- the two do not reach each other --------------------------------------
 await send('profe');
 result = await send('AP_Lit', { locked: true });
-ok('locking keeps the subjects as they were', result.state.restricted === false && result.state.locked === true);
+ok('locking says nothing about subjects', result.state.opened === undefined && result.state.locked === true);
 result = await send('AP_Lit', { locked: false });
-ok('and unlocking does not change them', result.state.restricted === false && result.state.locked === false);
+ok('and neither does unlocking', result.state.opened === undefined && result.state.locked === false);
 await send('walsh');
 
 // --- anything else is refused ---------------------------------------------
 result = await send('nope');
 ok('a wrong passcode is refused', result.status === 403, String(result.status));
-ok('and changes nothing', result.state.locked === false && result.state.restricted === true);
+ok('and changes nothing', result.state.locked === false && result.state.opened === undefined);
 ok('and says nothing about which was wrong', !/profe|walsh|AP_Lit/i.test(JSON.stringify(result.state)));
 result = await send('');
 ok('an empty passcode is refused', result.status === 403);

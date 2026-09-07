@@ -278,13 +278,15 @@ export const PACK = {
     verbMarker: /\b(?:verb|verbum)\s+([a-z]{2,})\b/i,
     conjugateTrailing: /^([a-z]+)\s+(?:conjugation|conjugated|principal parts)\b/i,
     define: /(?:what does|what is the meaning of|meaning of|define|definition of|quid significat)\s+["'“]?\s*([a-z]+)\s*["'”]?/i,
-    translateInto: /(?:how do you say|how do i say|translate)\s+["'“]?(.+?)["'”]?\s*(?:in latin|into latin)?\s*\??$/i,
+    translateInto: /(?:how do you say|how do i say|how to say|how would you say|how do u say|how say|translate)\s+["'“]?(.+?)["'”]?\s*(?:in latin|into latin|in english|into english)?\s*[.?!]*$/i,
     translateAny: /(?:translate|verte)\s+["'“]?(.+?)["'”]?\s*$/i,
     whatForm: /(?:what form is|what is|parse)\s+["'“]?\s*([a-z]+)\s*["'”]?/i,
     intoStudy: /^\s*[\"'“]?(.+?)[\"'”]?\s+(?:in|into)\s+latin\s*[.?!]*$/i,
     intoEnglish: /^\s*[\"'“]?(.+?)[\"'”]?\s+(?:in|into)\s+english\s*[.?!]*$/i,
     bareEnglishVerb: /^\s*to\s+([a-z]+(?:\s+[a-z]+){0,2})\s*[.?!]*$/i,
     intoStudyLanguage: /(?:in latin|into latin)/i,
+    /** Only an explicit "in English" sends a "how do you say" the other way. */
+    intoEnglishLanguage: /(?:in english|into english)/i,
   },
 
   /**

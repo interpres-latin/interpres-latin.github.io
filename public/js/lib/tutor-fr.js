@@ -132,13 +132,15 @@ export const PACK = {
     verbMarker: /\b(?:verbe|verb)\s+([a-zàâçéèêëîïôûùü']{2,})\b/i,
     conjugateTrailing: /^([a-zàâçéèêëîïôûùü']+)\s+(?:conjugation|conjugated|conjugaison|conjugué)\b/i,
     define: /(?:que veut dire|qu'est-ce que|que signifie|signification de|définition de|definition de|défini[st]|what does|what is the meaning of|meaning of)\s+["«'“]?\s*([a-zàâçéèêëîïôûùü'-]+)\s*["»'”]?/i,
-    translateInto: /(?:comment dit-on|comment dit on|comment on dit|how do you say|how do i say|translate)\s+["«'“]?(.+?)["»'”]?\s*(?:en francais|en français|in french)?\s*\??$/i,
+    translateInto: /(?:comment dit-on|comment dit on|comment on dit|how do you say|how do i say|how to say|how would you say|how do u say|how say|translate)\s+["«'“]?(.+?)["»'”]?\s*(?:en francais|en français|in french|in english|en anglais)?\s*[.?!]*$/i,
     translateAny: /(?:traduis|traduire|traduction de|translate)\s+["«'“]?(.+?)["»'”]?\s*$/i,
     whatForm: /(?:quelle forme est|quelle est la forme|c'est quoi|qu'est-ce que|what form is|what is)\s+["«'“]?\s*([a-zàâçéèêëîïôûùü'-]+)\s*["»'”]?/i,
     intoStudy: /^\s*[\"«'“]?(.+?)[\"»'”]?\s+(?:in|into|en)\s+(?:french|fran[cç]ais)\s*[.?!]*$/i,
     intoEnglish: /^\s*[\"«'“]?(.+?)[\"»'”]?\s+(?:in|into|en)\s+(?:english|anglais)\s*[.?!]*$/i,
     bareEnglishVerb: /^\s*to\s+([a-z]+(?:\s+[a-z]+){0,2})\s*[.?!]*$/i,
     intoStudyLanguage: /(?:en francais|en français|in french)/i,
+    /** Only an explicit "in English" sends a "how do you say" the other way. */
+    intoEnglishLanguage: /(?:in english|en anglais)/i,
   },
 
   LEADING_ARTICLE: /^(?:le|la|les|l'|un|une|des|du|de|the|a)\s*/,

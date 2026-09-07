@@ -365,29 +365,28 @@ off-topic one with nothing left behind it gets a short notice at the top that
 fades on its own — until five arrive within fifteen seconds, at which point the
 tape returns. Acknowledging it resets the count.
 
-### The teacher's restriction
+### The key to the other languages
 
-The same padlock carries a second, softer switch, and it **starts closed**. A
-visitor gets Spanish and English; French and Latin are absent from the menu and
-`mode: french` and `mode: latin` do nothing. Typing **`profe`** opens them for
-everybody, and **`walsh`** puts them away again.
+The site offers **Spanish and English**. French and Latin are absent from the
+menu, and `mode: french` and `mode: latin` do nothing, until somebody types
+**`profe`** into the padlock — which opens them **for that browser and no
+other**.
 
-Access is granted rather than removed, which is the right way round for a site a
-class reaches from anywhere: the worst a stranger finds is the Spanish lesson.
-It also means the failure directions are opposite, deliberately. A restart
-clears the lock **open**, because nobody should be shut out by a process nobody
-is watching; it clears the restriction **closed**, because nothing should be
-left open by one. The browser fails the same way — until the server answers, the
-page offers Spanish alone, so French and Latin never flash up for a moment
-before being taken back.
+That is the whole difference from the lock next door. The lock is a switch a
+teacher throws over a room; this is a key a person is given. One student being
+shown the French side must not put French in front of the other twenty-four, so
+the answer is remembered in that browser's storage and nowhere else.
 
-Where the lock stops the class working at all, this leaves everything working
-and offers only what is today's lesson. It lives on the server beside the lock,
-so one teacher throwing it reaches every browser in the room.
+The server holds no state for it at all. It knows only the word — a passcode
+checked in code that ships to every visitor is a passcode published to every
+visitor — and answers `opened: true` without recording anything. Clearing the
+site's storage is how a browser gives the key back.
 
-The two switches never reach each other: opening the subjects does not unseal a
-locked room, and unlocking one does not quietly open French and Latin.
-`RELEASE_PASSCODE` and `RESTRICT_PASSCODE` change the words.
+**There is no passcode that takes the languages away again.** There was one, and
+it was wrong: a word that closed French and Latin would have reached into every
+browser in the room, which is precisely the thing this is not. `AP_Lit` still
+seals the whole site for everybody — that one is meant to. `RELEASE_PASSCODE`
+changes the word.
 
 ### The teacher's lock
 
@@ -983,8 +982,7 @@ cp .env.example .env      # then put your key in it
 | `LLM_PROVIDER` | Pin one: `gemini`, `groq`, `openrouter` or `anthropic`. |
 | `PORT` | Defaults to `4000`. |
 | `CHAT_FREE_LIMIT` | Off-topic chat questions per window, shared by all three languages. Default `5`; set `0` to seal the chat immediately and see the tape. |
-| `RELEASE_PASSCODE` | Opens French and Latin from the padlock. They are closed until it is typed. Default `profe`. |
-| `RESTRICT_PASSCODE` | Puts them away again. Default `walsh`. |
+| `RELEASE_PASSCODE` | Opens French and Latin for the browser that types it in the padlock. They are closed until it is. Default `profe`. |
 | `LINGVA_INSTANCES` | Comma-separated Lingva hosts, tried in order; an entry may carry a scheme, so a self-hosted instance is `http://localhost:3100`. See *[The French translator](#the-french-translator)*. |
 | `LINGVA_TIMEOUT_MS` | How long to wait for an instance. Default `12000`; raise it for a self-hosted one that spins down. |
 | `CHAT_WINDOW_MINUTES` | Length of that window. Default `30`. |
@@ -1139,10 +1137,10 @@ count is not a performance choice — see below.
 To do it by hand instead: build `npm install`, start `npm start`, instance
 count 1, and set the variables below.
 
-**Change the three passcodes before anyone has the URL.** `TEACHER_PASSCODE`,
-`RESTRICT_PASSCODE` and `RELEASE_PASSCODE` all have defaults, and the defaults
-are in the source of a public repository — anyone who reads it can lock your
-site or narrow it to Spanish. The English-interface passcode in
+**Change both passcodes before anyone has the URL.** `TEACHER_PASSCODE` and
+`RELEASE_PASSCODE` both have defaults, and the defaults are in the source of a
+public repository — anyone who reads it can seal your site, or help themselves
+to French and Latin. The English-interface passcode in
 `public/js/lib/i18n.js` is client-side and therefore public by construction; it
 keeps a class honest, and nothing more.
 
@@ -1159,7 +1157,7 @@ and exposes `GET /api/health` for a health check.
 | `OPENROUTER_API_KEY` | The overflow, and in practice where most traffic lands. Free models only. |
 | `RAE_API_KEY` | **Get one.** Anonymous dictionary access is 100 lookups a day, which one class will exhaust. Free at <https://rae-api.com/login>. |
 | `TEACHER_PASSCODE` | **Change it.** The default is in a public repo. |
-| `RESTRICT_PASSCODE` | **Change it.** Same reason — it decides who gets French and Latin. |
+| `RELEASE_PASSCODE` | **Change it.** Same reason — it decides who gets French and Latin. |
 | `RELEASE_PASSCODE` | **Change it.** Same reason — it opens the subjects again. |
 | `LINGVA_INSTANCES` | Worth setting. Without a working instance, French and Latin translation falls to MyMemory alone. |
 | `DEEPL_API_KEY` | The single biggest quality difference on the French and Spanish sides — it is asked first and is better than everything under it. Free tier, 500k characters a month; a key ending `:fx` is routed to the free host automatically. It has no Latin. |
