@@ -190,6 +190,9 @@ const SPANISH = {
     outStudy: two('La traducción aparecerá aquí.', 'La traducción aparecerá aquí.'),
     outEn: two('The translation will appear here.', 'The translation will appear here.'),
     engine: two('traducido con {engine}', 'translated with {engine}'),
+    uncertain: two(
+      'El traductor no está seguro de esta frase: sus versiones guardadas no coinciden. Compruébala.',
+      'The translator is unsure of this one: its stored versions disagree. Check it.'),
   },
 
   finder: {
@@ -441,6 +444,9 @@ const FRENCH = {
     outStudy: deux('La traduction apparaîtra ici.', 'La traduction apparaîtra ici.'),
     outEn: deux('The translation will appear here.', 'The translation will appear here.'),
     engine: deux('traduit avec {engine}', 'translated with {engine}'),
+    uncertain: deux(
+      'Le traducteur hésite sur cette phrase : ses versions enregistrées se contredisent. À vérifier.',
+      'The translator is unsure of this one: its stored versions disagree. Check it.'),
   },
 
   finder: {
@@ -712,6 +718,9 @@ const LATIN = {
     outStudy: latine('Translatio hic apparebit.', 'The translation will appear here.'),
     outEn: latine('The translation will appear here.', 'The translation will appear here.'),
     engine: latine('versum per {engine}', 'translated with {engine}'),
+    uncertain: latine(
+      'Interpres dubitat: versiones servatae inter se discrepant. Cave.',
+      'The translator is unsure of this one: its stored versions disagree. Check it.'),
     parseTitle: latine('Verbum ac verbum', 'Word by word'),
     parseLead: latine(
       'Omne verbum Latinum, ut Whitaker’s Words id legit.',

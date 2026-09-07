@@ -225,6 +225,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 :root[data-theme="light"] .tabs button.is-active { background: var(--text); color: var(--bg-raised); }
 :root[data-theme="light"] .msg__body strong { color: #000; }
 :root[data-theme="light"] .notice { border-color: #c9a94e; background: #fdf6e0; color: #6d5410; }
+:root[data-theme="light"] .parses__alarm { border-color: #c9a94e; background: #fdf6e0; color: #6d5410; }
+:root[data-theme="light"] .output--unreliable { text-decoration-color: #c9a94e; }
 :root[data-theme="light"] .notice code { background: #f0e5c4; }
 
 /* --- nav ------------------------------------------------------------------ */
@@ -501,6 +503,13 @@ button, input, textarea, select { font: inherit; color: inherit; }
    plainly rather than slipped in. */
 .parses__fixed { margin: 0 0 10px; padding: 9px 12px; border-left: 2px solid var(--en); background: var(--panel); font-size: 12.5px; color: var(--text-dim); }
 .parses__warn { margin: 0 0 10px; padding: 9px 12px; border-left: 2px solid var(--es); background: var(--panel); font-size: 12.5px; color: var(--text-dim); }
+
+/* Louder than a doubtful reading, because it is a different kind of thing: the
+   engine handed back English, so the sentence above is not an answer at all.
+   The translation is struck through rather than hidden — a student should see
+   what came back and why it was rejected. */
+.parses__alarm { margin: 0 0 10px; padding: 11px 13px; border: 1px solid #574b26; background: #1d1a12; color: #d9b05c; font-size: 12.5px; font-weight: 500; }
+.output--unreliable { color: var(--text-faint); text-decoration: line-through; text-decoration-color: #d9b05c; text-decoration-thickness: 1px; }
 
 /* The same thing on the dictionary page: one line per way the form can read. */
 .parses { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }

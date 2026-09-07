@@ -234,11 +234,16 @@ function buildTranslator(root) {
    */
   function paintParses(latin) {
     clear(parses);
+    output.classList.remove('output--unreliable');
     if (!latin?.parses?.length) return;
+
+    // An engine that left English words behind did not translate the sentence,
+    // so the sentence stops looking like an answer.
+    output.classList.toggle('output--unreliable', latin.reliable === false);
 
     for (const note of latin.notes || []) {
       parses.appendChild(el('p', {
-        class: note.kind === 'case' ? 'parses__fixed' : 'parses__warn',
+        class: { case: 'parses__fixed', untranslated: 'parses__alarm' }[note.kind] || 'parses__warn',
       }, note.kind === 'case' ? `${t('translator.caseFixed')}: ${note.from} → ${note.to}. ${note.why}` : note.why));
     }
 
@@ -349,6 +354,13 @@ function buildTranslator(root) {
       paintNotes(data.notes);
       paintParses(data.latin);
       engine.textContent = data.engine ? t('translator.engine', { engine: data.engine }) : '';
+
+      // A last-resort translation says so, first among the notes and in the
+      // loud style — it is a caveat about the sentence itself, not a remark
+      // about one word in it.
+      if (data.uncertain) {
+        notes.prepend(el('p', { class: 'parses__alarm' }, t('translator.uncertain')));
+      }
       status.textContent = force ? t('translator.done') : t('translator.ready');
     } catch (error) {
       if (controller.signal.aborted || error.name === 'AbortError') return;

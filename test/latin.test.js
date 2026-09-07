@@ -262,6 +262,24 @@ ok('nothing outside the course has a book', bookOf(99) === null);
 ok('a found stage carries its book', findStage('17').book.label === 'Book II');
 ok('and so does every word', allWords().every((word) => word.book !== null));
 
+// --- finding a stage by whatever was typed ---------------------------------
+// The numerals used to be a hand-written table that stopped at xii, so adding
+// Books II and III left half the course reachable by digits only.
+const numeral = (n) => ['', 'x', 'xx', 'xxx'][Math.floor(n / 10)]
+  + ['', 'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix'][n % 10];
+
+for (const n of STAGE_NUMBERS) {
+  ok(`stage ${n} by digits`, findStage(String(n))?.number === n);
+  ok(`stage ${n} by "stage n"`, findStage(`stage ${n}`)?.number === n);
+  ok(`stage ${n} by numeral ${numeral(n)}`, findStage(numeral(n))?.number === n);
+  ok(`stage ${n} by its title`, findStage(STAGES[n].title)?.number === n);
+}
+ok('the numerals reach the last book', findStage('xxviii')?.number === 28);
+ok('a title is not case-sensitive', findStage('VESUVIUS')?.number === 12);
+ok('nothing is not a stage', findStage('') === null);
+ok('past the end is not a stage', findStage('99') === null);
+ok('nor is a word that is not a title', findStage('nonsense') === null);
+
 // --- the subject restriction, which is a browser-side gate ----------------
 const { allowedSubjects, subjectAllowed, setRestricted, isRestricted } = await import('../public/js/lib/restriction.js');
 globalThis.window = { dispatchEvent() {} };

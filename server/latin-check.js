@@ -196,8 +196,27 @@ export async function checkLatin(source, translated) {
     });
   }
 
+  /**
+   * A word Whitaker's does not know, sitting in the English that was asked
+   * about, is not a doubtful reading — it is a word the engine gave up on and
+   * copied across. "the boy praises the farmer" coming back as "puella complens
+   * the Farmer" is not a translation, and a study aid must not present it as
+   * one: this is the page where a student decides what to write down.
+   */
+  const englishWords = new Set(String(source ?? '').toLowerCase().match(/\p{L}+/gu) ?? []);
+  const untranslated = unknown.filter((entry) => englishWords.has(entry.word.toLowerCase()));
+  if (untranslated.length) {
+    notes.push({
+      kind: 'untranslated',
+      from: untranslated.map((entry) => entry.word).join(', '),
+      why: untranslated.length === 1
+        ? `The engine left “${untranslated[0].word}” in English, so this is not a full translation. Trust the words below, not the sentence.`
+        : `The engine left ${untranslated.length} words in English — ${untranslated.map((e) => `“${e.word}”`).join(', ')} — so this is not a full translation. Trust the words below, not the sentence.`,
+    });
+  }
+
   // Re-parse if anything was changed, so the page shows the corrected forms.
   const finalParses = text === translated ? parses : await parseLatin(text, expectations);
 
-  return { text, parses: finalParses, notes };
+  return { text, parses: finalParses, notes, reliable: untranslated.length === 0 };
 }

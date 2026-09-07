@@ -788,15 +788,32 @@ export function bookOf(stage) {
 /** Stage numbers in order, for the page's index. */
 export const STAGE_NUMBERS = Object.keys(STAGES).map(Number).sort((a, b) => a - b);
 
-/** Find a stage by whatever the reader typed: "5", "stage 5", "V". */
-const ROMAN = {
-  i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12,
-};
+/**
+ * Find a stage by whatever the reader typed: "5", "stage 5", "V", "Vesuvius".
+ *
+ * The numerals are derived rather than listed. They used to be a table that
+ * stopped at xii, which was the whole course when it was written — adding Books
+ * II and III quietly left stages 13 to 28 reachable by digits only, while the
+ * page went on inviting a numeral.
+ */
+const ROMAN_UNITS = ['', 'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix'];
+const ROMAN_TENS = ['', 'x', 'xx', 'xxx'];
+
+function roman(n) {
+  return ROMAN_TENS[Math.floor(n / 10)] + ROMAN_UNITS[n % 10];
+}
 
 export function findStage(input) {
   const text = String(input ?? '').trim().toLowerCase().replace(/^stage\s*/, '');
   if (!text) return null;
-  const number = /^\d+$/.test(text) ? Number(text) : ROMAN[text];
+
+  let number = /^\d+$/.test(text) ? Number(text) : 0;
+  // A numeral, or the stage's own title — the titles are on screen in the
+  // index, so typing one back is a fair thing to expect to work.
+  if (!number) {
+    number = STAGE_NUMBERS.find((n) => roman(n) === text
+      || STAGES[n].title.toLowerCase() === text) ?? 0;
+  }
   if (!number || !STAGES[number]) return null;
   return { number, book: bookOf(number), ...STAGES[number] };
 }

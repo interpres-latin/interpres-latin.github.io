@@ -174,7 +174,7 @@ No model, at any point. Four dedicated engines, tried in order:
 | --- | --- | --- |
 | 0 | **Wikipedia** | for names and titles. Machine translation renders them literally: "Cuban Missile Crisis" becomes *"crisis de los misiles cubanos"*, which says the missiles were Cuban when they were Soviet. Wikipedia's cross-language links hold the name each language actually uses — *Crisis de los misiles de Cuba*. |
 | 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES`, and one that fails is rested for a minute rather than re-asked on every translation. |
-| 2 | **MyMemory** | a crowd translation memory, believed only when its candidates agree with each other. |
+| 2 | **MyMemory** | a crowd translation memory. Believed outright when the answer is its own machine translation, and otherwise only when its stored candidates agree with each other. |
 | 3 | **Apertium** | open-source rule-based translation. Clumsy — *Test me* comes back as *Me pruebo* — but always up and it never invents content. Spanish only: it has no English–French or English–Latin pair, so those chains stop at MyMemory. |
 
 Apertium is the **floor**, not the usual answer. Spanish normally lands on
@@ -188,6 +188,29 @@ no score exposes: *"Buenos días, ¿cómo estás?"* comes back as *"Good morning
 Neither the quality field nor the source segment separates that from a good
 answer, since the memory genuinely holds three different translations of the
 same sentence. Disagreement does.
+
+**But agreement alone was too strict**, and it cost French and Latin their only
+translator. The memory rarely holds the same sentence twice, so *le chien de la
+fille* — the top candidate, and correct — was thrown out for sharing the page
+with *La rumeur* and *Of the girl*. Spanish never showed the damage because
+Apertium answers after it; French and Latin have no Apertium pair, so a veto
+there left them with nothing.
+
+What separates the two cases is not the score. The score says how close the
+*source* is to something stored, so a wrong translation of a well-known sentence
+still scores 0.99 — *Tengo hambre* → *"I have hunger"* at 1.00, *"cashapp me"*
+at 0.99. It is **where the candidate came from**. MyMemory translates the
+sentence itself only when its memory holds nothing close, and marks that one
+`MT!`: one engine's answer, with no crowd to disagree with. Where a stored
+translation does match there is no `MT!` at all, and the vote still decides — so
+the Najlaa sentence is still refused.
+
+And when nothing is confident, the memory's best guess is returned **labelled**
+rather than withheld. Spanish never reaches that, because Apertium answers
+first. French and Latin reach it whenever the memory holds a sentence twice and
+its copies disagree, and there the choice is between a doubtful sentence that
+says it is doubtful and an error message that helps nobody: a student can weigh
+a translation marked uncertain, and cannot weigh a blank page.
 
 Names inside a sentence are handled too, and separately: the whole-input lookup
 cannot see them, and a translator renders them literally wherever they appear.
@@ -567,17 +590,21 @@ checked, because the answer is not obvious and the temptation is to keep looking
 | Lingva | the surviving instances answer 500: the app is up, Google is refusing it |
 | SimplyTranslate | 200 with an empty translation — the same failure, same cause |
 | LibreTranslate | 51 languages, has French, **no Latin**; the main instance now needs a key |
-| MyMemory | answers, but nothing it returned passed the agreement rule |
+| MyMemory | answers, but nothing it returned passed the agreement rule *(since fixed — see the chain above)* |
 
 Lingva and SimplyTranslate are both Google front ends and both broke the same
 way, so it is the endpoint that whole category uses. **Self-hosting would not
 have helped**, which is worth knowing before spending an afternoon on it.
 
-MyMemory is the interesting near-miss. Its French is mostly right — *Où est la
-bibliothèque ?*, *Le chien de la fille* — but its three candidates never agree
-with each other, so the rule that exists to catch its bad days rejects its good
-ones too. Its Latin is not a near-miss: *I am tired* came back as *ego sum
-stultus*, which means "I am stupid".
+MyMemory was the interesting near-miss, and it is the one that turned out to be
+ours rather than theirs. Its French is mostly right — *Où est la bibliothèque ?*,
+*Le chien de la fille* — but its three candidates never agree with each other,
+so the rule meant to catch its bad days was rejecting its good ones too. That is
+fixed: French translates again, through MyMemory, in both directions.
+
+Its Latin is not a near-miss. *I am tired* came back as *ego sum stultus*, "I am
+stupid", and *the boy praises the farmer* as *puella complens the Farmer*. So
+Latin output is checked rather than shown — see below.
 
 **The site degrades honestly.** Spanish is unaffected, since Apertium is a real
 translator rather than a proxy and nothing can rate-limit it. French and Latin
@@ -688,6 +715,15 @@ Nothing is invented and nothing is guessed. Where the construction is not
 unambiguous the translation is left alone and the parse is shown instead, which
 is the honest half of the same idea.
 
+**And a sentence with English still in it is not offered as an answer.** A word
+Whitaker's does not know, which also appears in the English that was asked
+about, is not a doubtful reading — it is a word the engine gave up on and copied
+across. *the boy praises the farmer* → *puella complens **the Farmer***. The
+translation is struck through, the note says which words were left behind, and
+it points at the word-by-word parse instead. This is the page where a student
+decides what to write down, so a sentence that is not a translation must not
+look like one.
+
 **The number has to match too.** A nominative is not enough: *boy* came back as
 *pueri*, which is nominative — and plural. So the English head noun's number is
 read first, and the correction is to the nominative *singular* or *plural* as
@@ -764,6 +800,12 @@ shares the nominative. Read as a two-termination adjective it produces
 The Cambridge Latin Course teaches in numbered stages and students revise by
 stage, so the page takes a number and gives you the list. Typing a word instead
 tells you which stage it came from.
+
+A stage answers to whatever you type at it: `21`, `stage 21`, the numeral `xxi`,
+or its title. The numerals are derived rather than listed, which is the fix for
+a quiet one — they were a hand-written table that stopped at `xii`, so adding
+Books II and III left the second half of the course reachable by digits only
+while the page went on inviting a numeral.
 
 **Be clear about what this data is.** The course publishes no vocabulary data
 and its stage checklists are not available as a file, so these lists are

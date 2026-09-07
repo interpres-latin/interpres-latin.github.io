@@ -342,8 +342,31 @@ export function resetLingvaCooldowns() {
 }
 
 /**
- * Believed only when its candidates agree: the memory holds several different
- * translations of the same sentence, and the wrong one can score highest.
+ * MyMemory's own machine translation, which it returns under this name when no
+ * stored human translation comes close to the sentence.
+ */
+const MYMEMORY_MT = 'MT!';
+
+/**
+ * Believed when the answer is MyMemory's own machine translation, or when two
+ * stored translations agree.
+ *
+ * Agreement alone was the whole rule, and it was too strict to be useful. The
+ * memory rarely holds the same sentence twice, so "le chien de la fille" — the
+ * top candidate, and correct — was thrown out for sharing the page with "La
+ * rumeur" and "Of the girl". Spanish only seemed to survive that because
+ * Apertium answers after it; French and Latin have no Apertium pair and no
+ * Lingva, so the veto left them with no translator at all.
+ *
+ * What separates the two cases is not the score — the score says how close the
+ * *source* is to something stored, so the wrong translation of a well-known
+ * sentence still scores 0.99. It is where the candidate came from. MyMemory
+ * falls back to translating the sentence itself only when its memory has
+ * nothing close, and marks that one MT!: a single engine's answer, with no
+ * crowd to disagree with. Where a stored translation does match, there is no
+ * MT! at all and the vote still decides — which is the "Good morning Najlaa how
+ * are you?" case, three stored translations of one sentence with the wrong one
+ * on top, and it is still refused.
  */
 async function myMemory(text, from, to) {
   let confident = true;
@@ -358,7 +381,14 @@ async function myMemory(text, from, to) {
       throw new Error(body.responseDetails || 'MyMemory returned no translation');
     }
 
-    const candidates = (body.matches || []).map((match) => String(match.translation)).filter(Boolean);
+    const matches = (body.matches || []).filter((match) => String(match.translation || ''));
+
+    // Its own machine translation, offered because the memory had nothing
+    // closer. Nothing to take a vote among.
+    const machine = matches.find((match) => String(match['created-by']) === MYMEMORY_MT);
+    if (machine) return String(machine.translation);
+
+    const candidates = matches.map((match) => String(match.translation));
     const tally = new Map();
     for (const candidate of candidates) {
       const key = normalise(candidate);
@@ -372,7 +402,14 @@ async function myMemory(text, from, to) {
       || body.responseData.translatedText;
   });
 
-  if (!confident) throw new Error('MyMemory candidates disagreed');
+  if (!confident) {
+    // The best guess travels with the refusal. Nothing behind MyMemory can
+    // translate French or Latin, so a doubtful answer is worth keeping as a
+    // last resort — see translate().
+    const doubt = new Error('MyMemory candidates disagreed');
+    doubt.guess = translated;
+    throw doubt;
+  }
   return { text: translated, engine: 'MyMemory' };
 }
 
@@ -451,6 +488,7 @@ async function restoreIdioms(source, translated, from, to, translateSpan) {
  */
 export async function translate(text, from, to) {
   const failures = [];
+  let guess = null;
 
   for (const engine of ENGINES) {
     try {
@@ -471,7 +509,28 @@ export async function translate(text, from, to) {
       return { ...result, text: withIdioms.text, notes: withIdioms.notes };
     } catch (error) {
       failures.push(error.message);
+      if (error.guess?.trim() && !guess) guess = error.guess;
     }
+  }
+
+  /**
+   * Nothing was confident. Rather than nothing at all, take the memory's own
+   * best guess and say plainly that it is one.
+   *
+   * This is a last resort and reads like one. Spanish never reaches it, because
+   * Apertium answers first; French and Latin reach it whenever the memory holds
+   * a sentence more than once and its copies disagree, and for them the choice
+   * is between a doubtful sentence that is labelled and an error message that
+   * helps nobody. A student can weigh a translation marked uncertain. They
+   * cannot weigh a blank page.
+   */
+  if (guess) {
+    return {
+      text: guess,
+      engine: 'MyMemory',
+      uncertain: true,
+      notes: [],
+    };
   }
 
   const error = new Error(`No translation engine answered. ${failures.join(' · ')}`);

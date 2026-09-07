@@ -38,7 +38,12 @@ router.post('/', async (req, res) => {
 
   try {
     const result = await translate(text, from, to);
-    const payload = { translation: result.text, engine: result.engine, notes: result.notes || [] };
+    const payload = {
+      translation: result.text,
+      engine: result.engine,
+      notes: result.notes || [],
+      uncertain: result.uncertain === true,
+    };
 
     // Latin is checked rather than trusted. Every word is parsed, so the page
     // can show the case of each one, and a head noun in the wrong case is put
@@ -47,7 +52,9 @@ router.post('/', async (req, res) => {
       const checked = await checkLatin(text, payload.translation).catch(() => null);
       if (checked) {
         payload.translation = checked.text;
-        payload.latin = { parses: checked.parses, notes: checked.notes };
+        payload.latin = {
+          parses: checked.parses, notes: checked.notes, reliable: checked.reliable,
+        };
       }
     }
 

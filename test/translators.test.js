@@ -72,6 +72,15 @@ const memory = (...translations) => ({
   matches: translations.map((translation) => ({ translation })),
 });
 
+/** The same, but the first candidate is MyMemory's own machine translation. */
+const machineMemory = (...translations) => ({
+  responseStatus: 200,
+  responseData: { translatedText: translations[0] },
+  matches: translations.map((translation, index) => (index === 0
+    ? { translation, 'created-by': 'MT!' }
+    : { translation })),
+});
+
 // --- names and titles go to Wikipedia, not to a translator ----------------
 // "Cuban Missile Crisis" translated literally becomes "crisis de los misiles
 // cubanos", which says the missiles were Cuban. They were Soviet.
@@ -217,6 +226,53 @@ plan = {
 result = await translate('Buenos días, ¿cómo estás?', 'es', 'en');
 ok('a memory that disagrees with itself is skipped', result.engine === 'Apertium', JSON.stringify(result));
 ok('and the stray name never reaches the reader', !/Najlaa/.test(result.text), result.text);
+
+// --- MyMemory's own machine translation is taken on its own ---------------
+// It offers this only when the memory holds nothing close, so there is no
+// crowd to take a vote among — and refusing it left French and Latin, which
+// have no Apertium pair and no Lingva, with no translator at all.
+plan = {
+  lingva: null,
+  mymemory: machineMemory('le chien de la fille', 'La rumeur', 'Of the girl'),
+  apertium: null,
+};
+result = await translate('the dog of the girl', 'en', 'fr');
+ok('the machine translation is believed', result.engine === 'MyMemory', JSON.stringify(result));
+ok('and it is the one returned', result.text === 'le chien de la fille', result.text);
+
+// --- but a disagreeing crowd is still refused -----------------------------
+// The Najlaa case again, now proving the machine-translation route did not
+// quietly open a door for it: no MT! candidate, so the vote still decides.
+plan = {
+  lingva: null,
+  mymemory: memory('Good morning Najlaa how are you?', 'Yes, morning, how are you doing?', 'Good morning how are you?'),
+  apertium: { responseData: { translatedText: 'Good morning, how you are?' } },
+};
+result = await translate('Buenos días, ¿cómo estás?', 'es', 'en');
+ok('a stored crowd that disagrees is still skipped', result.engine === 'Apertium', JSON.stringify(result));
+ok('and the stray name still never reaches the reader', !/Najlaa/.test(result.text), result.text);
+
+// --- a doubtful memory is still better than nothing, once labelled --------
+// French and Latin have no engine behind MyMemory, so a refused vote used to
+// mean a 502. The guess comes back marked instead.
+plan = {
+  lingva: null,
+  mymemory: memory('I would like a coffee', 'a coffee please', 'Coffee'),
+  apertium: null,
+};
+result = await translate('Je voudrais un café', 'fr', 'en');
+ok('a disagreeing memory is still answered as a last resort', result.engine === 'MyMemory', JSON.stringify(result));
+ok('and it is marked uncertain', result.uncertain === true, JSON.stringify(result));
+
+// --- but only once every engine has declined ------------------------------
+plan = {
+  lingva: null,
+  mymemory: memory('Good morning Najlaa how are you?', 'Yes, morning, how are you doing?', 'Good morning how are you?'),
+  apertium: { responseData: { translatedText: 'Good morning, how you are?' } },
+};
+result = await translate('Buenos días, ¿cómo estás?', 'es', 'en');
+ok('an engine that can answer still wins', result.engine === 'Apertium', JSON.stringify(result));
+ok('and a confident answer is never marked uncertain', !result.uncertain, JSON.stringify(result));
 
 // --- agreement ignores case and punctuation -------------------------------
 plan = { lingva: null, mymemory: memory('Good morning.', 'good morning'), apertium: null };
