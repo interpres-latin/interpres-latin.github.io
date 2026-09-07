@@ -1353,9 +1353,6 @@ and exposes `GET /api/health` for a health check.
   harmless — arguably a feature for the lock — but the delay is visible.
 - **The lock clears on every deploy and restart**, by design. Nobody should be
   locked out by a process nobody is watching.
-- **Rotate any key that has ever been pasted into a chat, an issue or a commit.**
-  Keys belong in the host's environment settings, never in the repo; `.env` is
-  gitignored for that reason.
 
 ## Notes
 
