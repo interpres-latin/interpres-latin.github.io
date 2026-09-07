@@ -232,6 +232,37 @@ function buildTranslator(root) {
    * result rather than asking them to take it on trust, and flags any word that
    * is not Latin at all.
    */
+  /**
+   * Write the translation out, marking the words the engine gave up on.
+   *
+   * Apertium flags a word it has no entry for; those used to be silently
+   * unmarked, so a French sentence containing the English "chaîne" looked
+   * exactly as translated as the rest of it. They are the one part of the
+   * sentence the engine is telling you not to trust, so they are the one part
+   * that is coloured.
+   *
+   * textContent still reads back the whole sentence, so copying and the swap
+   * button are unaffected.
+   */
+  function paintOutput(text, unsure) {
+    clear(output);
+    if (!text) return;
+
+    const words = (unsure ?? []).filter(Boolean);
+    if (!words.length) { output.textContent = text; return; }
+
+    const escaped = words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const pattern = new RegExp(`\\b(${escaped.join('|')})\\b`, 'giu');
+
+    // split() with a capture group alternates plain text and matches.
+    for (const [index, piece] of text.split(pattern).entries()) {
+      if (!piece) continue;
+      output.appendChild(index % 2
+        ? el('span', { class: 'unsure', title: t('translator.unsureWord') }, piece)
+        : document.createTextNode(piece));
+    }
+  }
+
   function paintParses(latin) {
     clear(parses);
     output.classList.remove('output--unreliable');
@@ -355,7 +386,7 @@ function buildTranslator(root) {
         { signal: controller.signal },
       );
       if (controller.signal.aborted) return;
-      output.textContent = data.translation || '';
+      paintOutput(data.translation || '', data.unsure);
       paintNotes(data.notes);
       paintParses(data.latin);
       engine.textContent = data.engine ? t('translator.engine', { engine: data.engine }) : '';

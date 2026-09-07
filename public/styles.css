@@ -511,6 +511,12 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .parses__alarm { margin: 0 0 10px; padding: 11px 13px; border: 1px solid #574b26; background: #1d1a12; color: #d9b05c; font-size: 12.5px; font-weight: 500; }
 .output--unreliable { color: var(--text-faint); text-decoration: line-through; text-decoration-color: #d9b05c; text-decoration-thickness: 1px; }
 
+/* A word the engine could not translate and passed through untouched. Yellow,
+   the same yellow the notices use, with a dotted rule so it still reads as a
+   word rather than as a link. */
+.unsure { color: #d9b05c; border-bottom: 1px dotted #d9b05c; cursor: help; }
+:root[data-theme="light"] .unsure { color: #8a6a12; border-bottom-color: #c9a94e; }
+
 /* The same thing on the dictionary page: one line per way the form can read. */
 .parses { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
 .parses__label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
@@ -704,6 +710,23 @@ table.conj td.is-empty { color: var(--text-faint); }
 
 .entry__head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
 .entry__head h2 { font-size: 38px; }
+
+/* Sits with the headword rather than after the chips: it belongs to the word.
+   Square, like everything else here. */
+.speak {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0;
+  border: 1px solid var(--line); background: var(--panel); color: var(--text-dim);
+  cursor: pointer; align-self: center;
+  transition: color .12s, border-color .12s, background .12s;
+}
+.speak:hover { color: var(--text); border-color: var(--line-hi); background: var(--panel-hi); }
+.speak:active { transform: translateY(1px); }
+.speak.is-loading { opacity: .45; cursor: default; }
+.speak--failed { color: #d9b05c; border-color: #574b26; }
+
+/* The Latin caveat, in the quiet voice — it is a qualification, not a warning. */
+.entry__sound { margin: 0 0 14px; font-size: 12.5px; color: var(--text-faint); }
 .entry__origin { color: var(--text-dim); font-size: 13.5px; font-style: italic; margin: 0 0 28px; }
 
 .entry__gloss { margin: 0 0 20px; font-size: 16px; color: var(--text-dim); }

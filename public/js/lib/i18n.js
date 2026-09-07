@@ -193,6 +193,9 @@ const SPANISH = {
     uncertain: two(
       'El traductor no está seguro de esta frase: sus versiones guardadas no coinciden. Compruébala.',
       'The translator is unsure of this one: its stored versions disagree. Check it.'),
+    unsureWord: two(
+      'El traductor no conocía esta palabra y la dejó como estaba.',
+      'The translator did not know this word and left it as it was.'),
   },
 
   finder: {
@@ -292,6 +295,9 @@ const SPANISH = {
     ),
     notAcademie: two('', ''),
     seeAuthority: two('', ''),
+    speak: two('Escuchar la palabra', 'Hear the word'),
+    speakFailed: two('No se pudo pronunciar.', 'Could not pronounce that.'),
+    speakSpent: two('Se acabaron las pronunciaciones de este mes.', 'This month’s pronunciations are used up.'),
     templateNote: two(
       'Ejemplo de plantilla — configura una clave gratuita para generar frases reales.',
       'Template example — add a free API key to generate real sentences.',
@@ -447,6 +453,9 @@ const FRENCH = {
     uncertain: deux(
       'Le traducteur hésite sur cette phrase : ses versions enregistrées se contredisent. À vérifier.',
       'The translator is unsure of this one: its stored versions disagree. Check it.'),
+    unsureWord: deux(
+      'Le traducteur ne connaissait pas ce mot et l’a laissé tel quel.',
+      'The translator did not know this word and left it as it was.'),
   },
 
   finder: {
@@ -551,6 +560,9 @@ const FRENCH = {
       'The Académie française publishes no API, so these definitions come from the Wiktionnaire. The Académie’s own entry is one click away.',
     ),
     seeAuthority: deux('voir à l’Académie française ↗', 'view at the Académie française ↗'),
+    speak: deux('Écouter le mot', 'Hear the word'),
+    speakFailed: deux('Impossible de prononcer.', 'Could not pronounce that.'),
+    speakSpent: deux('Les prononciations de ce mois-ci sont épuisées.', 'This month’s pronunciations are used up.'),
     templateNote: deux(
       'Exemple type — ajoutez une clé gratuite pour générer de vraies phrases.',
       'Template example — add a free API key to generate real sentences.',
@@ -721,6 +733,9 @@ const LATIN = {
     uncertain: latine(
       'Interpres dubitat: versiones servatae inter se discrepant. Cave.',
       'The translator is unsure of this one: its stored versions disagree. Check it.'),
+    unsureWord: latine(
+      'Interpres hoc verbum non novit et intactum reliquit.',
+      'The translator did not know this word and left it as it was.'),
     parseTitle: latine('Verbum ac verbum', 'Word by word'),
     parseLead: latine(
       'Omne verbum Latinum, ut Whitaker’s Words id legit.',
@@ -908,6 +923,15 @@ const LATIN = {
     notRae: latine('', ''),
     notAcademie: latine('', ''),
     seeAuthority: latine('', ''),
+    speak: latine('Verbum audire', 'Hear the word'),
+    speakFailed: latine('Non potest pronuntiari.', 'Could not pronounce that.'),
+    speakSpent: latine('Pronuntiationes huius mensis consumptae sunt.', 'This month’s pronunciations are used up.'),
+    // Said next to the button, not buried in a footnote: no speech model has
+    // Latin, so this is an approximation and closer to ecclesiastical than to
+    // the classical pronunciation the course teaches.
+    speakLatin: latine(
+      'Sonus per machinam fictus est — non est pronuntiatio classica.',
+      'Approximated by a machine — closer to church Latin than to the classical pronunciation your course teaches.'),
     templateNote: latine('', ''),
     parses: latine('Formae lectiones', 'How this form reads'),
     principalParts: latine('Partes principales', 'Principal parts'),

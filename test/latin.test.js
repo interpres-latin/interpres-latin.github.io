@@ -284,15 +284,22 @@ ok('nor is a word that is not a title', findStage('nonsense') === null);
 const { allowedSubjects, subjectAllowed, setRestricted, isRestricted } = await import('../public/js/lib/restriction.js');
 globalThis.window = { dispatchEvent() {} };
 globalThis.CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init?.detail; } };
-ok('everything is on offer by default', allowedSubjects().join(',') === 'es,fr,la');
-setRestricted(true);
-ok('restricting leaves only Spanish', allowedSubjects().join(',') === 'es');
-ok('and says so', isRestricted() === true);
+// Closed by default: French and Latin are unlocked by a passcode rather than
+// taken away by one, so a page that has not yet heard from the server offers
+// only Spanish.
+ok('only Spanish is on offer by default', allowedSubjects().join(',') === 'es');
+ok('and it says it is restricted', isRestricted() === true);
 ok('French is refused', subjectAllowed('fr') === false);
 ok('Latin is refused', subjectAllowed('la') === false);
 ok('Spanish is not', subjectAllowed('es') === true);
+
 setRestricted(false);
-ok('lifting it restores the three', allowedSubjects().join(',') === 'es,fr,la');
+ok('opening it offers the three', allowedSubjects().join(',') === 'es,fr,la');
+ok('and it says so', isRestricted() === false);
+ok('French is allowed', subjectAllowed('fr') === true);
+
+setRestricted(true);
+ok('closing it leaves only Spanish again', allowedSubjects().join(',') === 'es');
 
 // --- report ----------------------------------------------------------------
 if (failures.length) {

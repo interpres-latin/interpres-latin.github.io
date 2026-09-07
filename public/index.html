@@ -17,10 +17,16 @@
       // The chrome is either English or whichever language the site is about.
       // The subject also goes on the root element, because the wallpaper is
       // chosen in CSS and has to be right before the first paint.
+      // French and Latin are behind the padlock's passcode, and the server
+      // says so a moment after this runs. What it said last time is kept in
+      // localStorage purely so this line can paint the right wallpaper — a
+      // returning Latin reader should not get a beat of the Colosseum before
+      // being put back to Spanish. The server remains the authority.
       var study = 'es';
       try {
         var subject = localStorage.getItem('profegpt:study');
-        study = subject === 'fr' || subject === 'la' ? subject : 'es';
+        var open = localStorage.getItem('profegpt:restricted') === 'false';
+        study = open && (subject === 'fr' || subject === 'la') ? subject : 'es';
       } catch (e) {}
       document.documentElement.dataset.study = study;
       try {

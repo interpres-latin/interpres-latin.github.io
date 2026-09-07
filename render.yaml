@@ -72,6 +72,16 @@ services:
       - key: DEEPL_API_KEY
         sync: false
 
+      # Pronunciation on the dictionary page. Free tier is 10,000 characters a
+      # month for the whole site, so clips are cached and only single words are
+      # ever spoken. Without it the speaker button removes itself.
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      # Optional: a premade voice id. Defaults to "Alice", a clear educator
+      # voice. A free account cannot use voice-library voices.
+      - key: ELEVENLABS_VOICE_ID
+        sync: false
+
       # Off-topic chat only. Everything about the languages themselves is
       # answered from the site's own data and needs no key at all.
       - key: GEMINI_API_KEY

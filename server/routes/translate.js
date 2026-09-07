@@ -61,6 +61,9 @@ router.post('/', async (req, res) => {
       engine: result.engine,
       notes: result.notes || [],
       uncertain: result.uncertain === true,
+      // Words the engine could not translate and left as they were. The page
+      // colours these rather than letting them pass as translation.
+      unsure: result.unsure ?? [],
     };
 
     // Latin is checked rather than trusted. Every word is parsed, so the page

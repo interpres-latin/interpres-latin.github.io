@@ -209,6 +209,66 @@ function renderMiss(word, error, search) {
       : null);
 }
 
+/**
+ * The button that says the headword out loud.
+ *
+ * One <audio> per entry, reused: a reader who presses it twice wants to hear
+ * the word again, not two overlapping copies of it. The clip is cached by the
+ * browser and by the server, so pressing it again costs nothing at all.
+ *
+ * If pronunciation is not configured the button removes itself rather than
+ * standing there failing — the site works without a key, as everything else
+ * here does.
+ */
+function speakButton(word) {
+  const button = el('button', {
+    class: 'speak',
+    type: 'button',
+    title: t('dictionary.speak'),
+    'aria-label': `${t('dictionary.speak')}: ${word}`,
+  }, icon(ICONS.speaker, { size: 16 }));
+
+  let audio = null;
+  let loading = false;
+
+  button.addEventListener('click', async () => {
+    if (loading) return;
+
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+      return;
+    }
+
+    loading = true;
+    button.classList.add('is-loading');
+    try {
+      const url = `/api/speak?word=${encodeURIComponent(word)}&study=${studyLang()}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        // Not configured at all: the button is noise, so it goes.
+        if (response.status === 503) { button.remove(); return; }
+        const failure = await response.json().catch(() => ({}));
+        button.classList.add('speak--failed');
+        button.title = failure.spent ? t('dictionary.speakSpent') : t('dictionary.speakFailed');
+        return;
+      }
+
+      audio = new Audio(URL.createObjectURL(await response.blob()));
+      await audio.play().catch(() => {});
+    } catch {
+      button.classList.add('speak--failed');
+      button.title = t('dictionary.speakFailed');
+    } finally {
+      loading = false;
+      button.classList.remove('is-loading');
+    }
+  });
+
+  return button;
+}
+
 function renderEntry(data, search) {
   const wrap = el('article', { class: 'entry' });
 
@@ -220,6 +280,7 @@ function renderEntry(data, search) {
 
   wrap.appendChild(el('div', { class: 'entry__head' },
     el('h2', {}, data.word),
+    speakButton(data.word),
     expected
       ? el('a', { class: 'chip', href: data.source.url, target: '_blank', rel: 'noopener' }, t('dictionary.seeOnRae'))
       : el('a', { class: 'chip chip--warn', href: data.source.url, target: '_blank', rel: 'noopener' }, data.source.name),
@@ -233,6 +294,12 @@ function renderEntry(data, search) {
   if (data.corrected) {
     wrap.appendChild(el('p', { class: 'notice' },
       t('dictionary.corrected', { from: data.corrected.from, to: data.corrected.to })));
+  }
+
+  // No speech model has Latin, so the sound is an approximation and the reader
+  // is told where it stands before they copy it into their head.
+  if (studyLang() === 'la') {
+    wrap.appendChild(el('p', { class: 'entry__sound' }, t('dictionary.speakLatin')));
   }
 
   // Never let the authority change silently.

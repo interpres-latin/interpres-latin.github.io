@@ -73,6 +73,15 @@ export const ICONS = {
   search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm10 2-4.35-4.35',
   copy: 'M9 9h10v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9Zm-2 6H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2',
   send: 'M4 12 21 4l-8 17-2-7-7-2Z',
+
+  // The cone is filled and the waves are stroked, for the same reason the
+  // padlock is: an all-outline speaker is mush at 16px. Two waves rather than
+  // three — the third crowds the box at this size and reads as noise.
+  speaker: [
+    { d: 'M4 9.3h3.3L12 5.3v13.4L7.3 14.7H4z', fill: true },
+    { d: 'M15.4 9.4a3.6 3.6 0 0 1 0 5.2', width: 2 },
+    { d: 'M18.1 7a7.2 7.2 0 0 1 0 10', width: 2 },
+  ],
   down: 'M12 5v14m0 0-6-6m6 6 6-6',
 
   // Solid bodies with a stroked shackle: an all-outline padlock turns to mush

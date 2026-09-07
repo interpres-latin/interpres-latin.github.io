@@ -459,7 +459,17 @@ const APERTIUM_PAIRS = new Set(['spa|eng', 'eng|spa', 'spa|fra', 'fra|spa']);
 const APERTIUM_PIVOT = 'cat';
 const APERTIUM_PIVOTS = new Set(['eng|fra', 'fra|eng']);
 
-async function apertiumHop(text, pair) {
+/**
+ * One Apertium hop, keeping a record of what it could not translate.
+ *
+ * Apertium marks a word it has no entry for with a leading `#`. That marker
+ * used to be stripped and forgotten, which quietly turned "I could not
+ * translate this word" into "here is your translation" — the reader saw
+ * *chaîne* sitting in a French sentence with nothing to say it was a guess.
+ * The marker comes off the text, because a `#` in the middle of a sentence is
+ * not for reading, and the words go into `unsure` so the page can colour them.
+ */
+async function apertiumHop(text, pair, unsure = new Set()) {
   return translateChunks(text, LINGVA_CHUNK, async (part) => {
     const url = `${APERTIUM}?langpair=${encodeURIComponent(pair)}&q=${encodeURIComponent(part)}`;
     const response = await throttle('apertium', 120, () => fetch(url, {
@@ -471,8 +481,10 @@ async function apertiumHop(text, pair) {
     const body = await response.json();
     const out = body.responseData?.translatedText;
     if (!out) throw new Error('Apertium returned no translation');
-    // Apertium marks words it could not translate with a leading #.
-    return String(out).replace(/#(\S)/g, '$1');
+    return String(out).replace(/#(\p{L}[\p{L}\p{M}'’-]*)/gu, (_match, word) => {
+      unsure.add(word);
+      return word;
+    });
   });
 }
 
@@ -481,14 +493,21 @@ async function apertium(text, from, to) {
   const target = APERTIUM_CODES[to];
   const pair = `${source}|${target}`;
 
+  const unsure = new Set();
+
   if (APERTIUM_PAIRS.has(pair)) {
-    return { text: await apertiumHop(text, pair), engine: 'Apertium' };
+    const translated = await apertiumHop(text, pair, unsure);
+    return { text: translated, engine: 'Apertium', unsure: [...unsure] };
   }
 
   if (APERTIUM_PIVOTS.has(pair)) {
-    const middle = await apertiumHop(text, `${source}|${APERTIUM_PIVOT}`);
-    const translated = await apertiumHop(middle, `${APERTIUM_PIVOT}|${target}`);
-    return { text: translated, engine: 'Apertium', uncertain: true };
+    // Both hops can give up on a word, and a word the first hop left behind is
+    // usually still there for the second to leave behind again.
+    const middle = await apertiumHop(text, `${source}|${APERTIUM_PIVOT}`, unsure);
+    const translated = await apertiumHop(middle, `${APERTIUM_PIVOT}|${target}`, unsure);
+    return {
+      text: translated, engine: 'Apertium', uncertain: true, unsure: [...unsure],
+    };
   }
 
   // Latin has no Apertium pair in either direction and no language between it
@@ -592,7 +611,16 @@ export async function translate(text, from, to, { model = true } = {}) {
       // Engines and substitutions both leave stray spacing behind; a reader
       // should never see the seam.
       const tidied = withIdioms.text.replace(/[ \t]{2,}/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
-      return { ...result, text: tidied, notes: withIdioms.notes };
+      // Only the words still standing in the finished text are worth marking:
+      // names and idioms are put back after the engine ran, and may well have
+      // replaced the very word Apertium gave up on.
+      const stillThere = (result.unsure ?? []).filter((word) => new RegExp(
+        `\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'iu',
+      ).test(tidied));
+
+      return {
+        ...result, text: tidied, notes: withIdioms.notes, unsure: stillThere,
+      };
     } catch (error) {
       failures.push(error.message);
       if (error.guess?.trim() && !guess) guess = error.guess;

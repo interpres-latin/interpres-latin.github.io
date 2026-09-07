@@ -7,6 +7,7 @@ import { router as dictionary } from './routes/dictionary.js';
 import { router as verbs } from './routes/verbs.js';
 import { router as chat } from './routes/chat.js';
 import { router as lock } from './routes/lock.js';
+import { router as speak } from './routes/speak.js';
 
 loadEnv();
 
@@ -22,6 +23,7 @@ app.use('/api/dictionary', dictionary);
 app.use('/api/verbs', verbs);
 app.use('/api/chat', chat);
 app.use('/api/lock', lock);
+app.use('/api/speak', speak);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, ai: hasProvider(), provider: providerInfo() });
