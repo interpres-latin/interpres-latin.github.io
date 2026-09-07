@@ -175,7 +175,7 @@ No model, at any point. Four dedicated engines, tried in order:
 | 0 | **Wikipedia** | for names and titles. Machine translation renders them literally: "Cuban Missile Crisis" becomes *"crisis de los misiles cubanos"*, which says the missiles were Cuban when they were Soviet. Wikipedia's cross-language links hold the name each language actually uses — *Crisis de los misiles de Cuba*. |
 | 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES`, and one that fails is rested for a minute rather than re-asked on every translation. |
 | 2 | **MyMemory** | a crowd translation memory. Believed outright when the answer is its own machine translation, and otherwise only when its stored candidates agree with each other. |
-| 3 | **Apertium** | open-source rule-based translation. Clumsy — *Test me* comes back as *Me pruebo* — but always up and it never invents content. Spanish only: it has no English–French or English–Latin pair, so those chains stop at MyMemory. |
+| 3 | **Apertium** | open-source rule-based translation. Clumsy — *Test me* comes back as *Me pruebo* — but always up and it never invents content. It has no English–French pair, so French goes through Catalan in two hops and everything that comes out is marked uncertain. Latin has no Apertium route at all, in any direction. |
 
 Apertium is the **floor**, not the usual answer. Spanish normally lands on
 Lingva; it only reaches Apertium when everything above it has declined, which at
@@ -564,20 +564,38 @@ sweep returned 6 of 22.
 
 ### The French translator
 
-The same chain, minus one engine: **Wikipedia → Lingva → MyMemory**.
+The same chain, with a longer road at the bottom: **Wikipedia → Lingva →
+MyMemory → Apertium through Catalan**.
 
 Apertium has **no English–French pair** — it has `spa↔eng` and `spa↔fra`, but
-not the one this needs — so the floor beneath MyMemory is missing on the French
-side. Pivoting through Spanish was tried and rejected: Apertium is already "a
-floor rather than a choice", and a double hop turns *Where is the library?* into
-*Où Il est la bibliothèque ?*, which is worse than no answer on a site whose
-value is being correct.
+not the one this needs. Pivoting through a third language was tried and
+rejected once, on the grounds that Apertium is already "a floor rather than a
+choice" and a double hop compounds its mistakes. That was right while Lingva sat
+above it. It stopped being right when Lingva went down everywhere and MyMemory
+began rationing by IP, because the French page then had nothing whatever to
+show.
 
-That makes Lingva load-bearing for French in a way it is not for Spanish, and
-Lingva instances are volunteer-run. Of nineteen once listed publicly, thirteen
-no longer resolve at all and two sit behind a Cloudflare challenge a server
-cannot pass; the default list is now the two that are still serving. A host that
-fails is **rested for a minute** before it is asked again.
+So the pivot exists, through **Catalan**, and everything it produces is marked
+uncertain on the page. It is genuinely rough — *The black cat sleeps on the old
+table* comes back as *Les rêves de chat noirs dans la table vieille*, the first
+hop having read *sleeps* as a noun — but a clumsy sentence a student is told to
+check beats a blank page, which is the same bargain Apertium already is for
+Spanish. Catalan rather than Spanish because it fails less badly where it
+matters: *Where is the station?* is *Où est la gare ?* through Catalan against
+*Où Il est la #chaîne ?* through Spanish, and that `#` is Apertium's marker for
+a word it could not translate at all.
+
+**Latin gets no pivot**, because there is no language between it and English
+that Apertium can reach — it has no Latin pair in any direction.
+
+Lingva is still the engine that would make French good rather than merely
+present, and Lingva instances are volunteer-run. Of eighteen once listed
+publicly, **none currently answer**: eleven no longer resolve at all, three sit
+behind a Cloudflare challenge (`cf-mitigated: challenge` — an interactive one,
+which no server can pass and which this project will not try to evade), and the
+rest return 500, which is Google refusing the instance rather than the instance
+being down. A host that fails is **rested for a minute** before it is asked
+again.
 
 That is worth more than it sounds. The translator fires on a debounce as you
 type, so re-asking a dead instance every time cost a timeout per keystroke-pause
@@ -614,8 +632,9 @@ stupid", and *the boy praises the farmer* as *puella complens the Farmer*. So
 Latin output is checked rather than shown — see below.
 
 **The site degrades honestly.** Spanish is unaffected, since Apertium is a real
-translator rather than a proxy and nothing can rate-limit it. French and Latin
-say they could not translate rather than showing a guess, and everything else —
+translator rather than a proxy and nothing can rate-limit it. French now has
+Apertium beneath it too, through Catalan. Latin says it could not translate
+rather than showing a guess, and everything else —
 both conjugators, the decliner, three dictionaries, the stages, the tutor —
 never touched a translation engine to begin with.
 

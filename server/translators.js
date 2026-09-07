@@ -429,17 +429,36 @@ async function myMemory(text, from, to) {
 const APERTIUM_CODES = { es: 'spa', en: 'eng', fr: 'fra', la: 'lat' };
 const APERTIUM_PAIRS = new Set(['spa|eng', 'eng|spa', 'spa|fra', 'fra|spa']);
 
-async function apertium(text, from, to) {
-  const pair = `${APERTIUM_CODES[from]}|${APERTIUM_CODES[to]}`;
-  // Neither English–French nor English–Latin is one of them. Pivoting through
-  // Spanish would double the damage of an engine that is already the floor, so
-  // it simply declines — by name, so the log says which pair was missing
-  // rather than "eng|undefined".
-  if (!APERTIUM_PAIRS.has(pair)) throw new Error(`Apertium has no ${pair} pair`);
+/**
+ * English–French in two hops, through Catalan.
+ *
+ * Apertium has no eng|fra pair, and this used to decline rather than pivot: two
+ * rule-based hops compound each other's mistakes, and Apertium is already the
+ * floor. That reasoning held while French had Lingva above it. It does not now
+ * — Lingva is down across the board and MyMemory rations by IP, and when both
+ * decline the French page has nothing at all to show.
+ *
+ * So the pivot exists, and everything it produces is marked uncertain. It is
+ * measurably rough: "The black cat sleeps on the old table" comes back as "Les
+ * rêves de chat noirs dans la table vieille", because the first hop read
+ * "sleeps" as a noun. But a clumsy sentence a student is told to check beats a
+ * blank page, which is the same bargain Apertium already is for Spanish.
+ *
+ * Catalan rather than Spanish: it is no better on average, but it fails less
+ * badly where it matters — "Where is the station?" comes back as "Où est la
+ * gare ?" against Spanish's "Où Il est la #chaîne ?", a marker for a word the
+ * engine could not translate at all.
+ */
+const APERTIUM_PIVOT = 'cat';
+const APERTIUM_PIVOTS = new Set(['eng|fra', 'fra|eng']);
 
-  const translated = await translateChunks(text, LINGVA_CHUNK, async (part) => {
+async function apertiumHop(text, pair) {
+  return translateChunks(text, LINGVA_CHUNK, async (part) => {
     const url = `${APERTIUM}?langpair=${encodeURIComponent(pair)}&q=${encodeURIComponent(part)}`;
-    const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    const response = await throttle('apertium', 120, () => fetch(url, {
+      headers: { 'User-Agent': USER_AGENT },
+      signal: AbortSignal.timeout(15000),
+    }));
     if (!response.ok) throw new Error(`Apertium responded ${response.status}`);
 
     const body = await response.json();
@@ -448,8 +467,27 @@ async function apertium(text, from, to) {
     // Apertium marks words it could not translate with a leading #.
     return String(out).replace(/#(\S)/g, '$1');
   });
+}
 
-  return { text: translated, engine: 'Apertium' };
+async function apertium(text, from, to) {
+  const source = APERTIUM_CODES[from];
+  const target = APERTIUM_CODES[to];
+  const pair = `${source}|${target}`;
+
+  if (APERTIUM_PAIRS.has(pair)) {
+    return { text: await apertiumHop(text, pair), engine: 'Apertium' };
+  }
+
+  if (APERTIUM_PIVOTS.has(pair)) {
+    const middle = await apertiumHop(text, `${source}|${APERTIUM_PIVOT}`);
+    const translated = await apertiumHop(middle, `${APERTIUM_PIVOT}|${target}`);
+    return { text: translated, engine: 'Apertium', uncertain: true };
+  }
+
+  // Latin has no Apertium pair in either direction and no language between it
+  // and English that does, so it declines — by name, so the log says which pair
+  // was missing rather than "eng|undefined".
+  throw new Error(`Apertium has no ${pair} pair`);
 }
 
 const ENGINES = [namedEntity, lingva, myMemory, apertium];

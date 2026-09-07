@@ -44,6 +44,12 @@ globalThis.fetch = async (url) => {
     const asked = decodeURIComponent(target.split('/').pop());
     answer = answer[asked] ? { translation: answer[asked] } : null;
   }
+  // Apertium answers per pair when the plan is keyed by one, so a two-hop
+  // pivot can be told apart from a direct translation.
+  if (which === 'apertium' && answer && !answer.responseData) {
+    const pair = decodeURIComponent(new URL(target).searchParams.get('langpair') || '');
+    answer = answer[pair] ? { responseData: { translatedText: answer[pair] } } : null;
+  }
   if (!answer) return { ok: false, status: 503, json: async () => ({}) };
   return { ok: true, json: async () => answer };
 };
@@ -273,6 +279,41 @@ plan = {
 result = await translate('Buenos días, ¿cómo estás?', 'es', 'en');
 ok('an engine that can answer still wins', result.engine === 'Apertium', JSON.stringify(result));
 ok('and a confident answer is never marked uncertain', !result.uncertain, JSON.stringify(result));
+
+// --- English–French through Catalan, when nothing else answers ------------
+// Apertium has no eng|fra pair. It used to decline rather than pivot, which
+// was right while Lingva sat above it and wrong once French had nothing else.
+plan = {
+  lingva: null,
+  mymemory: null,
+  apertium: { 'eng|cat': 'el gos de la noia', 'cat|fra': 'le chien de la fille' },
+};
+result = await translate('the dog of the girl', 'en', 'fr');
+ok('English–French pivots through Catalan', result.engine === 'Apertium', JSON.stringify(result));
+ok('and comes out the far side', result.text === 'le chien de la fille', result.text);
+ok('and says it is not to be trusted', result.uncertain === true, JSON.stringify(result));
+
+// --- the reverse pivot ----------------------------------------------------
+plan = {
+  lingva: null,
+  mymemory: null,
+  apertium: { 'fra|cat': 'el gos de la noia', 'cat|eng': 'the dog of the girl' },
+};
+result = await translate('le chien de la fille', 'fr', 'en');
+ok('French–English pivots too', result.text === 'the dog of the girl', JSON.stringify(result));
+
+// --- a direct pair is never pivoted ---------------------------------------
+plan = { lingva: null, mymemory: null, apertium: { 'eng|spa': 'el perro de la niña' } };
+result = await translate('the dog of the girl', 'en', 'es');
+ok('Spanish still goes straight there', result.text === 'el perro de la niña', JSON.stringify(result));
+ok('and a direct answer is not marked uncertain', !result.uncertain, JSON.stringify(result));
+
+// --- Latin has no pivot, because no pair reaches it -----------------------
+plan = { lingva: null, mymemory: null, apertium: { 'eng|cat': 'la noia' } };
+let noLatinRoute = null;
+try { await translate('the girl', 'en', 'la'); } catch (error) { noLatinRoute = error; }
+ok('Latin declines rather than inventing a route', noLatinRoute !== null);
+ok('and names the pair it has not got', /eng\|lat/.test(noLatinRoute?.message || ''), noLatinRoute?.message);
 
 // --- agreement ignores case and punctuation -------------------------------
 plan = { lingva: null, mymemory: memory('Good morning.', 'good morning'), apertium: null };
