@@ -122,6 +122,51 @@ function getFormIndex(pack = null) {
 }
 
 // ---------------------------------------------------------------------------
+// English gloss -> verb
+// ---------------------------------------------------------------------------
+
+const glossIndexes = new Map();
+
+/**
+ * The search index read backwards: "to say" -> decir.
+ *
+ * Every verb in the index is stored with its English gloss, so the same data
+ * that powers the conjugator's search answers a vocabulary question — offline,
+ * exactly, and without spending a translation. A gloss holding several senses
+ * ("to take, to grab") is indexed under each of them, and under the bare verb
+ * as well, since a reader is as likely to type "say" as "to say".
+ */
+function glossIndex(pack) {
+  if (glossIndexes.has(pack.code)) return glossIndexes.get(pack.code);
+
+  const index = new Map();
+  const add = (key, verb) => {
+    const clean = fold(key).replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (clean && !index.has(clean)) index.set(clean, verb);
+  };
+
+  for (const [verb, gloss] of pack.GLOSSES) {
+    for (const sense of String(gloss).split(/[,;]/)) {
+      const phrase = sense.trim();
+      if (!phrase) continue;
+      add(phrase, verb);
+      add(phrase.replace(/^to\s+/i, ''), verb);
+    }
+  }
+
+  glossIndexes.set(pack.code, index);
+  return index;
+}
+
+/** The verb an English phrase names, if the index knows one. */
+function verbForGloss(pack, phrase) {
+  const key = fold(phrase).replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!key) return null;
+  const index = glossIndex(pack);
+  return index.get(key) ?? index.get(`to ${key}`) ?? null;
+}
+
+// ---------------------------------------------------------------------------
 // answer builders
 // ---------------------------------------------------------------------------
 
@@ -384,6 +429,47 @@ export async function answer(question, { language = null, force = false, study =
 
   // 5. grammar topics
   if (!askedSomethingSpecific && ranked[0]?.score >= 6) return respond(topicAnswer(ranked[0].topic, lang));
+
+  // 5b. "to say in Spanish" — a vocabulary question with the direction named
+  //     but nothing asking for a translation, which is how most people put it.
+  //     After the topics, so "the subjunctive in Spanish" stays a topic.
+  const intoStudy = INTENTS.intoStudy?.exec(text);
+  const intoEnglish = INTENTS.intoEnglish?.exec(text);
+  const bareVerb = !intoStudy && !intoEnglish ? INTENTS.bareEnglishVerb?.exec(text) : null;
+
+  if (intoStudy || bareVerb) {
+    const phrase = (intoStudy ?? bareVerb)[1].trim();
+
+    // "the subjunctive in Spanish" is a grammar question wearing this shape.
+    // Scored on the phrase alone, since the trailing "in Spanish" is what makes
+    // it look like a translation request in the first place.
+    const asTopic = pack.TOPICS
+      .map((topic) => ({ topic, score: scoreTopic(pack, topic, fold(phrase)) }))
+      .sort((a, b) => b.score - a.score)[0];
+    if (asTopic?.score >= 6) return respond(topicAnswer(asTopic.topic, lang));
+
+    askedSomethingSpecific = true;
+
+    // The conjugator's own index answers this exactly, offline, and gives the
+    // whole paradigm rather than one word — so it is tried before the engines.
+    const known = verbForGloss(pack, phrase);
+    if (known) {
+      const blocks = conjugationAnswer(pack, known, lang, {
+        tense: findHint(folded, pack.TENSE_HINTS),
+        person: findHint(accented, pack.PERSON_HINTS),
+      });
+      if (blocks) return respond(blocks);
+    }
+
+    const blocks = await translationAnswer(pack, phrase, 'en', lang).catch(() => null);
+    if (blocks) return respond(blocks);
+  }
+
+  if (intoEnglish) {
+    askedSomethingSpecific = true;
+    const blocks = await translationAnswer(pack, intoEnglish[1].trim(), pack.code, lang).catch(() => null);
+    if (blocks) return respond(blocks);
+  }
 
   // 6. a bare word or two: a verb form, an infinitive, or a dictionary entry.
   // Every word is a candidate, not just the first long one — "ir conjugation"

@@ -133,6 +133,9 @@ export const PACK = {
     translateAny: /(?:traduce|traducir|translate)\s+["«'“]?(.+?)["»'”]?\s*$/i,
     whatForm: /(?:que es|qué es|que forma es|qué forma es|what form is|what is)\s+["«'“]?([a-záéíóúüñ]+)["»'”]?/i,
     /** Confirms that a "how do you say" really asked for the study language. */
+    intoStudy: /^\s*[\"«'“]?(.+?)[\"»'”]?\s+(?:in|into|en|al)\s+(?:spanish|espa[nñ]ol)\s*[.?!]*$/i,
+    intoEnglish: /^\s*[\"«'“]?(.+?)[\"»'”]?\s+(?:in|into|en|al)\s+(?:english|ingl[eé]s)\s*[.?!]*$/i,
+    bareEnglishVerb: /^\s*to\s+([a-z]+(?:\s+[a-z]+){0,2})\s*[.?!]*$/i,
     intoStudyLanguage: /(?:en espanol|en español|in spanish|al espanol|al español)/i,
   },
 

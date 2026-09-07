@@ -135,6 +135,9 @@ export const PACK = {
     translateInto: /(?:comment dit-on|comment dit on|comment on dit|how do you say|how do i say|translate)\s+["«'“]?(.+?)["»'”]?\s*(?:en francais|en français|in french)?\s*\??$/i,
     translateAny: /(?:traduis|traduire|traduction de|translate)\s+["«'“]?(.+?)["»'”]?\s*$/i,
     whatForm: /(?:quelle forme est|quelle est la forme|c'est quoi|qu'est-ce que|what form is|what is)\s+["«'“]?\s*([a-zàâçéèêëîïôûùü'-]+)\s*["»'”]?/i,
+    intoStudy: /^\s*[\"«'“]?(.+?)[\"»'”]?\s+(?:in|into|en)\s+(?:french|fran[cç]ais)\s*[.?!]*$/i,
+    intoEnglish: /^\s*[\"«'“]?(.+?)[\"»'”]?\s+(?:in|into|en)\s+(?:english|anglais)\s*[.?!]*$/i,
+    bareEnglishVerb: /^\s*to\s+([a-z]+(?:\s+[a-z]+){0,2})\s*[.?!]*$/i,
     intoStudyLanguage: /(?:en francais|en français|in french)/i,
   },
 

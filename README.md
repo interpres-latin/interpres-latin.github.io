@@ -39,7 +39,22 @@ five things it can actually ground an answer in:
 | *qué es «dijeron»* | a reverse index of 15,000 conjugated forms, built in ~100 ms on first use |
 | *qué significa sobremesa* | `/api/dictionary` → RAE |
 | *cómo se dice "I'm tired" en español* | `/api/translate` |
+| *to say in Spanish*, or just *to say* | the search index, read backwards |
 | *ser y estar*, *por y para*, *el subjuntivo*… | 16 hand-written grammar topics in `public/js/data/grammar.js`, in both languages |
+
+**"to say in Spanish" is a question, even without a question in it.** Most
+people ask for a word that way — the direction named, nothing asking for a
+translation — and it used to fall through to the model and cost one of the five
+free questions. It is now answered from the conjugator's own search index read
+backwards: every verb there is stored with its English gloss, so *to say* finds
+*decir* exactly, offline, and gives the whole paradigm rather than one word.
+Multi-sense glosses are indexed under each sense, and under the bare verb too,
+since a reader is as likely to type *say* as *to say*.
+
+Grammar questions wearing the same shape stay grammar questions. *the subjunctive
+in Spanish* is scored as a topic on the phrase alone — the trailing "in Spanish"
+is what made it look like a translation request — and *to be in Spanish* gets ser
+and estar rather than a single verb.
 
 A question that names a verb *and* asks about its forms gets that verb's table,
 not a general essay — "how do you say tener in the past tense" is about tener,

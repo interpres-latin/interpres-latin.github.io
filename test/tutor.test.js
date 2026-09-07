@@ -130,7 +130,32 @@ ok('refusal explains the scope', /outside what I cover|se me escapa/i.test(text(
 const outsideEs = await answer('¿cuál es la capital de Mongolia?');
 ok('declines in Spanish too', outsideEs.confident === false && /se me escapa/.test(text(outsideEs.blocks)));
 
-// --- report ----------------------------------------------------------------
+// --- "to say in Spanish": a vocabulary question with no verb asking for one -
+// This used to reach the model and cost the reader one of their five free
+// questions, for something the conjugator's own search index already knew.
+for (const [question, pattern, why] of [
+  ['to say in spanish', /decir/i, 'the gloss index answers it exactly'],
+  ['to say', /decir/i, 'and without the direction being named'],
+  ['to run in spanish', /correr/i, 'another verb'],
+  ['to speak in spanish', /hablar/i, 'another verb'],
+  ['to eat', /comer/i, 'a bare infinitive'],
+  ['say in spanish', /decir/i, 'without the leading "to"'],
+]) {
+  const result = await answer(question, { study: 'es' });
+  const body = text(result.blocks);
+  ok(`"${question}" is grounded — ${why}`, result.confident, body.slice(0, 100));
+  ok(`"${question}" names the verb`, pattern.test(body), body.slice(0, 100));
+}
+
+// A grammar question wearing the same shape stays a grammar question.
+const subjunctiveInSpanish = text((await answer('the subjunctive in spanish', { study: 'es' })).blocks);
+ok('"the subjunctive in spanish" is still the topic', /subjunctive|subjuntivo/i.test(subjunctiveInSpanish));
+ok('and not a translation of the words', !/translated with|traducido con/i.test(subjunctiveInSpanish));
+
+const toBe = text((await answer('to be in spanish', { study: 'es' })).blocks);
+ok('"to be in spanish" gives ser vs estar, not one verb',
+  /ser/i.test(toBe) && /estar/i.test(toBe), toBe.slice(0, 100));
+
 if (failures.length) {
   console.error(`\n✗ ${failures.length} of ${checked} tutor checks failed:\n`);
   for (const failure of failures) console.error(`  ${failure}`);

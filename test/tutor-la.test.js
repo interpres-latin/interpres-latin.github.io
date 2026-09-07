@@ -93,6 +93,18 @@ results.push(la('ser y estar').then((result) => {
   ok('and Latin mode does not', result.confident === false, text(result.blocks).slice(0, 100));
 }));
 
+// --- "to see in Latin": a vocabulary question with no verb asking for one --
+for (const [question, pattern, why] of [
+  ['to see in latin', /video/i, 'the gloss index answers it'],
+  ['to want', /volo/i, 'without the direction named'],
+  ['to rule in latin', /rego/i, 'another verb'],
+]) {
+  results.push(answer(question, { study: 'la' }).then((result) => {
+    ok(`"${question}" is grounded — ${why}`, result.confident, text(result.blocks).slice(0, 90));
+    ok(`"${question}" names the verb`, pattern.test(text(result.blocks)), text(result.blocks).slice(0, 90));
+  }));
+}
+
 await Promise.all(results);
 
 if (failures.length) {

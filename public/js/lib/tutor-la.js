@@ -281,6 +281,9 @@ export const PACK = {
     translateInto: /(?:how do you say|how do i say|translate)\s+["'“]?(.+?)["'”]?\s*(?:in latin|into latin)?\s*\??$/i,
     translateAny: /(?:translate|verte)\s+["'“]?(.+?)["'”]?\s*$/i,
     whatForm: /(?:what form is|what is|parse)\s+["'“]?\s*([a-z]+)\s*["'”]?/i,
+    intoStudy: /^\s*[\"'“]?(.+?)[\"'”]?\s+(?:in|into)\s+latin\s*[.?!]*$/i,
+    intoEnglish: /^\s*[\"'“]?(.+?)[\"'”]?\s+(?:in|into)\s+english\s*[.?!]*$/i,
+    bareEnglishVerb: /^\s*to\s+([a-z]+(?:\s+[a-z]+){0,2})\s*[.?!]*$/i,
     intoStudyLanguage: /(?:in latin|into latin)/i,
   },
 

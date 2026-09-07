@@ -120,6 +120,18 @@ results.push(fr('ser y estar').then((result) => {
     text(result.blocks).slice(0, 120));
 }));
 
+// --- "to eat in French": a vocabulary question with no verb asking for one --
+for (const [question, pattern, why] of [
+  ['to eat in french', /manger/i, 'the gloss index answers it'],
+  ['to speak in french', /parler/i, 'another verb'],
+  ['to eat', /manger/i, 'without the direction named'],
+]) {
+  results.push(answer(question, { study: 'fr' }).then((result) => {
+    ok(`"${question}" is grounded — ${why}`, result.confident, text(result.blocks).slice(0, 90));
+    ok(`"${question}" names the verb`, pattern.test(text(result.blocks)), text(result.blocks).slice(0, 90));
+  }));
+}
+
 await Promise.all(results);
 
 // --- report ----------------------------------------------------------------
