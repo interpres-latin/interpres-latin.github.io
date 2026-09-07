@@ -357,7 +357,14 @@ async function accentedTitle(word) {
  * @returns {Promise<{found: boolean, word?: string, entries?: Array, origin?: string, suggestions?: string[]}>}
  */
 export async function fetchWiktionnaire(word, { corrected = null } = {}) {
-  const body = await wiki({ action: 'parse', page: word, prop: 'wikitext' });
+  // redirects=1 because a French headword is titled with a typographic
+  // apostrophe — aujourd’hui, presqu’île, d’accord — and nobody types one. The
+  // straight-apostrophe spelling is a redirect on the wiki, so MediaWiki
+  // resolves it if asked; without this, three of the commonest words in the
+  // language came back "not in the dictionary".
+  const body = await wiki({
+    action: 'parse', page: word, prop: 'wikitext', redirects: '1',
+  });
 
   // Tried once, and only when the word as typed is not there at all: someone
   // who wrote "flaner" meant "flâner", and the dictionary has no idea.

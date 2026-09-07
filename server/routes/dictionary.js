@@ -20,16 +20,19 @@ const MESSAGES = {
     missing: 'Falta la palabra a buscar.',
     notFound: (word) => `"${word}" no aparece en el Diccionario de la lengua española.`,
     failed: (detail) => `No se pudo consultar el diccionario: ${detail}`,
+    notAWord: 'Busca una palabra: solo letras, sin símbolos.',
   },
   fr: {
     missing: 'Il manque le mot à chercher.',
     notFound: (word) => `« ${word} » ne figure pas dans le dictionnaire.`,
     failed: (detail) => `Impossible de consulter le dictionnaire : ${detail}`,
+    notAWord: 'Cherchez un mot : des lettres seulement, sans symboles.',
   },
   la: {
     missing: 'No word to look up.',
     notFound: (word) => `Whitaker’s Words does not know “${word}”.`,
     failed: (detail) => `The dictionary could not be reached: ${detail}`,
+    notAWord: 'Look up a word: letters only, no symbols.',
   },
 };
 
@@ -46,6 +49,18 @@ function normalizeQuery(raw) {
     .replace(/\s+/g, ' ')
     .slice(0, 60);
 }
+
+/**
+ * A word, or something to hand to a dictionary at all.
+ *
+ * Letters, and the punctuation that lives inside real headwords: the hyphen of
+ * *arc-en-ciel*, the apostrophe of *aujourd'hui*, the space of *res publica*.
+ * Nothing else — `<script>alert(1)</script>` and `../../etc/passwd` are not
+ * failed lookups, and sending them upstream produced a 502 that told a student
+ * the dictionary was unreachable when the dictionary was perfectly fine. It
+ * also spent a request on each, against a budget shared by a whole class.
+ */
+const LOOKS_LIKE_A_WORD = /^[\p{L}][\p{L}\p{M}'’\- ]*$/u;
 
 /** Strip the "Sin.:" / "Ant." tails RAE packs into the raw sense string. */
 function cleanDescription(sense) {
@@ -451,6 +466,7 @@ router.get('/', async (req, res) => {
 
   const word = normalizeQuery(req.query.word);
   if (!word) return res.status(400).json({ error: messages.missing });
+  if (!LOOKS_LIKE_A_WORD.test(word)) return res.status(400).json({ error: messages.notAWord });
 
   // The chrome language, which decides only whether an English gloss and an
   // English rendering of the definition are wanted. The English entry differs,

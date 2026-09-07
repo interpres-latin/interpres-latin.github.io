@@ -543,6 +543,12 @@ Example sentences come from Tatoeba as before, asked for French rather than
 Spanish; the English gloss beside the headword comes from the French section of
 en.wiktionary.
 
+Lookups follow redirects, which is not a detail: a French headword is titled
+with a typographic apostrophe — *aujourd’hui*, *presqu’île*, *d’accord* — and
+nobody types one. The straight-apostrophe spelling is a redirect on the wiki, so
+three of the commonest words in the language used to come back "not in the
+dictionary" until it was asked to resolve them.
+
 **One lookup is up to three Wikimedia requests** — the entry, a search when the
 word was typed without its accents, and that English gloss — so a class of
 twenty-five looking words up at once is a burst, and Wikimedia answers a burst
@@ -947,7 +953,8 @@ server/
   routes/
     translate.js        dedicated engines, never a model
     dictionary.js       picks a dictionary by `study`, then normalises both
-                        into one shape
+                        into one shape; rejects what is not a word before
+                        spending a request on it
     verbs.js            RAE's own conjugation tables, normalised to our shape
     chat.js             SSE streaming chat
 public/
