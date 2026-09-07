@@ -1,19 +1,14 @@
 /**
  * The French dictionary.
  *
- * The Académie française would be the right authority here, and it is what the
- * Spanish side has in the RAE. It has no API: `api.dictionnaire-academie.fr`
- * does not resolve, and dictionnaire-academie.fr serves a JavaScript search
- * whose results are not in the HTML it returns. Scraping it would be both
- * fragile and unkind, so the definitions come from the **Wiktionnaire**
- * instead — French definitions of French words, CC BY-SA — and every entry
- * links out to the Académie's own page so the authority stays one click away.
+ * There is no queryable authority for French the way the RAE is for Spanish:
+ * the obvious candidate publishes no API and serves a JavaScript search whose
+ * results are not in the HTML it returns. Scraping it would be fragile and
+ * unkind.
  *
- * The Wiktionnaire is served as wikitext rather than as data, so this file is
- * mostly a parser. It reads the `{{langue|fr}}` section, takes the numbered
- * definitions under each part-of-speech heading, and normalises the result into
- * exactly the shape routes/dictionary.js already returns for the RAE, so the
- * page and the tutor do not have to know which dictionary answered.
+ * So definitions come from the Wiktionnaire, read as wikitext and normalised
+ * into exactly the shape the RAE route returns, so the page and the tutor never
+ * learn which dictionary answered.
  */
 
 import { accentedForm } from './accents.js';
@@ -399,21 +394,6 @@ export async function fetchWiktionnaire(word, { corrected = null } = {}) {
     entries,
   };
 }
-
-/**
- * The Académie link, which for a long time went nowhere.
- *
- * `/search?term=couvercle` answers 200, so it looked fine and was not: their
- * search is a **POST**, and a GET drops the term and lands the reader on an
- * empty search box. Their real entries live at `/article/A9C4713` — an opaque
- * id, resolvable only by running their JavaScript, which is why this site reads
- * the Wiktionnaire in the first place.
- *
- * So a word links to the search page *with the word to hand* rather than
- * pretending to deep-link, and the page tells the reader to paste it. A link
- * that admits what it can do beats one that silently does nothing.
- */
-export const ACADEMIE = () => 'https://www.dictionnaire-academie.fr/';
 
 export const WIKTIONNAIRE_CREDIT = {
   name: 'Wiktionnaire',

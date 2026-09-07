@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { ask, hasProvider, parseJson } from '../llm.js';
 import { ATTRIBUTION, tatoebaExamples, wiktionaryGloss } from '../corpus.js';
-import { ACADEMIE, fetchWiktionnaire, WIKTIONNAIRE_CREDIT } from '../dictionary-fr.js';
+import { fetchWiktionnaire, WIKTIONNAIRE_CREDIT } from '../dictionary-fr.js';
 import { analyse, describeInflection, WHITAKER_CREDIT } from '../latin.js';
 import { accentedForm } from '../accents.js';
 
@@ -11,8 +11,8 @@ export const router = Router();
  * The two dictionaries this route can answer from.
  *
  * Spanish has the RAE, which is the authority and says so. French has no
- * equivalent that can be queried — the Académie française publishes no API —
- * so the Wiktionnaire answers and the Académie is linked rather than quoted.
+ * equivalent that can be queried, so a free dictionary answers instead and is
+ * credited where its licence requires it.
  * See server/dictionary-fr.js.
  */
 const MESSAGES = {
@@ -296,7 +296,7 @@ async function enrich(word, senses, english, study) {
   };
 }
 
-/** The French entry: the Wiktionnaire, with the Académie linked beside it. */
+/** The French entry. */
 async function lookupFrench(word, english) {
   const lookup = await fetchWiktionnaire(word);
   if (!lookup.found) {
@@ -321,10 +321,10 @@ async function lookupFrench(word, english) {
     ...await enrich(lookup.word, entries[0].senses, english, 'fr'),
     corrected: lookup.corrected ?? null,
     suggestions: [],
-    // Named plainly: this is not the Académie, and an entry that quietly
+    // The licence on this text is CC BY-SA, which requires the source to be
+    // named. It is one line in the footer of the entry rather than a banner.
     // implied otherwise would be worse than one that says where it came from.
     source: { name: 'Wiktionnaire', url: `https://fr.wiktionary.org/wiki/${encodeURIComponent(lookup.word)}` },
-    authority: { name: 'Dictionnaire de l’Académie française', url: ACADEMIE(lookup.word) },
     credit: WIKTIONNAIRE_CREDIT,
   };
 }

@@ -295,12 +295,11 @@ const SPANISH = {
     antonyms: two('Antónimos', 'Antonyms'),
     locutions: two('Locuciones y expresiones', 'Phrases and expressions'),
     inUse: two('En uso', 'In use'),
+    seeEntry: two('ver la entrada ↗', 'view the entry ↗'),
     notRae: two(
-      'El diccionario de la RAE no está disponible ahora mismo, así que estas definiciones vienen de Wiktionary, no de la RAE.',
-      'The RAE dictionary is unavailable right now, so these definitions come from Wiktionary, not the RAE.',
+      'El diccionario de la RAE no está disponible ahora mismo, así que estas definiciones no vienen de la RAE.',
+      'The RAE dictionary is unavailable right now, so these definitions are not from the RAE.',
     ),
-    notAcademie: two('', ''),
-    seeAuthority: two('', ''),
     speak: two('Escuchar la palabra', 'Hear the word'),
     speakFailed: two('No se pudo pronunciar.', 'Could not pronounce that.'),
     speakSpent: two('Se acabaron las pronunciaciones de este mes.', 'This month’s pronunciations are used up.'),
@@ -561,17 +560,13 @@ const FRENCH = {
     antonyms: deux('Antonymes', 'Antonyms'),
     locutions: deux('Locutions et expressions', 'Phrases and expressions'),
     inUse: deux('En usage', 'In use'),
+    seeEntry: deux('voir l’entrée ↗', 'view the entry ↗'),
     notRae: deux(
-      'Le Wiktionnaire n’est pas joignable pour le moment.',
-      'The Wiktionnaire is unavailable right now.',
+      'Le dictionnaire n’est pas joignable pour le moment.',
+      'The dictionary is unavailable right now.',
     ),
-    // The Académie française publishes no API, so this side says where its
+    // No French authority publishes an API, so this side says where its
     // definitions really come from rather than implying an authority it has not got.
-    notAcademie: deux(
-      'L’Académie française ne publie pas d’interface de consultation, donc ces définitions viennent du Wiktionnaire. L’article de l’Académie est à un clic.',
-      'The Académie française publishes no API, so these definitions come from the Wiktionnaire. The Académie’s own entry is one click away.',
-    ),
-    seeAuthority: deux('chercher à l’Académie française ↗', 'search the Académie française ↗'),
     speak: deux('Écouter le mot', 'Hear the word'),
     speakFailed: deux('Impossible de prononcer.', 'Could not pronounce that.'),
     speakSpent: deux('Les prononciations de ce mois-ci sont épuisées.', 'This month’s pronunciations are used up.'),
@@ -938,9 +933,8 @@ const LATIN = {
     antonyms: latine('Contraria', 'Antonyms'),
     locutions: latine('Locutiones', 'Phrases'),
     inUse: latine('In usu', 'In use'),
+    seeEntry: latine('vide lemma ↗', 'view the entry ↗'),
     notRae: latine('', ''),
-    notAcademie: latine('', ''),
-    seeAuthority: latine('', ''),
     speak: latine('Verbum audire', 'Hear the word'),
     speakFailed: latine('Non potest pronuntiari.', 'Could not pronounce that.'),
     speakSpent: latine('Pronuntiationes huius mensis consumptae sunt.', 'This month’s pronunciations are used up.'),

@@ -1346,6 +1346,17 @@ function describe(inflections) {
  * glossary at the back of a textbook does, and leaves the sentence to the
  * reader who knows what they meant.
  */
+/**
+ * Latin words that carry another verb and stand at the end of the clause.
+ *
+ * "I can't take it anymore" is *possum* plus *capio*, and Latin does not leave
+ * the modal where English put it — it goes last, after everything it governs.
+ */
+const LATIN_MODALS = new Set(['possum', 'debeo', 'volo', 'nolo', 'malo', 'soleo', 'coepi']);
+
+/** Subject pronouns, which Latin writes only for emphasis. */
+const LATIN_SUBJECT_PRONOUNS = new Set(['ego', 'nos', 'tu', 'vos']);
+
 export async function englishGlossary(text) {
   const tokens = openContractions(tokenise(text).filter(isWord).map(fold))
     .filter((token) => !ARTICLES.has(token));
@@ -1371,7 +1382,29 @@ export async function englishGlossary(text) {
   // Only if there was nothing at all to say. With a dictionary behind it rather
   // than a word list, that should not happen for English.
   if (glossed.every((entry) => entry.endsWith('— ?'))) fail('no Latin for any of it');
-  return glossed.join(' · ');
+
+  /**
+   * The words, put into Latin order rather than listed.
+   *
+   * A column of "word — word" is a lookup table, and nobody asked for a lookup
+   * table; they asked what the sentence is in Latin. The grammar is still
+   * beyond this — the cases are dictionary forms, and the page says so — but
+   * the *order* is not guesswork: Latin drops a pronoun subject its verb
+   * already carries, and puts a modal at the end after everything it governs.
+   * "I can't take it anymore" is *non capio id iam possum*, not a list.
+   */
+  // A word with no Latin stays visible, in brackets and in English. Dropping it
+  // would hand back a sentence quietly missing a piece of what was asked.
+  const words = glossed.map((entry) => {
+    const [english, latin] = entry.split(' — ');
+    return !latin || latin === '?' ? `[${english}]` : latin;
+  });
+
+  const kept = words.filter((word, i) => !(LATIN_SUBJECT_PRONOUNS.has(word) && i === 0));
+  const body = [...kept.filter((word) => !LATIN_MODALS.has(word)),
+    ...kept.filter((word) => LATIN_MODALS.has(word))];
+
+  return body.join(' ');
 }
 
 /** What this engine calls itself, so the chain can tell its work from a guess. */

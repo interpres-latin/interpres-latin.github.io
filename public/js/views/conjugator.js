@@ -369,7 +369,7 @@ export function renderConjugator(main) {
  * RAE forms win cell by cell. RAE gives no nosotros imperative and no negative
  * imperative, so both are rebuilt from the merged present subjunctive.
  *
- * Spanish only: the French side has no authority to merge, because the Académie
+ * Spanish only: the French side has no authority to merge, because no French
  * française publishes no API.
  */
 function merge(local, rae, PERSONS) {

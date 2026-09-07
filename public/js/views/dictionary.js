@@ -272,10 +272,8 @@ function speakButton(word) {
 function renderEntry(data, search) {
   const wrap = el('article', { class: 'entry' });
 
-  // The Spanish side falls back to Wiktionary only when the RAE is unreachable,
-  // and says so. The French side is on the Wiktionnaire by design, because the
-  // Académie française publishes no API — so it names its source and links the
-  // Académie's own article rather than implying an authority it has not got.
+  // The Spanish side falls back to a second dictionary only when the RAE is
+  // unreachable, and says so.
   const expected = data.definitionSource !== 'wiktionary';
 
   wrap.appendChild(el('div', { class: 'entry__head' },
@@ -283,10 +281,7 @@ function renderEntry(data, search) {
     speakButton(data.word),
     expected
       ? el('a', { class: 'chip', href: data.source.url, target: '_blank', rel: 'noopener' }, t('dictionary.seeOnRae'))
-      : el('a', { class: 'chip chip--warn', href: data.source.url, target: '_blank', rel: 'noopener' }, data.source.name),
-    data.authority
-      ? el('a', { class: 'chip', href: data.authority.url, target: '_blank', rel: 'noopener' }, t('dictionary.seeAuthority'))
-      : null));
+      : el('a', { class: 'chip', href: data.source.url, target: '_blank', rel: 'noopener' }, t('dictionary.seeEntry'))));
 
   // Say when the word looked up was not quite the word typed. Only ever the
   // same word with its accents put back — see server/accents.js — but the
@@ -302,9 +297,22 @@ function renderEntry(data, search) {
     wrap.appendChild(el('p', { class: 'entry__sound' }, t('dictionary.speakLatin')));
   }
 
-  // Never let the authority change silently.
+  /**
+   * The licence line, and only that.
+   *
+   * The text these definitions come from is CC BY-SA, which requires the source
+   * to be named — so it is, once, small, at the foot of the entry, rather than
+   * in a chip at the top and a banner underneath it.
+   */
+  if (data.credit) {
+    wrap.appendChild(el('p', { class: 'usage__credit' },
+      el('a', { href: data.credit.url, target: '_blank', rel: 'noopener' }, data.credit.name),
+      ` · ${data.credit.licence}`));
+  }
+
+  // The Spanish side still says when it is not the RAE, because there the RAE
+  // is the authority the page promises.
   if (!expected) wrap.appendChild(el('p', { class: 'notice' }, t('dictionary.notRae')));
-  else if (data.authority) wrap.appendChild(el('p', { class: 'notice' }, t('dictionary.notAcademie')));
 
   // A short English gloss, where the dictionary gives only its own language.
   if (data.gloss?.senses?.length) {
