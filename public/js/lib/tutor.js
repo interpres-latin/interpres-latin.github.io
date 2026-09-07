@@ -306,13 +306,26 @@ function findHint(text, table) {
   return null;
 }
 
+/**
+ * A keyword matches its own plural, and a plural keyword its own singular.
+ *
+ * Otherwise "comparatives" misses the keyword *comparative*, and "how do I make
+ * a command" misses *commands* — a question is declined over one letter, and
+ * the reader spends one of their free five on it. The stem has to stay long
+ * enough to be worth matching, so a short word ending in s is left alone.
+ */
+function keywordPattern(key) {
+  const stem = key.length > 4 && key.endsWith('s') ? key.slice(0, -1) : key;
+  return `\\b${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`;
+}
+
 function scoreTopic(pack, topic, folded) {
   const bare = folded.replace(pack.LEADING_ARTICLE, '');
   let score = 0;
   for (const keyword of topic.keywords) {
     const key = fold(keyword);
     if (folded === key || bare === key) return 100;
-    if (new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(folded)) {
+    if (new RegExp(keywordPattern(key)).test(folded)) {
       score += key.includes(' ') ? 6 : 3;
     }
   }

@@ -56,7 +56,7 @@ La ubicación es la trampa clásica: los **eventos** llevan *ser* y todo lo dem�
 
   {
     id: 'por-para',
-    keywords: ['por', 'para', 'por vs para', 'por o para', 'diferencia entre por y para'],
+    keywords: ['por', 'para', 'por vs para', 'por o para', 'diferencia entre por y para', 'preposiciones', 'prepositions'],
     title: { es: 'Por y para', en: 'Por vs. para' },
     body: {
       en: `Rough rule: **para** points forward to a destination, purpose or deadline. **Por** points back at a cause, or covers the means and the exchange.
@@ -98,7 +98,7 @@ El par que mejor muestra la diferencia:
 
   {
     id: 'preterito-imperfecto',
-    keywords: ['preterito', 'imperfecto', 'preterito vs imperfecto', 'pasado', 'past tense', 'preterite', 'imperfect', 'hablaba', 'hable'],
+    keywords: ['preterito', 'imperfecto', 'preterito vs imperfecto', 'pasado', 'past tense', 'preterite', 'imperfect', 'hablaba', 'hable', 'pluscuamperfecto', 'pretérito pluscuamperfecto', 'tiempos compuestos', 'pretérito perfecto', 'have been', 'present perfect', 'he hablado'],
     title: { es: 'Pretérito e imperfecto', en: 'Preterite vs. imperfect' },
     body: {
       en: `Both are past tenses. The **preterite** frames an action as a completed whole; the **imperfect** leaves it open — background, habit, or something in progress.
@@ -403,7 +403,7 @@ Los interrogativos la llevan en preguntas directas **e** indirectas: *¿Qué qui
 
   {
     id: 'futuro',
-    keywords: ['futuro', 'future', 'ir a', 'voy a', 'future tense', 'como se dice will'],
+    keywords: ['futuro', 'future', 'ir a', 'voy a', 'future tense', 'como se dice will', 'futuro perfecto'],
     title: { es: 'Hablar del futuro', en: 'Talking about the future' },
     body: {
       en: `Three ways, and everyday speech leans on the second.
@@ -511,7 +511,7 @@ Regla práctica: *tú* con la gente de tu edad y con quien te tutee; *usted* con
 
   {
     id: 'adjetivos',
-    keywords: ['adjetivos', 'adjectives', 'concordancia', 'agreement', 'genero', 'gender', 'posicion del adjetivo'],
+    keywords: ['adjetivos', 'adjectives', 'concordancia', 'agreement', 'genero', 'gender', 'posicion del adjetivo', 'diminutivos', 'diminutivo', 'aumentativos'],
     title: { es: 'Los adjetivos', en: 'Adjectives: agreement and position' },
     body: {
       en: `**Agreement.** An adjective copies the gender and number of its noun.
@@ -605,7 +605,7 @@ Locuciones con *tener* donde el inglés usa *to be*: *tengo hambre, sed, frío, 
 
   {
     id: 'muy-mucho',
-    keywords: ['muy', 'mucho', 'muy vs mucho', 'very', 'a lot'],
+    keywords: ['muy', 'mucho', 'muy vs mucho', 'very', 'a lot', 'adverbios', 'adverbs', 'mente'],
     title: { es: 'Muy y mucho', en: 'Muy vs. mucho' },
     body: {
       en: `**Muy** = *very*. It modifies adjectives and adverbs, and never changes form.
@@ -641,7 +641,7 @@ Y *muy* no puede ir solo. *¿Estás cansado? — Mucho.* Nunca *muy*.`,
 
   {
     id: 'condicional-si',
-    keywords: ['condicional', 'conditional', 'si', 'si clauses', 'would', 'hubiera', 'si tuviera'],
+    keywords: ['condicional', 'conditional', 'si', 'si clauses', 'would', 'hubiera', 'si tuviera', 'condicional perfecto'],
     title: { es: 'El condicional y las oraciones con «si»', en: 'The conditional and "si" clauses' },
     body: {
       en: `The **conditional** (*hablaría, comerías, viviría*) is English *would*. Its endings go on the full infinitive, and it shares the twelve irregular stems with the future: *tendría, haría, diría, podría*.
@@ -678,6 +678,319 @@ Usos: hipótesis (*Yo no haría eso*), cortesía (*¿Podrías ayudarme?*) y futu
 La regla que a todos se les escapa: **detrás de *si* no van ni el condicional ni el presente de subjuntivo**. *Si tendría* y *si tenga* son incorrectos; se dice *si tuviera*.`,
     },
   },
+  {
+    id: 'imperativo',
+    keywords: ['imperativo', 'mandatos', 'órdenes', 'ordenes', 'imperative', 'commands', 'command',
+      'cómo dar órdenes', 'usted commands', 'tú commands', 'negative commands'],
+    title: { es: 'El imperativo', en: 'Commands' },
+    body: {
+      en: `Spanish has a different form for a command depending on **who** you are telling and **whether it is negative**. That second half is the part people forget.
+
+**Affirmative tú** — the third person singular of the present. No ending to learn:
+- *habla* (speak), *come* (eat), *escribe* (write)
+
+**Eight irregulars**, and they are all short. Learn them as a list — *ven, di, sal, haz, ten, ve, pon, sé*:
+- venir → **ven** · decir → **di** · salir → **sal** · hacer → **haz**
+- tener → **ten** · ir → **ve** · poner → **pon** · ser → **sé**
+
+**Everything else is the subjunctive.** That is the whole trick:
+
+| | affirmative | negative |
+| --- | --- | --- |
+| tú | habla | **no hables** |
+| usted | hable | no hable |
+| nosotros | hablemos | no hablemos |
+| vosotros | hablad | no habléis |
+| ustedes | hablen | no hablen |
+
+So *habla* becomes *no hables* — the negative tú command is not the negative of the affirmative one, it is the subjunctive. *No ven* is wrong; *no vengas* is right.
+
+**Pronouns attach to an affirmative command and precede a negative one:**
+- *dímelo* — tell me it · *no me lo digas* — don't tell me it
+- Attaching one often needs a written accent to keep the stress: *dime*, *dímelo*.`,
+      es: `El español cambia de forma según **a quién** se manda y **si la orden es negativa**. Lo segundo es lo que más se olvida.
+
+**Afirmativo de tú** — la tercera persona del singular del presente, sin terminación nueva:
+- *habla*, *come*, *escribe*
+
+**Ocho irregulares**, todos cortos — *ven, di, sal, haz, ten, ve, pon, sé*:
+- venir → **ven** · decir → **di** · salir → **sal** · hacer → **haz**
+- tener → **ten** · ir → **ve** · poner → **pon** · ser → **sé**
+
+**Todo lo demás es el subjuntivo.** Ese es el truco entero:
+
+| | afirmativo | negativo |
+| --- | --- | --- |
+| tú | habla | **no hables** |
+| usted | hable | no hable |
+| nosotros | hablemos | no hablemos |
+| vosotros | hablad | no habléis |
+| ustedes | hablen | no hablen |
+
+*Habla* pasa a *no hables*: el negativo de tú no es la negación del afirmativo, es el subjuntivo. *No ven* es incorrecto; *no vengas* es lo correcto.
+
+**Los pronombres se pegan al afirmativo y van delante del negativo:**
+- *dímelo* · *no me lo digas*
+- Al pegarlos suele hacer falta una tilde para mantener el acento: *dime*, *dímelo*.`,
+    },
+  },
+
+  {
+    id: 'gerundio-progresivo',
+    keywords: ['gerundio', 'progresivo', 'estar + gerundio', 'gerund', 'progressive', '-ing',
+      'present progressive', 'estoy hablando', 'participio presente'],
+    title: { es: 'El gerundio y el progresivo', en: 'The gerund and the progressive' },
+    body: {
+      en: `**Form:** -ar verbs take **-ando**, -er and -ir verbs take **-iendo**.
+*hablar → hablando* · *comer → comiendo* · *vivir → viviendo*
+
+Spelling and stem changes:
+- a vowel before the ending turns *-iendo* into **-yendo**: *leer → leyendo*, *oír → oyendo*, *construir → construyendo*
+- -ir verbs with a stem change use the weak one: *dormir → durmiendo*, *pedir → pidiendo*, *sentir → sintiendo*
+
+**With estar**, it says the action is going on right now:
+- *Estoy comiendo.* — I'm eating (this minute).
+
+**The trap.** English uses "-ing" far more widely than Spanish uses the gerund, and three of those uses are wrong in Spanish:
+- **Future** — "I'm eating tomorrow" is *Como mañana* or *Voy a comer mañana*, never *estoy comiendo mañana*.
+- **As a noun** — "reading is fun" is *leer es divertido*, with the **infinitive**, not *leyendo*.
+- **Describing a noun** — "a running man" is *un hombre que corre*, not *un hombre corriendo*.
+
+The plain present already covers habits and general truths, so *hablo español* is "I speak Spanish" and *estoy hablando español* means you are doing it at this moment.
+
+**Other verbs take it too**, and each shades the meaning: *sigue lloviendo* (it's still raining), *va mejorando* (it's gradually improving), *lleva dos horas esperando* (he's been waiting two hours).`,
+      es: `**Formación:** los verbos en -ar toman **-ando**; los de -er e -ir toman **-iendo**.
+*hablar → hablando* · *comer → comiendo* · *vivir → viviendo*
+
+Cambios ortográficos y de raíz:
+- una vocal antes de la terminación convierte *-iendo* en **-yendo**: *leer → leyendo*, *oír → oyendo*, *construir → construyendo*
+- los verbos en -ir con cambio de raíz usan el débil: *dormir → durmiendo*, *pedir → pidiendo*, *sentir → sintiendo*
+
+**Con estar**, indica que la acción ocurre ahora mismo:
+- *Estoy comiendo.*
+
+**La trampa.** El inglés usa *-ing* mucho más de lo que el español usa el gerundio, y tres de esos usos son incorrectos aquí:
+- **Futuro** — *I'm eating tomorrow* es *como mañana* o *voy a comer mañana*, nunca *estoy comiendo mañana*.
+- **Como sustantivo** — *reading is fun* es *leer es divertido*, con **infinitivo**.
+- **Describiendo a un sustantivo** — *a running man* es *un hombre que corre*, no *un hombre corriendo*.
+
+El presente simple ya cubre hábitos y verdades generales: *hablo español* frente a *estoy hablando español*, que es lo que ocurre en este momento.
+
+**Otros verbos también lo llevan**, y cada uno matiza: *sigue lloviendo*, *va mejorando*, *lleva dos horas esperando*.`,
+    },
+  },
+
+  {
+    id: 'pasiva',
+    keywords: ['pasiva', 'voz pasiva', 'passive', 'passive voice', 'ser + participio',
+      'se pasiva', 'pasiva refleja', 'fue escrito', 'was written', 'participio', 'participio pasado', 'past participle'],
+    title: { es: 'La voz pasiva', en: 'The passive voice' },
+    body: {
+      en: `Spanish has three ways to avoid saying who did something, and the middle one is the one it actually uses.
+
+**1. True passive — ser + past participle.** The participle **agrees** with the subject.
+- *La carta fue escrita por María.* — The letter was written by María.
+- *Las cartas fueron escritas.* — plural, so *escritas*.
+
+Correct, but far less common than in English. Spanish reaches for it mainly when the agent is named, and mostly in writing.
+
+**2. Passive se — what Spanish really says.** No agent, and the verb agrees with the thing.
+- *Se habla español.* — Spanish is spoken.
+- *Se venden casas.* — Houses are sold. (**plural**, because *casas* is)
+
+This is the one on shop signs and in instructions, and it is what an English passive usually becomes.
+
+**3. Third person plural, with no subject** — when a person did it but it does not matter who.
+- *Dicen que va a llover.* — They say it's going to rain.
+- *Me robaron la bicicleta.* — My bike was stolen.
+
+**Estar + participle is not a passive.** It describes a resulting state, not an action:
+- *La puerta fue cerrada* — the door was closed (someone closed it)
+- *La puerta estaba cerrada* — the door was closed (it was shut)`,
+      es: `El español tiene tres maneras de no decir quién hizo algo, y la del medio es la que de verdad se usa.
+
+**1. Pasiva perifrástica — ser + participio.** El participio **concuerda** con el sujeto.
+- *La carta fue escrita por María.*
+- *Las cartas fueron escritas.*
+
+Es correcta, pero mucho menos frecuente que en inglés: se emplea sobre todo cuando se nombra el agente, y más por escrito.
+
+**2. Pasiva refleja — lo que el español dice de verdad.** Sin agente, y el verbo concuerda con la cosa.
+- *Se habla español.*
+- *Se venden casas.* (**plural**, porque *casas* lo es)
+
+Es la de los carteles y las instrucciones, y en lo que suele convertirse una pasiva inglesa.
+
+**3. Tercera persona del plural, sin sujeto** — cuando lo hizo alguien pero da igual quién.
+- *Dicen que va a llover.*
+- *Me robaron la bicicleta.*
+
+**Estar + participio no es una pasiva.** Describe un estado resultante, no una acción:
+- *La puerta fue cerrada* (alguien la cerró) · *La puerta estaba cerrada* (estaba así)`,
+    },
+  },
+
+  {
+    id: 'comparativo',
+    keywords: ['comparativo', 'superlativo', 'comparative', 'superlative', 'más que', 'menos que',
+      'tan como', 'mejor', 'peor', 'mayor', 'menor', 'comparisons', 'better', 'best'],
+    title: { es: 'El comparativo y el superlativo', en: 'Comparative and superlative' },
+    body: {
+      en: `One pattern covers almost everything — there is no *-er* ending to learn.
+
+- **más … que** — *Es **más** alto **que** yo.*
+- **menos … que** — *Es **menos** caro **que** el otro.*
+- **tan … como** — *Es **tan** alto **como** yo.* (as … as)
+- With a noun rather than an adjective, "as much/many as" is **tanto … como**, and *tanto* agrees: *tantos libros como tú*.
+
+**Than a number is *de*, not *que*:** *más de veinte*. This one costs marks.
+
+**Superlative** — the comparative with a definite article in front:
+- *el más alto*, *la más alta*, *los más altos*
+- "in" after a superlative is **de**: *el más alto **de** la clase*, never *en*.
+
+**The irregulars are the ones you will actually use:**
+
+| | comparative | superlative |
+| --- | --- | --- |
+| bueno | **mejor** | el mejor |
+| malo | **peor** | el peor |
+| grande | **mayor** (older, greater) | el mayor |
+| pequeño | **menor** (younger, lesser) | el menor |
+
+*mayor* and *menor* are about age or importance; for physical size Spanish says *más grande* and *más pequeño*.
+
+**-ísimo** is the other superlative, and it means "very", not "most": *guapísimo*, *carísima*, *facilísimo*. It replaces a final vowel and takes the spelling changes with it — *rico → riquísimo*, *largo → larguísimo*.`,
+      es: `Un solo esquema cubre casi todo; no hay terminación que aprender.
+
+- **más … que** — *Es **más** alto **que** yo.*
+- **menos … que** — *Es **menos** caro **que** el otro.*
+- **tan … como** — *Es **tan** alto **como** yo.*
+- Con sustantivo se usa **tanto … como**, y *tanto* concuerda: *tantos libros como tú*.
+
+**Ante un número se usa *de*, no *que*:** *más de veinte*.
+
+**Superlativo** — el comparativo con artículo delante:
+- *el más alto*, *la más alta*, *los más altos*
+- El complemento va con **de**: *el más alto **de** la clase*, nunca *en*.
+
+**Los irregulares son los que de verdad se usan:**
+
+| | comparativo | superlativo |
+| --- | --- | --- |
+| bueno | **mejor** | el mejor |
+| malo | **peor** | el peor |
+| grande | **mayor** | el mayor |
+| pequeño | **menor** | el menor |
+
+*Mayor* y *menor* se refieren a la edad o a la importancia; para el tamaño se dice *más grande* y *más pequeño*.
+
+**-ísimo** es el otro superlativo y significa "muy", no "el más": *guapísimo*, *carísima*, *facilísimo*. Sustituye a la vocal final y arrastra los cambios ortográficos — *rico → riquísimo*, *largo → larguísimo*.`,
+    },
+  },
+
+  {
+    id: 'articulos-genero',
+    keywords: ['artículos', 'articulos', 'género', 'genero', 'articles', 'gender', 'el la los las',
+      'un una', 'masculino o femenino', 'masculine feminine', 'plural', 'plurales', 'formar el plural'],
+    title: { es: 'El género y los artículos', en: 'Gender and articles' },
+    body: {
+      en: `Every noun is masculine or feminine, and the article shows which.
+
+| | masculine | feminine |
+| --- | --- | --- |
+| definite | **el** libro / **los** libros | **la** casa / **las** casas |
+| indefinite | **un** libro / **unos** libros | **una** casa / **unas** casas |
+
+**Guessing the gender.** The ending is the best clue:
+- **-o** is usually masculine, **-a** usually feminine
+- **-ción, -sión, -dad, -tad, -tud, -umbre** are feminine, always
+- **-ma** from Greek is masculine: *el problema, el sistema, el tema, el idioma*
+- Exceptions worth memorising: *el día*, *la mano*, *el mapa*, *la foto*, *la moto*
+
+**A feminine noun starting with a stressed a- takes *el*** — for sound, not gender. It stays feminine, so the adjective does too:
+- *el agua **fría***, *el águila, el hambre*
+- and the plural goes back to normal: *las aguas*
+
+**Two contractions are compulsory:** *a + el* → **al**, *de + el* → **del**. Never *a el* or *de el*.
+
+**Plurals:** add **-s** after a vowel (*libro → libros*), **-es** after a consonant (*papel → papeles*). A final **-z** becomes **-c**: *lápiz → lápices*.
+
+Spanish uses the definite article where English uses nothing — with general nouns (*me gusta **el** café*), with languages (*hablo **el** español*, though it is dropped right after *hablar*), with days (*el lunes* = on Monday), and with body parts and clothes where English uses a possessive (*me duele **la** cabeza*).`,
+      es: `Todo sustantivo es masculino o femenino, y el artículo lo indica.
+
+| | masculino | femenino |
+| --- | --- | --- |
+| determinado | **el** libro / **los** libros | **la** casa / **las** casas |
+| indeterminado | **un** libro / **unos** libros | **una** casa / **unas** casas |
+
+**Adivinar el género.** La terminación es la mejor pista:
+- **-o** suele ser masculino; **-a**, femenino
+- **-ción, -sión, -dad, -tad, -tud, -umbre** son siempre femeninos
+- **-ma** de origen griego es masculino: *el problema, el sistema, el tema, el idioma*
+- Excepciones que conviene saber: *el día*, *la mano*, *el mapa*, *la foto*, *la moto*
+
+**Un sustantivo femenino que empieza por a- tónica lleva *el***, por razones de sonido, no de género. Sigue siendo femenino, y el adjetivo también:
+- *el agua **fría***, *el águila*, *el hambre*
+- en plural vuelve a la normalidad: *las aguas*
+
+**Dos contracciones son obligatorias:** *a + el* → **al**, *de + el* → **del**.
+
+**Plurales:** **-s** tras vocal (*libro → libros*), **-es** tras consonante (*papel → papeles*). La **-z** final pasa a **-c**: *lápiz → lápices*.
+
+El español usa el artículo donde el inglés no pone nada: con sustantivos generales (*me gusta **el** café*), con los días (*el lunes*), y con partes del cuerpo y ropa donde el inglés usa posesivo (*me duele **la** cabeza*).`,
+    },
+  },
+
+  {
+    id: 'reflexivos',
+    keywords: ['reflexivos', 'verbos reflexivos', 'reflexive', 'reflexive verbs', 'me te se nos os se',
+      'levantarse', 'pronombres reflexivos', 'recíprocos'],
+    title: { es: 'Los verbos reflexivos', en: 'Reflexive verbs' },
+    body: {
+      en: `A verb carried with a pronoun matching its subject: **me, te, se, nos, os, se**. The infinitive is quoted with *-se* on the end — *levantarse*.
+
+*me levanto · te levantas · se levanta · nos levantamos · os levantáis · se levantan*
+
+**Three kinds:**
+- **reflexive** — the action comes back on the subject: *me lavo* (I wash myself)
+- **reciprocal** — they do it to each other: *se escriben* (they write to each other)
+- **idiomatic** — the pronoun is simply part of the verb: *acordarse de* (remember), *quejarse* (complain), *atreverse* (dare)
+
+**Many change meaning with the pronoun**, and this is where the marks are:
+- *ir* (to go) → *irse* (to leave) · *dormir* (to sleep) → *dormirse* (to fall asleep)
+- *poner* (to put) → *ponerse* (to put on, to become) · *llevar* (to carry) → *llevarse* (to take away)
+- *acordar* (to agree) → *acordarse* (to remember)
+
+**Where the pronoun goes** — the same rule as any object pronoun:
+- before the conjugated verb: *me levanto*, *no me levanto*
+- attached to an infinitive or gerund, or before the whole thing: *voy a levantar**me*** or *me voy a levantar*
+- attached to an affirmative command, before a negative one: *levánta**te***, but *no **te** levantes*
+
+**With body parts and clothes, Spanish uses the definite article**, not a possessive, because the pronoun already says whose: *me lavo **las** manos* — I wash **my** hands.`,
+      es: `Un verbo acompañado de un pronombre que reproduce el sujeto: **me, te, se, nos, os, se**. El infinitivo se cita con *-se* — *levantarse*.
+
+*me levanto · te levantas · se levanta · nos levantamos · os levantáis · se levantan*
+
+**Tres tipos:**
+- **reflexivo** — la acción recae en el sujeto: *me lavo*
+- **recíproco** — el uno al otro: *se escriben*
+- **idiomático** — el pronombre forma parte del verbo: *acordarse de*, *quejarse*, *atreverse*
+
+**Muchos cambian de sentido con el pronombre:**
+- *ir* → *irse* · *dormir* → *dormirse*
+- *poner* → *ponerse* · *llevar* → *llevarse*
+- *acordar* → *acordarse*
+
+**Dónde va el pronombre** — la regla de cualquier pronombre átono:
+- delante del verbo conjugado: *me levanto*, *no me levanto*
+- pegado al infinitivo o al gerundio, o delante de todo: *voy a levantar**me*** o *me voy a levantar*
+- pegado al imperativo afirmativo, delante del negativo: *levánta**te***, pero *no **te** levantes*
+
+**Con partes del cuerpo y ropa se usa el artículo**, no el posesivo, porque el pronombre ya dice de quién es: *me lavo **las** manos*.`,
+    },
+  },
+
 ];
 
 /**

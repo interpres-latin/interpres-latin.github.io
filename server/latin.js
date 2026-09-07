@@ -18,6 +18,8 @@
  *   each one is shown rather than trusted — see server/routes/translate.js.
  */
 
+import { USER_AGENT } from './throttle.js';
+
 const ALPHEIOS = 'https://morph.alpheios.net/api/v1/analysis/word';
 
 const CACHE_TTL = 1000 * 60 * 60 * 24;
@@ -150,7 +152,7 @@ async function ask(form, attempt = 0) {
   const url = `${ALPHEIOS}?word=${encodeURIComponent(form)}&engine=whitakerLat&lang=lat`;
   try {
     const response = await fetch(url, {
-      headers: { accept: 'application/json', 'user-agent': 'ProfeGPT (educational)' },
+      headers: { accept: 'application/json', 'user-agent': USER_AGENT },
       signal: AbortSignal.timeout(12000),
     });
     // The service answers 201, not 200, when it has something to say.

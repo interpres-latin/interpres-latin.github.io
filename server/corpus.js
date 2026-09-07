@@ -15,6 +15,8 @@
  * sentence in a result is keyed `text` rather than by a language code.
  */
 
+import { throttle, USER_AGENT } from './throttle.js';
+
 /** Tatoeba and Wiktionary disagree about language codes; this is the bridge. */
 const CORPUS_LANGUAGES = {
   es: { tatoeba: 'spa', wiktionary: 'es' },
@@ -52,7 +54,7 @@ export function tatoebaExamples(word, limit = 2, language = 'es') {
   return cached(`tatoeba:${language}:${word}`, async () => {
     const url = `${TATOEBA}?from=${codes.tatoeba}&to=eng&query=${encodeURIComponent(word)}&sort=relevance`;
     const response = await fetch(url, {
-      headers: { accept: 'application/json', 'user-agent': 'ProfeGPT (educational)' },
+      headers: { accept: 'application/json', 'user-agent': USER_AGENT },
       signal: AbortSignal.timeout(12000),
     });
     if (!response.ok) return null;
@@ -104,10 +106,11 @@ function stripMarkup(html) {
 export function wiktionaryGloss(word, limit = 3, language = 'es') {
   const codes = CORPUS_LANGUAGES[language] ?? CORPUS_LANGUAGES.es;
   return cached(`wiktionary:${language}:${word}`, async () => {
-    const response = await fetch(`${WIKTIONARY}/${encodeURIComponent(word)}`, {
-      headers: { accept: 'application/json', 'user-agent': 'ProfeGPT (educational)' },
+    // Shares Wikimedia's limit with the Wiktionnaire, so it shares the queue.
+    const response = await throttle('wikimedia', 180, () => fetch(`${WIKTIONARY}/${encodeURIComponent(word)}`, {
+      headers: { accept: 'application/json', 'user-agent': USER_AGENT },
       signal: AbortSignal.timeout(12000),
-    });
+    }));
     if (!response.ok) return null;
 
     const body = await response.json();

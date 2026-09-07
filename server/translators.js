@@ -84,6 +84,7 @@ function hostsToTry() {
 }
 
 import { alreadyIdiomatic, findIdioms } from './idioms.js';
+import { USER_AGENT } from './throttle.js';
 
 const WIKIPEDIA = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
@@ -198,7 +199,7 @@ async function officialNames(phrases, from, to) {
   url.searchParams.set('origin', '*');
 
   const response = await fetch(url, {
-    headers: { accept: 'application/json', 'user-agent': 'ProfeGPT (educational)' },
+    headers: { accept: 'application/json', 'user-agent': USER_AGENT },
     signal: AbortSignal.timeout(12000),
   });
   if (!response.ok) return found;

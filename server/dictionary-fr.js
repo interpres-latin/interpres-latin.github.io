@@ -17,6 +17,7 @@
  */
 
 import { accentedForm } from './accents.js';
+import { throttle, USER_AGENT } from './throttle.js';
 
 const WIKTIONNAIRE = 'https://fr.wiktionary.org/w/api.php';
 
@@ -296,10 +297,12 @@ async function wiki(params, attempt = 0) {
   url.searchParams.set('origin', '*');
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
 
-  const response = await fetch(url, {
-    headers: { accept: 'application/json', 'user-agent': 'ProfeGPT (educational)' },
+  // Queued: one lookup can be three Wikimedia requests, and a burst is met
+  // with 429s that outlast the burst. See server/throttle.js.
+  const response = await throttle('wikimedia', 180, () => fetch(url, {
+    headers: { accept: 'application/json', 'user-agent': USER_AGENT },
     signal: AbortSignal.timeout(15000),
-  });
+  }));
 
   // Wikimedia throttles by address, and a class shares one. A short wait clears
   // it; anything longer is surfaced as a rate limit so the page can say so

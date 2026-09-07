@@ -52,7 +52,7 @@ Voir *le passé composé*.`,
   {
     id: 'passe-compose',
     keywords: ['passé composé', 'passe compose', 'auxiliaire', 'avoir ou être', 'être ou avoir au passé',
-      'accord du participe passé', 'perfect tense', 'past tense', 'dr mrs vandertramp'],
+      'accord du participe passé', 'perfect tense', 'past tense', 'dr mrs vandertramp', 'plus-que-parfait', 'plus que parfait', 'pluperfect', 'temps composés', 'temps composes'],
     title: { fr: 'Le passé composé', en: 'The passé composé' },
     body: {
       en: `The everyday past tense: **auxiliary in the present + past participle**.
@@ -99,7 +99,7 @@ Avec *avoir*, pas d'accord avec le sujet — mais le participe s'accorde avec le
   {
     id: 'passe-compose-imparfait',
     keywords: ['imparfait', 'passé composé et imparfait', 'imparfait ou passé composé', 'difference entre imparfait et passé composé',
-      'imperfect', 'imperfect vs perfect', 'which past tense'],
+      'imperfect', 'imperfect vs perfect', 'which past tense', 'passé simple', 'passe simple'],
     title: { fr: 'Passé composé et imparfait', en: 'Passé composé vs. imparfait' },
     body: {
       en: `Both are past. The split is **what happened** vs. **what was going on**.
@@ -195,7 +195,7 @@ Le subjonctif imparfait est une forme littéraire : on la rencontre en lisant, o
   {
     id: 'articles-genre',
     keywords: ['le la les', 'un une des', 'articles', 'genre', 'masculin ou féminin', 'gender', 'definite article',
-      'indefinite article', 'masculine feminine'],
+      'indefinite article', 'masculine feminine', 'pluriel', 'former le pluriel', 'plurals'],
     title: { fr: 'Le genre et les articles', en: 'Gender and articles' },
     body: {
       en: `Every French noun is masculine or feminine, and the article shows which.
@@ -449,7 +449,7 @@ In speech the *ne* is very often dropped — *je sais pas*, *j'ai rien vu*. Reco
   {
     id: 'adjectifs',
     keywords: ['adjectifs', 'accord des adjectifs', 'place des adjectifs', 'adjective', 'adjectives',
-      'adjective agreement', 'adjective placement', 'bags'],
+      'adjective agreement', 'adjective placement', 'bags', 'adverbes', 'adverbs', 'ment'],
     title: { fr: 'Les adjectifs', en: 'Adjectives' },
     body: {
       en: `**They agree** with the noun in gender and number. The default is add *-e* for feminine, *-s* for plural:
@@ -502,7 +502,7 @@ Une courte liste se place **avant**, et il vaut la peine de l'apprendre parce qu
 
   {
     id: 'futur',
-    keywords: ['futur', 'futur simple', 'futur proche', 'aller + infinitif', 'future', 'future tense', 'going to'],
+    keywords: ['futur', 'futur simple', 'futur proche', 'aller + infinitif', 'future', 'future tense', 'going to', 'futur antérieur', 'futur anterieur'],
     title: { fr: 'Le futur', en: 'The future' },
     body: {
       en: `Two ways to talk about what is coming.
@@ -547,7 +547,7 @@ Une règle sans équivalent anglais : après **quand**, **lorsque**, **dès que*
   {
     id: 'conditionnel-si',
     keywords: ['conditionnel', 'phrases avec si', 'phrase avec si', 'hypothèse', 'conditional',
-      'if clauses', 'si imparfait', 'irréel'],
+      'if clauses', 'si imparfait', 'irréel', 'conditionnel passé', 'conditionnel passe'],
     title: { fr: 'Le conditionnel et les phrases en « si »', en: 'The conditional and si clauses' },
     body: {
       en: `**Form:** the future stem plus the imperfect endings — *-ais, -ais, -ait, -ions, -iez, -aient*.
@@ -903,7 +903,7 @@ L'anglais dit *better* pour les deux, d'où la confusion. Si le mot qualifie un 
   {
     id: 'depuis-pendant',
     keywords: ['depuis', 'pendant', 'depuis ou pendant', 'depuis et pendant', 'il y a',
-      'since', 'ago', 'expressions de temps'],
+      'since', 'ago', 'expressions de temps', 'prépositions', 'prepositions', 'preposition'],
     title: { fr: 'Depuis, pendant, pour, il y a', en: 'Depuis, pendant, pour, il y a' },
     body: {
       en: `English uses *for* for all of these. French splits them by whether the action is still going on.
@@ -946,6 +946,163 @@ Comparez : *j'habite ici depuis trois ans* (j'y suis encore) et *j'ai habité ic
 À la forme négative, *depuis* appelle le passé composé : *je ne l'ai pas vu depuis un an.*`,
     },
   },
+  {
+    id: 'imperatif',
+    keywords: ['impératif', 'imperatif', 'imperative', 'commands', 'ordres', 'donner un ordre',
+      'va-t-en', 'négation impérative', 'command', 'give an order'],
+    title: { fr: 'L’impératif', en: 'Commands' },
+    body: {
+      en: `Three forms only — **tu**, **nous** and **vous** — and they are the present tense with the pronoun taken away.
+
+| | | |
+| --- | --- | --- |
+| parler | parle | parlons / parlez |
+| finir | finis | finissons / finissez |
+| attendre | attends | attendons / attendez |
+
+**The tu form of an -er verb loses its -s.** *Tu parles* but *parle !* — and the same for *aller* (*va !*) and the -frir/-vrir verbs (*ouvre !*). Other verbs keep it: *finis !*, *attends !*
+
+**Four are irregular**, and they are the ones you need:
+- être → **sois, soyons, soyez** · avoir → **aie, ayons, ayez**
+- savoir → **sache, sachons, sachez** · vouloir → **veuillez** (the polite "please")
+
+**Negation wraps the verb**, as always: *ne parle pas*, *n'ouvre pas*.
+
+**Pronouns move.** After an affirmative command, joined by a hyphen, with *me* becoming *moi*; before a negative one:
+- *donne-**moi** le livre* · *ne **me** donne pas le livre*
+- *lève-**toi*** · *ne **te** lève pas*
+- Two pronouns after an affirmative go direct then indirect — the opposite of the usual order: *donne-**le-moi***.
+
+**The -s comes back before y and en**, for sound: *vas-y*, *parles-en*.`,
+      fr: `Trois formes seulement — **tu**, **nous** et **vous** — et ce sont celles du présent sans le pronom.
+
+| | | |
+| --- | --- | --- |
+| parler | parle | parlons / parlez |
+| finir | finis | finissons / finissez |
+| attendre | attends | attendons / attendez |
+
+**La forme de tu perd son -s aux verbes en -er.** *Tu parles* mais *parle !* — de même pour *aller* (*va !*) et les verbes en -frir/-vrir (*ouvre !*). Les autres la gardent : *finis !*, *attends !*
+
+**Quatre sont irréguliers**, et ce sont ceux dont on a besoin :
+- être → **sois, soyons, soyez** · avoir → **aie, ayons, ayez**
+- savoir → **sache, sachons, sachez** · vouloir → **veuillez**
+
+**La négation entoure le verbe** : *ne parle pas*, *n'ouvre pas*.
+
+**Les pronoms se déplacent.** Après un impératif affirmatif, avec un trait d'union et *me* devenu *moi* ; devant un impératif négatif :
+- *donne-**moi** le livre* · *ne **me** donne pas le livre*
+- *lève-**toi*** · *ne **te** lève pas*
+- Deux pronoms après un affirmatif vont direct puis indirect, à l'inverse de l'ordre habituel : *donne-**le-moi***.
+
+**Le -s revient devant y et en**, pour la liaison : *vas-y*, *parles-en*.`,
+    },
+  },
+
+  {
+    id: 'participes-passif',
+    keywords: ['participe présent', 'participe present', 'gérondif', 'gerondif', 'en + participe',
+      'voix passive', 'passif', 'passive', 'passive voice', 'participles', 'être + participe', 'present participle', 'past participle'],
+    title: { fr: 'Le participe présent et le passif', en: 'The present participle and the passive' },
+    body: {
+      en: `**The present participle** is the *nous* form of the present with **-ons** swapped for **-ant**:
+*nous parlons → parlant* · *nous finissons → finissant* · *nous buvons → buvant*
+
+Three irregulars: *être → **étant***, *avoir → **ayant***, *savoir → **sachant***.
+
+**With *en* it is the gérondif**, and it says two things happen together, or how:
+- *En arrivant, il a vu la lettre.* — On arriving, he saw the letter.
+- *Il travaille **en écoutant** la radio.* — He works **while listening** to the radio.
+
+The two actions must have the **same subject**. That is the rule people break.
+
+**Without *en*, it behaves as an adjective or a cause**, and then it does not agree unless it is a true adjective:
+- *une histoire **amusante*** — adjective, agrees
+- *des enfants **criant** dans la rue* — verbal, does not agree
+
+**French does not use it where English uses "-ing" after a preposition.** After anything but *en*, French takes the **infinitive**:
+- *avant de **partir*** — before leaving · *sans **rien dire*** — without saying anything
+
+**The passive** is *être* + the past participle, and the participle **agrees with the subject**:
+- *La lettre **est écrite** par Marie.* · *Les lettres **sont écrites**.*
+- The tense sits on *être*: *fut écrite*, *sera écrite*, *a été écrite*.
+
+**French avoids it**, though, and prefers **on**: *on parle français ici* rather than *le français est parlé ici*. A reflexive does the same job for things: *ça **se** dit* — that is said.`,
+      fr: `**Le participe présent** est la forme *nous* du présent, **-ons** remplacé par **-ant** :
+*nous parlons → parlant* · *nous finissons → finissant* · *nous buvons → buvant*
+
+Trois irréguliers : *être → **étant***, *avoir → **ayant***, *savoir → **sachant***.
+
+**Avec *en*, c'est le gérondif**, qui marque la simultanéité ou la manière :
+- *En arrivant, il a vu la lettre.*
+- *Il travaille **en écoutant** la radio.*
+
+Les deux actions doivent avoir le **même sujet**. C'est la règle qu'on enfreint.
+
+**Sans *en*, il vaut comme adjectif ou comme cause**, et il ne s'accorde que s'il est vraiment adjectif :
+- *une histoire **amusante*** — adjectif, s'accorde
+- *des enfants **criant** dans la rue* — verbal, invariable
+
+**Après une préposition autre que *en*, le français prend l'infinitif**, là où l'anglais met *-ing* :
+- *avant de **partir*** · *sans **rien dire***
+
+**Le passif** est *être* + participe passé, et le participe **s'accorde avec le sujet** :
+- *La lettre **est écrite** par Marie.* · *Les lettres **sont écrites**.*
+- Le temps se porte sur *être* : *fut écrite*, *sera écrite*, *a été écrite*.
+
+**Mais le français l'évite** et préfère **on** : *on parle français ici* plutôt que *le français est parlé ici*. Un pronominal fait le même travail pour les choses : *ça **se** dit*.`,
+    },
+  },
+
+  {
+    id: 'nombres-temps',
+    keywords: ['nombres', 'chiffres', 'numbers', 'numerals', 'compter', 'l’heure', 'heure',
+      'dates', 'jours', 'mois', 'telling the time', 'quelle heure', 'tell the time', 'time', 'clock'],
+    title: { fr: 'Les nombres, l’heure et la date', en: 'Numbers, time and dates' },
+    body: {
+      en: `**Counting** is regular until seventy, and then it stops being regular:
+
+*un, deux, trois, quatre, cinq, six, sept, huit, neuf, dix*
+*onze, douze, treize, quatorze, quinze, seize*, then *dix-sept, dix-huit, dix-neuf*
+*vingt, trente, quarante, cinquante, soixante*
+
+- **70 = soixante-dix** — sixty-ten. 71 is *soixante et onze*, 79 is *soixante-dix-neuf*.
+- **80 = quatre-vingts** — four twenties. It loses its -s before another number: *quatre-vingt-un*.
+- **90 = quatre-vingt-dix**, so 99 is *quatre-vingt-dix-neuf* — four twenties, ten and nine.
+
+*et* appears only in 21, 31, 41, 51, 61 and 71: *vingt et un*, but *vingt-deux*.
+
+**The time** uses *il est* and the 24-hour clock in anything official:
+- *Il est trois heures.* · *Il est trois heures et quart / et demie / moins le quart.*
+- *à quatorze heures trente* — at 14:30
+
+**Dates** take the **cardinal** number, not the ordinal, with one exception:
+- *le trois mai*, *le vingt juin* — but ***le premier** mai* for the first.
+- Months and days are **not capitalised**: *lundi*, *janvier*.
+- *le lundi* means every Monday; *lundi* alone means this coming one.`,
+      fr: `**Compter** est régulier jusqu'à soixante-dix, puis cesse de l'être :
+
+*un, deux, trois, quatre, cinq, six, sept, huit, neuf, dix*
+*onze, douze, treize, quatorze, quinze, seize*, puis *dix-sept, dix-huit, dix-neuf*
+*vingt, trente, quarante, cinquante, soixante*
+
+- **70 = soixante-dix**. 71 : *soixante et onze* ; 79 : *soixante-dix-neuf*.
+- **80 = quatre-vingts**, qui perd son -s devant un autre nombre : *quatre-vingt-un*.
+- **90 = quatre-vingt-dix**, donc 99 : *quatre-vingt-dix-neuf*.
+
+*et* n'apparaît qu'à 21, 31, 41, 51, 61 et 71 : *vingt et un*, mais *vingt-deux*.
+
+**L'heure** se dit avec *il est*, et en chiffres de 0 à 24 dans tout usage officiel :
+- *Il est trois heures.* · *Il est trois heures et quart / et demie / moins le quart.*
+- *à quatorze heures trente*
+
+**La date** prend le nombre **cardinal**, sauf une exception :
+- *le trois mai*, *le vingt juin* — mais ***le premier** mai*.
+- Les mois et les jours ne prennent **pas de majuscule** : *lundi*, *janvier*.
+- *le lundi* = tous les lundis ; *lundi* seul = celui qui vient.`,
+    },
+  },
+
 ];
 
 /**

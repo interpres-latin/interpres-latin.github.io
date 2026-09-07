@@ -20,7 +20,7 @@ const topic = (id, keywords, la, en, body) => ({
 });
 
 export const TOPICS = [
-  topic('cases', ['cases', 'case', 'the cases', 'casus', 'six cases', 'what are the cases'],
+  topic('cases', ['cases', 'case', 'the cases', 'casus', 'six cases', 'what are the cases', 'vocative', 'locative', 'which case', 'ablative case', 'accusative case'],
     'Casus', 'The cases', `Latin marks a noun's job in the sentence by its **ending**, not by its position. That is the whole idea, and it is why word order is free.
 
 | case | job | rough English |
@@ -136,7 +136,7 @@ Note that the first declension dative and genitive singular are both *puellae*, 
 
 The distinction students lose marks on: **means has no preposition, agent has *ab***. A sword is a thing, so *gladio necatus*; a sailor is a person, so *a nauta necatus*. Both are "by" in English.`),
 
-  topic('declensions', ['declensions', 'declension', 'five declensions', 'noun endings', 'declinatio', '1st declension', '2nd declension', '3rd declension'],
+  topic('declensions', ['declensions', 'declension', 'five declensions', 'noun endings', 'declinatio', '1st declension', '2nd declension', '3rd declension', 'i-stem', 'i stem', 'first declension', 'second declension', 'third declension', 'fourth declension', 'fifth declension'],
     'Declinationes', 'The five declensions', `Every Latin noun belongs to one of five patterns, and its **genitive singular** says which. That is why a dictionary quotes two forms.
 
 | | genitive | example | mostly |
@@ -201,7 +201,7 @@ The comparative declines as a third declension consonant stem; the superlative a
 
 Adjectives in *-er* form the superlative in *-rimus* (*celer → celerrimus*), and six in *-lis* in *-limus* (*facilis → facillimus*).`),
 
-  topic('principal-parts', ['principal parts', 'four principal parts', 'parts', 'verb parts', 'stems'],
+  topic('principal-parts', ['principal parts', 'four principal parts', 'parts', 'verb parts', 'stems', 'supine', 'supine stem', 'perfect stem', 'present stem'],
     'Partes principales', 'Principal parts', `A Latin verb is quoted by three or four forms, and they are not decoration — each one is a **stem you cannot predict from the others**.
 
 *amo, amare, amavi, amatus*
@@ -228,7 +228,7 @@ Adjectives in *-er* form the superlative in *-rimus* (*celer → celerrimus*), a
 Second and third look identical without macrons, so the **first** part separates them: a second conjugation verb ends *-eo* (*moneo*), a third *-io* verb ends *-io* (*capio*), and everything else in *-o* is plain third.`),
 
   topic('conjugations', ['conjugations', 'five conjugations', 'which conjugation', '3rd io', 'third io',
-    'io verbs', 'capio', 'mixed conjugation', 'how to conjugate 3rd-io', 'how do you conjugate'],
+    'io verbs', 'capio', 'mixed conjugation', 'how to conjugate 3rd-io', 'how do you conjugate', 'impersonal verbs', 'defective verbs', 'irregular verbs'],
     'Coniugationes', 'The five conjugations', `Every Latin verb belongs to one of five patterns, and the **second principal part** says which.
 
 | | infinitive | example | present stem |
@@ -293,7 +293,7 @@ Latin has no separate continuous tense: *amat* is "he loves", "he is loving" and
 
 **No pronoun is needed** — the ending already says who. *Amo* is "I love" on its own; *ego amo* adds emphasis, "**I** love".`),
 
-  topic('imperfect-perfect', ['imperfect', 'perfect', 'imperfect vs perfect', 'past tense', 'past tenses', 'which past tense'],
+  topic('imperfect-perfect', ['imperfect', 'perfect', 'imperfect vs perfect', 'past tense', 'past tenses', 'which past tense', 'pluperfect', 'plusquamperfect', 'future perfect', 'perfect tense'],
     'Imperfectum et perfectum', 'Imperfect vs. perfect', `Both are past. The split is the same one Spanish and French make, and for the same reason.
 
 **Imperfect** — going on, repeated, or descriptive. Stem + **-bam, -bas, -bat, -bamus, -batis, -bant**.
@@ -635,7 +635,9 @@ export const SMALL_TALK = [
     },
   },
   {
-    match: /^(gratias|gratias tibi|thanks|thank you|ok|great|perfect)\b/,
+    // No "perfect" here: on a Latin site it is a tense, and as a small-talk
+    // trigger it swallowed "perfect participle" and "perfect tense" too.
+    match: /^(gratias|gratias tibi|thanks|thank you|ok|great)\b/,
     reply: {
       la: 'Libenter! Ask me anything else you need.',
       en: 'Libenter! Ask me anything else you need.',

@@ -40,7 +40,7 @@ five things it can actually ground an answer in:
 | *qué significa sobremesa* | `/api/dictionary` → RAE |
 | *cómo se dice "I'm tired" en español* | `/api/translate` |
 | *to say in Spanish*, or just *to say* | the search index, read backwards |
-| *ser y estar*, *por y para*, *el subjuntivo*… | 16 hand-written grammar topics in `public/js/data/grammar.js`, in both languages |
+| *ser y estar*, *por y para*, *el subjuntivo*… | 22 hand-written grammar topics in `public/js/data/grammar.js`, in both languages |
 
 **"to say in Spanish" is a question, even without a question in it.** Most
 people ask for a word that way — the direction named, nothing asking for a
@@ -519,6 +519,19 @@ Example sentences come from Tatoeba as before, asked for French rather than
 Spanish; the English gloss beside the headword comes from the French section of
 en.wiktionary.
 
+**One lookup is up to three Wikimedia requests** — the entry, a search when the
+word was typed without its accents, and that English gloss — so a class of
+twenty-five looking words up at once is a burst, and Wikimedia answers a burst
+with 429s that persist for a while afterwards. A dictionary that dies the moment
+a whole class uses it is not a dictionary. `server/throttle.js` therefore holds
+the calls to three lanes with a gap in each.
+
+Three is measured, not guessed. Twenty-five simultaneous lookups, run twice
+over: one lane took 75s, three took 23s, six took 40s, and none of them drew a
+429 — past three the host simply stops answering any faster, so further lanes
+queue behind its own pacing instead of the queue's. Before the throttle the same
+sweep returned 6 of 22.
+
 ### The French translator
 
 The same chain, minus one engine: **Wikipedia → Lingva → MyMemory**.
@@ -879,6 +892,8 @@ server/
   quota.js              sliding-window allowance — one bucket, both languages
   llm.js                picks a provider — free tiers first
   corpus.js             Tatoeba sentences and Wiktionary glosses, either language
+  throttle.js           three lanes onto Wikimedia, so a whole class at once
+                        does not draw a 429
   translators.js        the engine chain; every engine takes the pair as codes
   idioms.js             one idiom table per language
   dictionary-fr.js   ·fr the Wiktionnaire, parsed from wikitext
@@ -919,8 +934,8 @@ public/
     lib/wallpaper.js    the Madrid photo: parallax, scrim, scroll fade
     lib/i18n.js         every interface string — one table per study language
     lib/language-switch.js  the ES/EN — or FR/EN — switch and its passcode gate
-    data/grammar.js     16 grammar explanations, Spanish and English
-    data/grammar-fr.js ·fr 20 more, French and English
+    data/grammar.js     22 grammar explanations, Spanish and English
+    data/grammar-fr.js ·fr 23 more, French and English
     data/verbs.js       stem changes, irregulars, the search index
     data/verbs-fr.js ·fr irregulars, the -er spelling exceptions, 232 verbs
     data/grammar-la.js ·la 26 more, English only — see The Latin side
