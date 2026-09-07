@@ -14,6 +14,7 @@ import {
   pluralise, thirdPerson, pastOf, firstSense, verbStem, englishVerb, baseVerb, notted,
   adjectiveCitation, verbCandidates, splitEnglishClauses,
 } from '../server/latin-translate.js';
+import { latinIdiom, LATIN_IDIOM_COUNT } from '../server/latin-idioms.js';
 
 let checked = 0;
 const failures = [];
@@ -188,6 +189,24 @@ ok('and so does punctuation alone', splitEnglishClauses('  .  ').length === 0);
 const purpose = splitEnglishClauses('the boy works so that the girl sleeps');
 ok('a purpose clause is subjunctive outright',
   purpose[1]?.lead === 'ut' && purpose[1]?.subjunctive === true, JSON.stringify(purpose));
+
+// --- phrases Latin says its own way -----------------------------------------
+// Word-by-word is the wrong tool for these: "how much does this cost" is five
+// English words and two Latin ones, because Latin puts the price in the
+// genitive and needs no word for "how much" at all.
+ok('the table has entries', LATIN_IDIOM_COUNT > 20, String(LATIN_IDIOM_COUNT));
+ok('"how much does this cost"', latinIdiom('how much does this cost') === 'quanti constat');
+ok('a question mark does not defeat it', latinIdiom('How much does this cost?') === 'quanti constat');
+ok('"it is not worth it"', latinIdiom('it is not worth it') === 'non tanti est');
+ok('and the shorter form', latinIdiom('is not worth it') === 'non tanti est');
+ok('"I love you"', latinIdiom('I love you') === 'te amo');
+ok('a full stop does not defeat it', latinIdiom('I love you.') === 'te amo');
+ok('an apostrophe-less contraction still matches',
+  latinIdiom('I cant take it anymore') === 'non iam ferre possum');
+ok('a capture is carried through',
+  latinIdiom('my name is Marcus') === 'nomen mihi est Marcus', String(latinIdiom('my name is Marcus')));
+ok('an ordinary sentence is not an idiom', latinIdiom('the boy praises the farmer') === null);
+ok('nothing is not an idiom', latinIdiom('') === null);
 
 if (failures.length) {
   console.error(`\n✗ ${failures.length} of ${checked} Latin-translator checks failed:\n`);

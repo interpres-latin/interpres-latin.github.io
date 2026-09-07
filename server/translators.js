@@ -703,8 +703,19 @@ export async function translate(text, from, to) {
        * failure of the lookup.
        */
       if (result.wordByWord) {
+        /**
+         * Only phrases written as names get looked up as names.
+         *
+         * Wikipedia has an article called "How Much More", so "how much more
+         * can this cost" was answered with "how much more — (no Latin name)".
+         * An article existing does not make a phrase a name; being written like
+         * one does, and in English that means capitals.
+         */
+        const looksNamed = (phrase) => /^\p{Lu}/u.test(phrase)
+          && phrase.split(/\s+/).every((word) => /^[\p{Lu}\d]/u.test(word) || EDGE_WORDS.has(word.toLowerCase()));
+
         const named = from === 'en'
-          ? await namesAndGaps(nameCandidates(text), from, to).catch(() => new Map())
+          ? await namesAndGaps(nameCandidates(text).filter(looksNamed), from, to).catch(() => new Map())
           : new Map();
 
         // Longest first, and nothing contained inside a longer one: "World War

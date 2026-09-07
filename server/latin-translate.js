@@ -36,6 +36,7 @@ import {
   latinNounParts,
 } from './latin-lexicon.js';
 import { formOf, declineAdjective } from '../public/js/lib/decliner-la.js';
+import { latinIdiom } from './latin-idioms.js';
 import { conjugate } from '../public/js/lib/conjugator-la.js';
 
 const fold = (word) => String(word ?? '').trim().toLowerCase();
@@ -1150,6 +1151,10 @@ export function splitEnglishClauses(text) {
  * clause after the statement it explains.
  */
 export async function englishToLatin(text) {
+  // An idiom before a rule: a rule applied to an idiom is confident nonsense.
+  const idiomatic = latinIdiom(text);
+  if (idiomatic) return idiomatic;
+
   const clauses = splitEnglishClauses(text);
   if (!clauses.length) fail('nothing to translate');
   if (clauses.length > 3) fail('too many clauses for the rules translator');
@@ -1650,8 +1655,27 @@ export async function englishGlossary(text) {
   });
 
   const kept = words.filter((word, i) => !(LATIN_SUBJECT_PRONOUNS.has(word) && i === 0));
-  const body = [...kept.filter((word) => !LATIN_MODALS.has(word)),
-    ...kept.filter((word) => LATIN_MODALS.has(word))];
+
+  /**
+   * The verb goes last, which is the order Latin is taught in.
+   *
+   * Neutral Latin is subject–object–verb, so leaving *est* where English put it
+   * gives a sentence that reads like English wearing Latin words. Everything
+   * that is not a verb keeps its order; the verbs follow; a modal follows them,
+   * since it governs the rest.
+   */
+  const verbs = new Set();
+  await Promise.all(kept.map(async (word) => {
+    if (word.startsWith('[')) return;
+    const analyses = await analyse(word).catch(() => null);
+    if (analyses?.some((one) => one.pos === 'verb')) verbs.add(word);
+  }));
+
+  const body = [
+    ...kept.filter((word) => !verbs.has(word) && !LATIN_MODALS.has(word)),
+    ...kept.filter((word) => verbs.has(word) && !LATIN_MODALS.has(word)),
+    ...kept.filter((word) => LATIN_MODALS.has(word)),
+  ];
 
   return body.join(' ');
 }
