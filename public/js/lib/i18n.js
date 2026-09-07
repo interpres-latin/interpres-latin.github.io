@@ -571,7 +571,7 @@ const FRENCH = {
       'L’Académie française ne publie pas d’interface de consultation, donc ces définitions viennent du Wiktionnaire. L’article de l’Académie est à un clic.',
       'The Académie française publishes no API, so these definitions come from the Wiktionnaire. The Académie’s own entry is one click away.',
     ),
-    seeAuthority: deux('voir à l’Académie française ↗', 'view at the Académie française ↗'),
+    seeAuthority: deux('chercher à l’Académie française ↗', 'search the Académie française ↗'),
     speak: deux('Écouter le mot', 'Hear the word'),
     speakFailed: deux('Impossible de prononcer.', 'Could not pronounce that.'),
     speakSpent: deux('Les prononciations de ce mois-ci sont épuisées.', 'This month’s pronunciations are used up.'),

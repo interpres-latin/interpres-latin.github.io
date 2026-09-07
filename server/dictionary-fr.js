@@ -400,8 +400,20 @@ export async function fetchWiktionnaire(word, { corrected = null } = {}) {
   };
 }
 
-export const ACADEMIE = (word) =>
-  `https://www.dictionnaire-academie.fr/search?term=${encodeURIComponent(word)}`;
+/**
+ * The Académie link, which for a long time went nowhere.
+ *
+ * `/search?term=couvercle` answers 200, so it looked fine and was not: their
+ * search is a **POST**, and a GET drops the term and lands the reader on an
+ * empty search box. Their real entries live at `/article/A9C4713` — an opaque
+ * id, resolvable only by running their JavaScript, which is why this site reads
+ * the Wiktionnaire in the first place.
+ *
+ * So a word links to the search page *with the word to hand* rather than
+ * pretending to deep-link, and the page tells the reader to paste it. A link
+ * that admits what it can do beats one that silently does nothing.
+ */
+export const ACADEMIE = () => 'https://www.dictionnaire-academie.fr/';
 
 export const WIKTIONNAIRE_CREDIT = {
   name: 'Wiktionnaire',
