@@ -280,26 +280,21 @@ ok('nothing is not a stage', findStage('') === null);
 ok('past the end is not a stage', findStage('99') === null);
 ok('nor is a word that is not a title', findStage('nonsense') === null);
 
-// --- the subject restriction, which is a browser-side gate ----------------
-const { allowedSubjects, subjectAllowed, setRestricted, isRestricted } = await import('../public/js/lib/restriction.js');
-globalThis.window = { dispatchEvent() {} };
-globalThis.CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init?.detail; } };
-// Closed by default: French and Latin are unlocked by a passcode rather than
-// taken away by one, so a page that has not yet heard from the server offers
-// only Spanish.
-ok('only Spanish is on offer by default', allowedSubjects().join(',') === 'es');
-ok('and it says it is restricted', isRestricted() === true);
-ok('French is refused', subjectAllowed('fr') === false);
-ok('Latin is refused', subjectAllowed('la') === false);
-ok('Spanish is not', subjectAllowed('es') === true);
-
-setRestricted(false);
-ok('opening it offers the three', allowedSubjects().join(',') === 'es,fr,la');
-ok('and it says so', isRestricted() === false);
-ok('French is allowed', subjectAllowed('fr') === true);
-
-setRestricted(true);
-ok('closing it leaves only Spanish again', allowedSubjects().join(',') === 'es');
+// --- English plurals, which a bare -s rule gets wrong -----------------------
+const { pluralise } = await import('../server/latin-translate.js');
+for (const [one, many] of [
+  ['woman', 'women'], ['man', 'men'], ['child', 'children'], ['person', 'people'],
+  ['foot', 'feet'], ['tooth', 'teeth'], ['mouse', 'mice'], ['wife', 'wives'],
+  ['leaf', 'leaves'], ['city', 'cities'], ['box', 'boxes'],
+  // Unchanged in the plural, and uncountable, both of which took an -s before.
+  ['sheep', 'sheep'], ['fish', 'fish'], ['furniture', 'furniture'], ['water', 'water'],
+  // Already plural: *arma* is glossed "arms" and became "armses".
+  ['arms', 'arms'],
+  // The ordinary ones still work.
+  ['girl', 'girls'], ['rose', 'roses'], ['book', 'books'],
+]) {
+  ok(`${one} -> ${many}`, pluralise(one) === many, pluralise(one));
+}
 
 // --- report ----------------------------------------------------------------
 if (failures.length) {

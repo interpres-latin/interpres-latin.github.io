@@ -1,101 +1,36 @@
 /**
  * Translation engines, none of which is a language model.
  *
- * Tried in order until one gives an answer:
+ * Latin is answered by this site or not at all.
+ *
+ * The free engines this file used to carry — Lingva, MyMemory, Apertium and
+ * DeepL — are gone with the Spanish and French sides they were built for. None
+ * of them can do Latin, and one of them was worse than useless: asked for
+ * Latin, MyMemory returns *Malagasy*. "…the First World War hero who died in
+ * the Cuban Missile Crisis" came back as "…maherifo Worlde, izay maty tao
+ * amin'ny Krizin'ny Balafomanga Kiobana" — a real translation into a language
+ * nobody asked for, wearing enough Latin to pass a glance.
+ *
+ * What is left is procedural from end to end, and tried in order:
  *
  *   0. Wikipedia   for names and titles. Machine translation renders them
- *                  literally — "Cuban Missile Crisis" becomes "crisis de los
- *                  misiles cubanos", which says the missiles were Cuban when
- *                  they were Soviet. Wikipedia's cross-language links hold the
- *                  established name in each language instead.
- *   1. Lingva      a Google Translate front end. Best quality, free, no key —
- *                  but these are volunteer-run instances, so several are listed
- *                  and a dead one is simply skipped.
- *   2. MyMemory    a crowd translation memory. Real human translations, but its
- *                  segments can be wrong in ways no score exposes: "Buenos días,
- *                  ¿cómo estás?" comes back as "Good morning Najlaa how are
- *                  you?" at top confidence. Only believed when its candidates
- *                  agree with each other.
- *   3. Apertium    open-source rule-based translation. Clumsy — "It would like
- *                  me learn Spanish with you" — but always up and never invents
- *                  content, so it is a floor rather than a choice. It has no
- *                  English–French pair, so French translation has one engine
- *                  fewer beneath it and stops at MyMemory.
- *
- * Every engine takes the language pair as codes, so the whole chain works for
- * whichever language the site is currently about.
+ *                  literally, and its cross-language links hold the established
+ *                  name instead. Looking up what Latin actually calls a thing
+ *                  is not a guess.
+ *   1. the rules   the site's own grammar — see latin-translate.js.
+ *   2. the gloss   dictionary forms in Latin word order going in, and a
+ *                  word-by-word decoding coming out. Neither claims a grammar,
+ *                  so neither can be wrong about one.
  */
 
-/**
- * Lingva instances, tried in order.
- *
- * Volunteer-run, so this list ages, and most of it has now gone: of nineteen
- * instances once listed publicly, thirteen no longer resolve at all and two
- * (lingva.ml, lingva.garudalinux.org) sit behind a Cloudflare challenge that a
- * server cannot pass. Those are dropped — they cost a request and can never
- * answer.
- *
- * The two left are up and serving; it is Google refusing *them*, which is a
- * thing that passes. Keeping them here is what lets the site pick the service
- * back up on its own when it does.
- *
- * An entry may carry a scheme, which is how a self-hosted instance is pointed
- * at — `LINGVA_INSTANCES=http://localhost:3100`.
- */
-const LINGVA_HOSTS = (process.env.LINGVA_INSTANCES || 'lingva.lunar.icu,translate.plausibility.cloud')
-  .split(',').map((host) => host.trim()).filter(Boolean)
-  .map((host) => (/^https?:\/\//.test(host) ? host : `https://${host}`));
-
-/**
- * How long a host that just failed is passed over.
- *
- * Without this a dead instance is re-tried on every translation, and the
- * translator box fires on a debounce as you type — so one host being down cost
- * a timeout per keystroke-pause, several seconds each, before anything else was
- * even asked. Short enough that an instance having a bad minute is back in the
- * rotation quickly; long enough that a real outage costs one request, not one
- * per translation.
- */
-const LINGVA_COOLDOWN_MS = 60_000;
-const restingUntil = new Map();
-
-/**
- * How long to wait for an instance.
- *
- * The default suits a public instance, which is either up or not. A
- * self-hosted one on a free tier spins down when idle and takes the better part
- * of a minute to wake, so a deployment that owns its own instance should raise
- * this — see LINGVA_TIMEOUT_MS in the README.
- */
-const LINGVA_TIMEOUT_MS = Number(process.env.LINGVA_TIMEOUT_MS) || 12_000;
-
-
-/**
- * Hosts worth asking now.
- *
- * Can be empty, and that is the point: when every instance is down — which is
- * the common case, not the rare one — Lingva steps aside immediately and the
- * chain falls through to the engines beneath it. Nothing is disabled
- * permanently; the cooldown expiring is what puts a host back.
- */
-function hostsToTry() {
-  const now = Date.now();
-  return LINGVA_HOSTS.filter((host) => (restingUntil.get(host) ?? 0) <= now);
-}
-
-import { alreadyIdiomatic, findIdioms, wantsProgressive } from './idioms.js';
-import { throttle, USER_AGENT } from './throttle.js';
-import { deepl } from './deepl.js';
+import { USER_AGENT } from './throttle.js';
 import {
-  latinRules, englishToLatinGloss, latinToEnglishGloss, LATIN_RULES_ENGINE,
+  latinRules, englishToLatinGloss, englishToLatinSentence,
+  latinToEnglishGloss, latinToEnglishSentence, LATIN_RULES_ENGINE,
 } from './latin-translate.js';
+import { latinToEnglishParse } from './latin-parse.js';
 
 const WIKIPEDIA = (lang) => `https://${lang}.wikipedia.org/w/api.php`;
-const MYMEMORY = 'https://api.mymemory.translated.net/get';
-const APERTIUM = 'https://apertium.org/apy/translate';
-
-const LINGVA_CHUNK = 700;
-const MYMEMORY_CHUNK = 450;
 
 const normalise = (text) => String(text).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   .replace(/[^a-z0-9ñ ]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -302,16 +237,11 @@ async function officialName(phrase, from, to) {
 }
 
 /** Replace `find` in `text`, keeping the capitalisation that was already there. */
-function substitute(text, find, replacement, { progressive = null, to = null } = {}) {
+function substitute(text, find, replacement) {
   const pattern = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-  return text.replace(pattern, (match, offset) => {
-    // An auxiliary already standing in front of the slot wants the gerund, not
-    // a finite clause — "está lloviendo a cántaros", never "está llueve".
-    const chosen = progressive && wantsProgressive(text.slice(0, offset), to)
-      ? progressive
-      : replacement;
-    return /^\p{Ll}/u.test(match) ? chosen.charAt(0).toLowerCase() + chosen.slice(1) : chosen;
-  });
+  return text.replace(pattern, (match) => (
+    /^\p{Ll}/u.test(match) ? replacement.charAt(0).toLowerCase() + replacement.slice(1) : replacement
+  ));
 }
 
 /** Drop names contained inside a longer one that also matched. */
@@ -370,319 +300,46 @@ async function namedEntity(text, from, to) {
   return { text: link, engine: 'Wikipedia' };
 }
 
-async function lingva(text, from, to) {
-  const hosts = hostsToTry();
-  if (!hosts.length) throw new Error('Every Lingva instance is resting after a recent failure');
-
-  let lastError = null;
-
-  for (const host of hosts) {
-    try {
-      const translated = await translateChunks(text, LINGVA_CHUNK, async (part) => {
-        const url = `${host}/api/v1/${from}/${to}/${encodeURIComponent(part)}`;
-        const response = await fetch(url, {
-          headers: { accept: 'application/json' },
-          signal: AbortSignal.timeout(LINGVA_TIMEOUT_MS),
-        });
-        if (!response.ok) throw new Error(`${host} responded ${response.status}`);
-
-        const body = await response.json();
-        if (!body.translation) throw new Error(`${host} returned no translation`);
-        return String(body.translation);
-      });
-
-      restingUntil.delete(host);
-      return { text: translated, engine: 'Lingva' };
-    } catch (error) {
-      restingUntil.set(host, Date.now() + LINGVA_COOLDOWN_MS);
-      lastError = error;
-    }
-  }
-
-  throw lastError || new Error('No Lingva instance answered.');
-}
-
-/** Exposed for the tests, which need each case to start from a clean slate. */
-export function resetLingvaCooldowns() {
-  restingUntil.clear();
-}
-
 /**
- * MyMemory's own machine translation, which it returns under this name when no
- * stored human translation comes close to the sentence.
+ * Wikipedia first, because an established name is not a guess.
+ *
+ * Then the two checked sentence routes, and only then the site's own grammar.
+ * That order is the other way round from how it started, and it changed for a
+ * measured reason: the rules translator answers *confidently* on sentences it
+ * cannot really do, and an engine that answers is an engine that stops the
+ * chain. "Sometimes life is a horrible time" came back as *interda dira vita
+ * tempus est* — the rules engine had produced it, so the model was never asked.
+ *
+ * The grammar engine is not gone and is not idle: it still answers whenever
+ * there is no model configured, and it is what the conjugator, the decliner and
+ * the tutor are built on. It is simply no longer in front of something better.
+ *
+ * The glossaries stay at the bottom, where they are the honest last word: a
+ * list of dictionary forms is less than a translation and worth more, because
+ * it is true.
  */
-const MYMEMORY_MT = 'MT!';
-
 /**
- * Believed when the answer is MyMemory's own machine translation, or when two
- * stored translations agree.
+ * Latin into English has one engine and no fallback.
  *
- * Agreement alone was the whole rule, and it was too strict to be useful. The
- * memory rarely holds the same sentence twice, so "le chien de la fille" — the
- * top candidate, and correct — was thrown out for sharing the page with "La
- * rumeur" and "Of the girl". Spanish only seemed to survive that because
- * Apertium answers after it; French and Latin have no Apertium pair and no
- * Lingva, so the veto left them with no translator at all.
+ * The parser either reads the sentence or it does not, and when it does not the
+ * translation fails and says so. There is deliberately nothing underneath it:
+ * a model route and a word list sitting below meant that a parse failure was
+ * invisible, answered by something worse, and never fixed. A reader who wants
+ * the model asks for it, and that is a separate request. See the re-translate
+ * button in public/js/views/home.js.
  *
- * What separates the two cases is not the score — the score says how close the
- * *source* is to something stored, so the wrong translation of a well-known
- * sentence still scores 0.99. It is where the candidate came from. MyMemory
- * falls back to translating the sentence itself only when its memory has
- * nothing close, and marks that one MT!: a single engine's answer, with no
- * crowd to disagree with. Where a stored translation does match, there is no
- * MT! at all and the vote still decides — which is the "Good morning Najlaa how
- * are you?" case, three stored translations of one sentence with the wrong one
- * on top, and it is still refused.
+ * English into Latin still has its chain, which is a different problem and is
+ * not what the parser does.
  */
-async function myMemory(text, from, to) {
-  let confident = true;
+const OUT_OF_LATIN = [namedEntity, latinToEnglishParse];
+const INTO_LATIN = [namedEntity, englishToLatinSentence, latinRules, englishToLatinGloss];
 
-  const translated = await translateChunks(text, MYMEMORY_CHUNK, async (part) => {
-    const url = new URL(MYMEMORY);
-    url.searchParams.set('q', part);
-    url.searchParams.set('langpair', `${from}|${to}`);
-    // MyMemory rations anonymous use by IP, and a deployed site shares its IP
-    // with whatever else the host has on it — which is why translation worked
-    // on a laptop and answered 429 on Render. Naming a contact address is
-    // MyMemory's own way of asking for the larger allowance.
-    if (process.env.MYMEMORY_EMAIL) url.searchParams.set('de', process.env.MYMEMORY_EMAIL);
+const enginesFor = (from) => (from === 'la' ? OUT_OF_LATIN : INTO_LATIN);
 
-    // Spaced for the same reason the dictionary is: a class arrives at once.
-    const response = await throttle('mymemory', 120, () => fetch(url, {
-      headers: { 'User-Agent': USER_AGENT },
-      signal: AbortSignal.timeout(15000),
-    }));
-    if (!response.ok) throw new Error(`MyMemory responded ${response.status}`);
-
-    const body = await response.json();
-    if (body.responseStatus !== 200 || !body.responseData?.translatedText) {
-      throw new Error(body.responseDetails || 'MyMemory returned no translation');
-    }
-
-    const matches = (body.matches || []).filter((match) => String(match.translation || ''));
-
-    // Its own machine translation, offered because the memory had nothing
-    // closer. Nothing to take a vote among.
-    const machine = matches.find((match) => String(match['created-by']) === MYMEMORY_MT);
-    if (machine) return String(machine.translation);
-
-    const candidates = matches.map((match) => String(match.translation));
-    const tally = new Map();
-    for (const candidate of candidates) {
-      const key = normalise(candidate);
-      tally.set(key, (tally.get(key) || 0) + 1);
-    }
-
-    const [agreedKey, votes] = [...tally.entries()].sort((a, b) => b[1] - a[1])[0] || ['', 0];
-    if (!(votes >= 2 || candidates.length <= 1)) confident = false;
-
-    return candidates.find((candidate) => normalise(candidate) === agreedKey)
-      || body.responseData.translatedText;
-  });
-
-  if (!confident) {
-    // The best guess travels with the refusal. Nothing behind MyMemory can
-    // translate French or Latin, so a doubtful answer is worth keeping as a
-    // last resort — see translate().
-    const doubt = new Error('MyMemory candidates disagreed');
-    doubt.guess = translated;
-    throw doubt;
-  }
-  return { text: translated, engine: 'MyMemory' };
-}
-
-/** Apertium's own codes, and the pairs it actually has installed. */
-const APERTIUM_CODES = { es: 'spa', en: 'eng', fr: 'fra', la: 'lat' };
-const APERTIUM_PAIRS = new Set(['spa|eng', 'eng|spa', 'spa|fra', 'fra|spa']);
-
-/**
- * English–French in two hops, through Catalan.
- *
- * Apertium has no eng|fra pair, and this used to decline rather than pivot: two
- * rule-based hops compound each other's mistakes, and Apertium is already the
- * floor. That reasoning held while French had Lingva above it. It does not now
- * — Lingva is down across the board and MyMemory rations by IP, and when both
- * decline the French page has nothing at all to show.
- *
- * So the pivot exists, and everything it produces is marked uncertain. It is
- * measurably rough: "The black cat sleeps on the old table" comes back as "Les
- * rêves de chat noirs dans la table vieille", because the first hop read
- * "sleeps" as a noun. But a clumsy sentence a student is told to check beats a
- * blank page, which is the same bargain Apertium already is for Spanish.
- *
- * Catalan rather than Spanish: it is no better on average, but it fails less
- * badly where it matters — "Where is the station?" comes back as "Où est la
- * gare ?" against Spanish's "Où Il est la #chaîne ?", a marker for a word the
- * engine could not translate at all.
- */
-const APERTIUM_PIVOT = 'cat';
-const APERTIUM_PIVOTS = new Set(['eng|fra', 'fra|eng']);
-
-/**
- * One Apertium hop, keeping a record of what it could not translate.
- *
- * Apertium marks a word it has no entry for with a leading `#`. That marker
- * used to be stripped and forgotten, which quietly turned "I could not
- * translate this word" into "here is your translation" — the reader saw
- * *chaîne* sitting in a French sentence with nothing to say it was a guess.
- * The marker comes off the text, because a `#` in the middle of a sentence is
- * not for reading, and the words go into `unsure` so the page can colour them.
- */
-async function apertiumHop(text, pair, unsure = new Set()) {
-  return translateChunks(text, LINGVA_CHUNK, async (part) => {
-    const url = `${APERTIUM}?langpair=${encodeURIComponent(pair)}&q=${encodeURIComponent(part)}`;
-    const response = await throttle('apertium', 120, () => fetch(url, {
-      headers: { 'User-Agent': USER_AGENT },
-      signal: AbortSignal.timeout(15000),
-    }));
-    if (!response.ok) throw new Error(`Apertium responded ${response.status}`);
-
-    const body = await response.json();
-    const out = body.responseData?.translatedText;
-    if (!out) throw new Error('Apertium returned no translation');
-    return String(out).replace(/#(\p{L}[\p{L}\p{M}'’-]*)/gu, (_match, word) => {
-      unsure.add(word);
-      return word;
-    });
-  });
-}
-
-async function apertium(text, from, to) {
-  const source = APERTIUM_CODES[from];
-  const target = APERTIUM_CODES[to];
-  const pair = `${source}|${target}`;
-
-  const unsure = new Set();
-
-  if (APERTIUM_PAIRS.has(pair)) {
-    const translated = await apertiumHop(text, pair, unsure);
-    return { text: translated, engine: 'Apertium', unsure: [...unsure] };
-  }
-
-  if (APERTIUM_PIVOTS.has(pair)) {
-    // Both hops can give up on a word, and a word the first hop left behind is
-    // usually still there for the second to leave behind again.
-    const middle = await apertiumHop(text, `${source}|${APERTIUM_PIVOT}`, unsure);
-    const translated = await apertiumHop(middle, `${APERTIUM_PIVOT}|${target}`, unsure);
-    return {
-      text: translated, engine: 'Apertium', uncertain: true, unsure: [...unsure],
-    };
-  }
-
-  // Latin has no Apertium pair in either direction and no language between it
-  // and English that does, so it declines — by name, so the log says which pair
-  // was missing rather than "eng|undefined".
-  throw new Error(`Apertium has no ${pair} pair`);
-}
-
-/**
- * The order translation is attempted in.
- *
- * Wikipedia first — an established name is a fact to look up, not a phrase to
- * translate. Then DeepL, which is a real translation engine and the best one
- * here for French and Spanish, answering to a published contract rather than to
- * whether Google feels like serving a volunteer's proxy today. Then the free
- * engines, in the order they can be trusted.
- *
- * **No model translates.** Gemini and OpenRouter answer off-topic chat and
- * nothing else: their credits are a fixed monthly allowance, and translation —
- * which fires as you type — would drain it on sentences nobody asked about.
- * The chain is dedicated engines only, which is where this project started.
- *
- * Latin has no engine anywhere — DeepL has no pair for it and MyMemory returns
- * "dog de puella" for *the dog of the girl* — so the site builds its own out of
- * the parts it already has: Whitaker's Words for the morphology, the decliner
- * and conjugator for the forms, the course's own vocabulary for the words. It
- * handles the sentence shapes a class writes and declines everything else, at
- * which point the free engines take over as before. See latin-translate.js.
- *
- * The two glossaries are the last resort for Latin, and they sit in different
- * places on purpose. Going *into* Latin, a heap of half-translated words is
- * something a reader could copy out believing it, so the glossary of dictionary
- * forms goes above the free engines. Coming *out* of Latin, MyMemory is
- * occasionally right and a correct sentence beats a correct list, so the
- * word-by-word decoding waits at the very bottom. Neither can be wrong about
- * the grammar, because neither claims any.
- *
- * translate-model.js is kept and still tested, and is not in this list.
- */
-const ENGINES = [
-  namedEntity, deepl, latinRules, englishToLatinGloss,
-  lingva, myMemory, apertium, latinToEnglishGloss,
-];
-
-/**
- * Latin is answered by this site or not at all.
- *
- * Lingva, MyMemory and Apertium are struck out of the chain for Latin entirely,
- * because none of them can do it and one of them is worse than useless: asked
- * for Latin, MyMemory returns *Malagasy*. "…the First World War hero who died
- * in the Cuban Missile Crisis" came back as "…maherifo Worlde, izay maty tao
- * amin'ny Krizin'ny Balafomanga Kiobana", which is a real translation into a
- * language nobody asked for, wearing enough Latin to pass a glance.
- *
- * So the Latin chain is the rules translator, then the glossary, and nothing
- * else — procedural from end to end, and the two things left cannot be wrong
- * about grammar they never claim. Wikipedia stays, because looking up what
- * Latin actually calls a thing is not a guess.
- */
-function enginesFor(from, to) {
-  if (from !== 'la' && to !== 'la') return ENGINES;
-  return [namedEntity, latinRules, englishToLatinGloss, latinToEnglishGloss];
-}
-
-/**
- * Swap a word-for-word rendering of an idiom for the equivalent idiom.
- *
- * Most idioms already survive translation — "raining cats and dogs" comes back
- * as "llueve a cántaros" — so only the ones that do not are listed, and only
- * those are touched.
- *
- * "Does not" has to mean *this* rendering, though, not this idiom in general.
- * The stored form is a citation, and an engine that produced the idiom in some
- * other inflection has got it right: replacing *está lloviendo a cántaros* with
- * the citation form yields "está llueve a cántaros", which is worse than the
- * literal translation the feature exists to repair. So the idiom is only put in
- * where it is genuinely absent — checked twice, on the sentence and on the span
- * — and the note is shown either way, since the pairing is the thing being
- * taught.
- */
-async function restoreIdioms(source, translated, from, to, translateSpan) {
-  const idioms = findIdioms(source, from, to);
-  if (!idioms.length) return { text: translated, notes: [] };
-
-  let result = translated;
-  const notes = [];
-
-  for (const idiom of idioms) {
-    notes.push({ source: idiom.source, target: idiom.say, meaning: idiom.meaning });
-
-    // The engine already said it idiomatically — leave its grammar alone.
-    if (alreadyIdiomatic(result, idiom.say)) continue;
-
-    // Trimmed: an engine that returns " llueve gatos y perros" for the span
-    // alone will not match the same words inside the sentence, and the repair
-    // silently does nothing.
-    const literal = (await translateSpan(idiom.phrase).catch(() => null))?.trim();
-    if (!literal) continue;
-    if (alreadyIdiomatic(literal, idiom.say)) continue;
-    if (normalise(literal) === normalise(idiom.say)) continue;
-
-    result = substitute(result, literal, idiom.say, { progressive: idiom.progressive, to });
-  }
-
-  return { text: result, notes };
-}
-
-/**
- * Translate, trying each engine until one answers.
- * @returns {Promise<{text: string, engine: string, notes: Array}>}
- */
 export async function translate(text, from, to) {
   const failures = [];
-  let guess = null;
 
-  for (const engine of enginesFor(from, to)) {
+  for (const engine of enginesFor(from)) {
     try {
       const result = await engine(text, from, to);
       if (!result.text.trim()) continue;
@@ -690,6 +347,27 @@ export async function translate(text, from, to) {
       // Wikipedia already answers with the established name; the translators
       // need the names put back afterwards.
       if (engine === namedEntity) return { ...result, notes: [] };
+
+      /**
+       * An assembled sentence is finished when it arrives.
+       *
+       * Name restoration below would re-run the engine once per candidate span
+       * to learn how it renders each — which for this engine means a pair of
+       * model calls per name, to repair a sentence a model has already written
+       * with the names in it.
+       */
+      // A parsed sentence is finished when it arrives, like an assembled one.
+      if (result.parsed || result.assembled) {
+        return {
+          ...result,
+          text: result.text.replace(/[ \t]{2,}/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim(),
+          notes: [],
+          unsure: [],
+          uncertain: result.reading?.confidence !== 'agreed',
+          uncertainWhy: result.reading?.confidence === 'differs' ? 'readingsDiffer'
+            : (result.reading?.confidence === 'partial' ? 'readingsPartial' : null),
+        };
+      }
 
       /**
        * A gloss is a list of words, not a sentence, so names are not spliced
@@ -726,7 +404,7 @@ export async function translate(text, from, to) {
           kept.push(phrase);
         }
 
-        const heads = kept.map((phrase) => `${phrase} — ${named.get(phrase) ?? '(no Latin name)'}`);
+        const heads = kept.map((phrase) => `${phrase}: ${named.get(phrase) ?? '(no Latin name)'}`);
         const body = [...heads, result.text].filter(Boolean).join(' · ');
 
         return { ...result, text: body.trim(), notes: [], uncertainWhy: 'wordByWord' };
@@ -736,15 +414,13 @@ export async function translate(text, from, to) {
 
       const named = await restoreNames(text, result.text, from, to, translateSpan)
         .catch(() => result.text);
-      const withIdioms = await restoreIdioms(text, named, from, to, translateSpan)
-        .catch(() => ({ text: named, notes: [] }));
 
       // Engines and substitutions both leave stray spacing behind; a reader
       // should never see the seam.
-      const tidied = withIdioms.text.replace(/[ \t]{2,}/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
+      const tidied = named.replace(/[ \t]{2,}/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
       // Only the words still standing in the finished text are worth marking:
-      // names and idioms are put back after the engine ran, and may well have
-      // replaced the very word Apertium gave up on.
+      // a name is put back after the engine ran, and may well have replaced the
+      // very word the gloss gave up on.
       const stillThere = (result.unsure ?? []).filter((word) => new RegExp(
         `\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'iu',
       ).test(tidied));
@@ -752,12 +428,10 @@ export async function translate(text, from, to) {
       /**
        * Latin from anywhere but our own grammar is a guess, and says so.
        *
-       * The word-level check cannot catch this. "I wish I were dead, I really
-       * do" comes back from MyMemory as "Ego sum mortis, ego sum", and every
-       * word of that is real Latin — it simply does not mean what was asked, so
-       * nothing looks wrong. Latin has no engine that can be trusted with a
-       * sentence, so a Latin translation the rules engine did not build is
-       * marked uncertain whatever it looks like.
+       * The word-level check cannot catch a sentence that is wrong as a whole:
+       * every word can be real Latin and still not mean what was asked, so
+       * nothing looks wrong. Anything the rules engine did not build is
+       * therefore marked uncertain whatever it looks like.
        */
       const guessedLatin = (to === 'la' || from === 'la')
         && result.engine !== LATIN_RULES_ENGINE;
@@ -768,36 +442,16 @@ export async function translate(text, from, to) {
       return {
         ...result,
         text: tidied,
-        notes: withIdioms.notes,
+        notes: [],
         unsure: stillThere,
         uncertain: result.uncertain === true || guessedLatin || result.wordByWord === true,
         uncertainWhy: why,
       };
     } catch (error) {
       failures.push(error.message);
-      if (error.guess?.trim() && !guess) guess = error.guess;
     }
   }
 
-  /**
-   * Nothing was confident. Rather than nothing at all, take the memory's own
-   * best guess and say plainly that it is one.
-   *
-   * This is a last resort and reads like one. Spanish never reaches it, because
-   * Apertium answers first; French and Latin reach it whenever the memory holds
-   * a sentence more than once and its copies disagree, and for them the choice
-   * is between a doubtful sentence that is labelled and an error message that
-   * helps nobody. A student can weigh a translation marked uncertain. They
-   * cannot weigh a blank page.
-   */
-  if (guess) {
-    return {
-      text: guess,
-      engine: 'MyMemory',
-      uncertain: true,
-      notes: [],
-    };
-  }
 
   const error = new Error(`No translation engine answered. ${failures.join(' · ')}`);
   error.status = 502;

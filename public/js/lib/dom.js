@@ -84,6 +84,25 @@ export const ICONS = {
   ],
   down: 'M12 5v14m0 0-6-6m6 6 6-6',
 
+  // A chevron, for a control that opens something. Smaller and lighter than
+  // `down`, because it sits inside a tab label rather than standing alone.
+  caret: 'M6 9.5l6 5.5 6-5.5',
+
+  // A filled disc with the dot and stem knocked out of it, wound the opposite
+  // way. The outline version of an "i" reads as a lowercase L at this size.
+  info: [
+    { d: 'M12 2.6A9.4 9.4 0 1 0 12 21.4 9.4 9.4 0 0 0 12 2.6zm-1.15 4.2h2.3v2.3h-2.3zm0 3.9h2.3v6.6h-2.3z', fill: true },
+  ],
+
+  // A flag on a stroked pole: this is the button that says something is wrong,
+  // so it wants a silhouette rather than an outline.
+  flag: [
+    { d: 'M6 3.4v17.2', width: 2.2 },
+    { d: 'M7.6 4.2h11.2l-2.6 4 2.6 4H7.6z', fill: true },
+  ],
+
+  close: 'M6 6l12 12M18 6 6 18',
+
   // Solid bodies with a stroked shackle: an all-outline padlock turns to mush
   // at 16px, which is the size these run at in the header. The keyhole is cut
   // out of the body by winding it the opposite way (evenodd on one path).

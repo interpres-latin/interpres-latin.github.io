@@ -37,9 +37,6 @@ const UNPARSED_BUT_LATIN = new Set([
   'mihi', 'tibi', 'sibi', 'nobis', 'vobis', 'mecum', 'tecum', 'secum', 'nobiscum', 'vobiscum',
 ]);
 
-/** Words that mean the English source has a finite verb in it. */
-const ENGLISH_VERBS = /\b(is|are|was|were|am|be|been|being|has|have|had|do|does|did|will|would|can|could|shall|should|may|might|must|says?|said|goes?|went|sees?|saw|loves?|loved|gives?|gave|takes?|took|makes?|made|comes?|came|wants?|carries|carried|calls?|called|walks?|walked|lives?|lived|works?|worked|writes?|wrote|reads?|read|hears?|heard|finds?|found|leads?|led|holds?|held|sends?|sent|fights?|fought|kills?|killed|praises?|praised|watches|watched|asks?|asked|replies|replied|shouts?|shouted|sits?|sat|stands?|stood|sleeps?|slept|drinks?|drank|eats?|ate|runs?|ran|builds?|built|conquers?|conquered)\b/i;
-
 /** Nouns that end in s without being plural, so "the glass" is not "glasses". */
 const FALSE_PLURALS = /(?:ss|us|is|as|os)$/i;
 const IRREGULAR_PLURALS = /^(?:men|women|children|feet|teeth|mice|geese|people|oxen)$/i;
@@ -61,14 +58,6 @@ export function expectedNumber(source) {
   if (IRREGULAR_PLURALS.test(head)) return 'plural';
   if (/s$/i.test(head) && !FALSE_PLURALS.test(head)) return 'plural';
   return 'singular';
-}
-
-/** A bare noun phrase: no verb, so its head noun is nominative. */
-function isVerblessPhrase(source) {
-  const text = String(source).trim();
-  if (!text || /[.!?;]/.test(text)) return false;
-  if (text.split(/\s+/).length > 8) return false;
-  return !ENGLISH_VERBS.test(text);
 }
 
 /** Split a Latin sentence into words, keeping what sat between them. */
@@ -137,14 +126,6 @@ function score(reading, wanted) {
 }
 
 /** The nominative of a noun whose headword we have, in the number it is already in. */
-function nominativeOf(reading, number) {
-  const parts = parseParts(reading.principalParts.join(', '));
-  if (parts.length < 2) return null;
-  const declined = declineNoun(parts[0], parts[1], reading.gender);
-  if (!declined.ok) return null;
-  return declined.table[number === 'plural' ? 'plural' : 'singular'].nominative ?? null;
-}
-
 /**
  * Check a translation, and correct the head noun's case where the English
  * source leaves no room for doubt.
@@ -159,32 +140,21 @@ export async function checkLatin(source, translated) {
 
   let text = translated;
 
-  if (isVerblessPhrase(source)) {
-    // The head of a verbless phrase is nominative. Find the first noun of the
-    // Latin and see whether it is.
-    const head = parses.find((entry) => entry.readings.some((r) => r.pos === 'noun'));
-    if (head) {
-      const number = expectedNumber(source);
-      const nounReadings = head.readings.filter((r) => r.pos === 'noun');
-      const alreadyRight = nounReadings.some((reading) => reading.forms
-        .some((form) => form.case === 'nominative' && form.number === number));
-
-      if (!alreadyRight) {
-        const reading = nounReadings[0];
-        const corrected = nominativeOf(reading, number);
-        if (corrected && corrected.toLowerCase() !== head.word.toLowerCase()) {
-          text = text.replace(new RegExp(`\\b${head.word}\\b`), corrected);
-          expectations.set(corrected.toLowerCase(), { pos: 'noun', case: 'nominative' });
-          notes.push({
-            kind: 'case',
-            from: head.word,
-            to: corrected,
-            why: `“${source.trim()}” has no verb, so its head noun is nominative ${number}. ${head.word} is ${nounReadings[0].parses[0] ?? 'not that'}.`,
-          });
-        }
-      }
-    }
-  }
+  /**
+   * The head noun's case is no longer overruled.
+   *
+   * This used to rewrite the first noun into the nominative whenever the
+   * English looked like a bare noun phrase, and "looked like" meant "contains
+   * none of the verbs on a hand written list". No such list is ever complete:
+   * *help* and *save* were not on it, so "help me save the queen" read as
+   * verbless and the correct *reginam*, accusative and the object of the
+   * sentence, was corrected into *regina*. The reading that was right got
+   * overruled by the one that was guessed.
+   *
+   * A check that cannot tell "the queen" from "help me save the queen" has no
+   * business rewriting either. What is left below still reports what it sees,
+   * which was always the useful half.
+   */
 
   const unknown = parses.filter((entry) => !entry.known && !entry.unchecked
     && !UNPARSED_BUT_LATIN.has(entry.word.toLowerCase()));
@@ -192,7 +162,7 @@ export async function checkLatin(source, translated) {
     notes.push({
       kind: 'unknown',
       from: entry.word,
-      why: `Whitaker’s Words does not recognise “${entry.word}” — it may not be Latin.`,
+      why: `The dictionary does not recognise “${entry.word}”. It may not be Latin.`,
     });
   }
 
@@ -211,7 +181,7 @@ export async function checkLatin(source, translated) {
       from: untranslated.map((entry) => entry.word).join(', '),
       why: untranslated.length === 1
         ? `The engine left “${untranslated[0].word}” in English, so this is not a full translation. Trust the words below, not the sentence.`
-        : `The engine left ${untranslated.length} words in English — ${untranslated.map((e) => `“${e.word}”`).join(', ')} — so this is not a full translation. Trust the words below, not the sentence.`,
+        : `The engine left ${untranslated.length} words in English: ${untranslated.map((e) => `“${e.word}”`).join(', ')} — so this is not a full translation. Trust the words below, not the sentence.`,
     });
   }
 

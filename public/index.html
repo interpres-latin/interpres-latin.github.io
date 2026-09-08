@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="es">
+<html lang="la">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ProfeGPT</title>
-  <meta name="description" content="Traductor español ↔ inglés, tablas de conjugación completas, diccionario de la RAE y un tutor con IA." />
+  <title>Interpres</title>
+  <meta name="description" content="Latin ↔ English translator, full conjugation and declension tables, Whitaker's Words and a Latin tutor." />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,51 +14,45 @@
   <script>
     // Runs before the first paint so the page never flashes the wrong palette.
     (function () {
-      // The chrome is either English or whichever language the site is about.
-      // The subject also goes on the root element, because the wallpaper is
-      // chosen in CSS and has to be right before the first paint.
-      // French and Latin are behind the padlock's passcode, and the server
-      // says so a moment after this runs. What it said last time is kept in
-      // localStorage purely so this line can paint the right wallpaper — a
-      // returning Latin reader should not get a beat of the Colosseum before
-      // being put back to Spanish. The server remains the authority.
-      var study = 'es';
+      // The chrome is either Latin or English; the subject is always Latin.
       try {
-        var subject = localStorage.getItem('profegpt:study');
-        var open = localStorage.getItem('profegpt:restricted') === 'false';
-        study = open && (subject === 'fr' || subject === 'la') ? subject : 'es';
-      } catch (e) {}
-      document.documentElement.dataset.study = study;
-      try {
-        var l = localStorage.getItem('profegpt:lang');
-        document.documentElement.lang = l === 'en' ? 'en' : study;
-      } catch (e) { document.documentElement.lang = study; }
+        var l = localStorage.getItem('interpres:lang');
+        document.documentElement.lang = l === 'en' ? 'en' : 'la';
+      } catch (e) { document.documentElement.lang = 'la'; }
       var stored = null;
-      try { stored = localStorage.getItem('profegpt:theme'); } catch (e) {}
+      try { stored = localStorage.getItem('interpres:theme'); } catch (e) {}
       var system = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       document.documentElement.dataset.theme = stored === 'light' || stored === 'dark' ? stored : system;
     })();
   </script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Saltar al contenido</a>
+  <a class="skip-link" href="#main">Ad contenta</a>
 
   <header class="nav" id="nav">
-    <button class="nav__lock" type="button" aria-label="Bloquear la web"></button>
     <a class="nav__brand" href="/" data-link>
-      <span class="nav__wordmark">ProfeGPT</span>
+      <span class="nav__wordmark">Interpres</span>
     </a>
-    <nav class="nav__links" aria-label="Principal">
-      <a href="/#traductor" data-link data-nav="traductor">Traductor</a>
-      <a href="/conjugacion" data-link data-nav="conjugacion">Conjugación</a>
-      <a href="/declinationes" data-link data-nav="declinationes" data-only="la" hidden>Declinatio</a>
-      <a href="/stadia" data-link data-nav="stadia" data-only="la" hidden>Stadia</a>
-      <a href="/diccionario" data-link data-nav="diccionario">Diccionario</a>
-      <a href="/chat" data-link data-nav="chat">Chat</a>
+    <nav class="nav__links" aria-label="Index">
+      <a href="/#interpres" data-link data-nav="traductor">Interpres</a>
+      <a href="/conjugacion" data-link data-nav="conjugacion">Coniugatio</a>
+      <a href="/declinationes" data-link data-nav="declinationes">Declinatio</a>
+      <a href="/diccionario" data-link data-nav="diccionario">Lexicon</a>
+      <a href="/chat" data-link data-nav="chat">Colloquium</a>
+      <!--
+        More tools are coming, and the header is the wrong place to grow one at
+        a time. The menu is the shelf they go on; Stadia is what is on it now.
+      -->
+      <div class="navmore">
+        <button class="navmore__button" type="button" aria-expanded="false" aria-haspopup="true"></button>
+        <div class="navmore__list" role="menu" hidden>
+          <a href="/stadia" data-link data-nav="stadia" role="menuitem">Stadia</a>
+        </div>
+      </div>
     </nav>
     <div class="langswitch" role="group"></div>
-    <button class="nav__theme" type="button" aria-label="Cambiar de tema"></button>
-    <button class="nav__toggle" type="button" aria-label="Abrir menú" aria-expanded="false">
+    <button class="nav__theme" type="button" aria-label="Mutare speciem"></button>
+    <button class="nav__toggle" type="button" aria-label="Aperire indicem" aria-expanded="false">
       <span></span><span></span>
     </button>
   </header>
@@ -66,7 +60,7 @@
   <main id="main"></main>
 
   <footer class="footer">
-    <p>ProfeGPT · definiciones del <a href="https://dle.rae.es" target="_blank" rel="noopener">Diccionario de la lengua española</a> (RAE)</p>
+    <p>Interpres · significationes ex <a href="https://mk270.github.io/whitakers-words/" target="_blank" rel="noopener">Whitaker’s Words</a></p>
   </footer>
 
   <script type="module" src="/js/app.js"></script>

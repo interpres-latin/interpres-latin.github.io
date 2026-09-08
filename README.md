@@ -1,11 +1,7 @@
-# ProfeGPT
+# Interpres
 
-A Spanish learning site: a two-way translator, complete conjugation tables, the
-RAE dictionary, and an AI tutor.
-
-There are two more behind it. Type **`mode: french`** or **`mode: latin`** into
-the translator and the whole site changes subject — see *[The French
-side](#the-french-side)* and *[The Latin side](#the-latin-side)*.
+A Latin site: a two-way translator, complete conjugation and declension tables,
+Whitaker's Words, and a tutor that answers from the site's own data.
 
 ```bash
 npm install
@@ -14,191 +10,81 @@ npm start          # http://localhost:4000
 
 No build step. The frontend is plain ES modules served straight out of `public/`.
 
-## The four pages
+Latin and English, in both directions, and nothing else. There were once a
+Spanish side and a French one behind the same pages; they are gone, along with
+everything that existed only to serve them — the RAE, the Wiktionnaire, and the
+four free translation engines that could not do Latin anyway.
 
+## The five pages
 
-| Route          | What it does |
-| -------------- | ------------ |
-| `/`            | Hero with an animated node network; the **translator**, whose centre button flips the languages and carries the text across; and a **dictionary search** that opens the dictionary page with your query already applied. |
-| `/conjugacion` | Every tense of the indicative, subjunctive and imperative. Three tabs for the regular **-ar / -er / -ir** models, plus a verb search that conjugates anything you type. Irregular forms are highlighted. |
-| `/diccionario` | Definitions from the *Diccionario de la lengua española*, with senses, synonyms and locutions, plus real example sentences and — in English mode — an English gloss. |
-| `/chat`        | A **grounded tutor** that answers from the site's own data — the conjugator, the dictionary, the translator, and hand-written grammar explanations. Needs no API key and invents nothing. |
+| Route | What it does |
+| ----- | ------------ |
+| `/` | Hero with an animated node network; the **translator**, which builds its Latin from the site's own grammar rather than asking an engine; and a **dictionary search** that opens the dictionary page with your query already applied. |
+| `/conjugacion` | Every tense of the indicative, subjunctive and imperative, active and passive, across the five conjugations. Tabs for the model verbs, plus a search that conjugates anything you give principal parts for. Irregular forms are highlighted. |
+| `/declinationes` | The five noun declensions and the adjectives, in every case and number. Takes a noun the way a dictionary quotes it — nominative and genitive — because the genitive is what says which declension it is. |
+| `/diccionario` | Whitaker's Words: the headword with its principal parts, and every way the form you looked up can be read. Real example sentences where a corpus has them, and a spoken pronunciation. |
+| `/chat` | The tutor. Answers about Latin from the conjugator, the decliner, Whitaker's and a set of grammar notes; anything else is turned away rather than invented. |
 
-Every one of them has a French and a Latin counterpart on the other side of the
-switch, and Latin adds two more pages that the modern languages have no use
-for: **declension tables** and the **course's vocabulary by stage**.
+**Stadia** — the Cambridge Latin Course vocabulary by stage — lives in the
+**More** menu in the header rather than in the top row. More tools are coming
+and the header is the wrong place to grow one at a time; the menu is the shelf
+they go on.
 
-## The chat page
+## The translator
 
-The tutor is deliberately not a language model. It routes a question to one of
-five things it can actually ground an answer in:
+The centre button flips the languages and carries the text across. Type and it
+translates once typing pauses; ⌘/Ctrl + Enter translates immediately.
 
-| Ask | Where the answer comes from |
-| --- | --- |
-| *conjuga tener en subjuntivo* | the local conjugation engine |
-| *qué es «dijeron»* | a reverse index of 15,000 conjugated forms, built in ~100 ms on first use |
-| *qué significa sobremesa* | `/api/dictionary` → RAE |
-| *cómo se dice "I'm tired" en español* | `/api/translate` |
-| *to say in Spanish*, or just *to say* | the search index, read backwards |
-| *ser y estar*, *por y para*, *el subjuntivo*… | 22 hand-written grammar topics in `public/js/data/grammar.js`, in both languages |
+Two controls sit under the result, and both are usually absent.
 
-**"to say in Spanish" is a question, even without a question in it.** Most
-people ask for a word that way — the direction named, nothing asking for a
-translation — and it used to fall through to the model and cost one of the five
-free questions. It is now answered from the conjugator's own search index read
-backwards: every verb there is stored with its English gloss, so *to say* finds
-*decir* exactly, offline, and gives the whole paradigm rather than one word.
-Multi-sense glosses are indexed under each sense, and under the bare verb too,
-since a reader is as likely to type *say* as *to say*.
+**See more information** opens a panel over the page with the whole working: the
+source, the result, which engine produced it, any warning about the sentence as
+a whole, every Latin word with its meaning and the case, number, tense and mood
+it is in, and — coming out of Latin — the two readings the sentence was checked
+against each other. That breakdown used to be printed under the pane, and coming
+out of Latin it *was* the answer: the page handed back a row of `word — meaning
+(case)` and left the reader to assemble it. It is one click away now instead of
+in the way.
 
-**"How do you say X" translates X, even when X is a grammar term.** It used to
-hand back the topic instead — asking how to say *the subjunctive* got an essay
-on the subjunctive and never the words *el subjuntivo*. Those are two different
-questions and the site answers both: "how do you say" asks what the words are,
-"what is" asks what it does. The translation leads and the note follows it,
-since a reader who asked about the subjunctive is not worse off for getting
-both.
+**Report a problem** is offered on every translation. It used to appear only
+when a word came back that was not Latin, which stopped being the common failure
+once the sentence routes started reaching for a synonym instead of giving up on
+a word — so the button that reported problems was the one thing you could not
+use when there was one.
 
-Grammar questions wearing the same shape stay grammar questions. *the subjunctive
-in Spanish* is scored as a topic on the phrase alone — the trailing "in Spanish"
-is what made it look like a translation request — and *to be in Spanish* gets ser
-and estar rather than a single verb.
+It opens with five reasons to pick from — the word was not translated, wrong
+Latin word, wrong grammar, formatting, something else — because a free-text box
+alone gives a log nobody can sort, and because picking one is a click where
+writing a sentence is a decision.
 
-A question that names a verb *and* asks about its forms gets that verb's table,
-not a general essay — "how do you say tener in the past tense" is about tener,
-not about the preterite. An exact topic match still wins, so "el subjuntivo"
-stays an explanation.
+What lands in `logs/reports.txt` is the whole picture, not the complaint: the
+reason, the direction, the words that failed, **what you typed, what came back**,
+the check's verdict, and the word-by-word breakdown the sentence was built from.
+That last one is there because "wrong grammar" is rarely diagnosable from the
+two sentences alone — what went wrong is almost always one word the parser
+misread, and that is in the breakdown. A line in the log stands on its own
+rather than having to be reproduced. It used to be a
+strike-through over the whole translation, which tells a student their sentence
+is wrong and offers them nothing to do about it. A word with no Latin is a gap
+in the lexicon, and the reader who hit it is the person best placed to say so.
+The button opens a form with the words already filled in and room for a note,
+and what it sends is appended to `logs/reports.txt` — a plain text file, because
+the point is that somebody reads it and adds the words. See
+`server/routes/report.js`, and `REPORT_LOG_DIR` if the log should live somewhere
+a deploy will not overwrite.
 
-Anything it can't ground, it declines — it says so rather than guessing. That's
-the whole point: on a site whose value is being correct about Spanish, a
-confident wrong answer costs more than an honest "outside what I cover".
-
-It replies in the language you asked in, and carries that choice forward for
-follow-ups that have no language signal of their own.
-
-If `ANTHROPIC_API_KEY` is set, the questions the tutor declined — and only those
-— are passed to Claude instead. Grounded answers always win.
-
-### The free allowance
-
-Questions about the language are free forever: they never leave the server.
-Off-topic ones go to a language model, and are metered server-side in
-`server/quota.js` with a sliding window.
-
-**Five off-topic questions per browser, per 30 minutes** — `CHAT_FREE_LIMIT`
-and `CHAT_WINDOW_MINUTES`.
-
-**All three languages share the one allowance.** The bucket has no language in
-it: switching sides is a change of subject, not a second helping.
-
-Per *browser*, not per address: a classroom sits behind one router, so an
-address identifies the room rather than the student, and the first person to ask
-would spend everyone's allowance. Each browser gets a signed opaque id in a
-cookie instead (`server/identity.js`). Clearing cookies earns a fresh allowance,
-which is the right trade here — this is about sharing fairly, not resisting
-attack — but the signature stops anyone simply inventing an identity per
-request. Set `SESSION_SECRET` to keep identities across restarts.
-
-The address is only a fallback for clients that cannot hold a cookie, and
-`X-Forwarded-For` is trusted only when `TRUST_PROXY=1`, since any client can
-send one.
-One question costs one slot whichever model answers it — the provider chain is
-about surviving an outage, not about handing out more questions. When a slot is
-spent the tape rolls.
-
-Providers are tried in order until one answers. A provider that fails before
-producing a token hands straight over to the next, so a free endpoint having a
-bad afternoon is invisible to the visitor and costs them nothing.
-
-| Order | Key | Default model | Cost |
-| --- | --- | --- | --- |
-| 1 | `GEMINI_API_KEY` | `gemini-flash-latest` | free |
-| 2 | `GROQ_API_KEY` | `llama-3.3-70b-versatile` | free |
-| 3 | `OPENROUTER_API_KEY` | three `:free` models, tried in order | free |
-| 4 | `ANTHROPIC_API_KEY` | `claude-opus-5` | **paid** |
-
-`LLM_PROVIDER` pins a single one. With none set, the tutor, conjugator and
-dictionary still work and translation falls back to MyMemory.
-
-Note that Google's own free tier is roughly **20 requests a day** for the Flash
-models, well below what this site's per-visitor allowance would permit — which
-is exactly why the overflow tier exists.
-
-### Typing without accents
-
-*jamon* is not in any dictionary. *jamón* is. Students do not type accents, so a
-perfectly ordinary vocabulary question came back as "not found" and went to a
-language model — spending one of the reader's five free questions to be told
-something the dictionary knew all along.
-
-The word is now looked up a second time with its accents put back, and the entry
-says so. Where the accented spelling comes from differs by language: the **RAE
-returns it in its own 404** (asked for *jamon* it suggests *jamón*), while the
-Wiktionnaire needs its **search** index rather than opensearch — asked for
-*flaner*, opensearch offers Breton words that merely start the same way, and
-search returns *flâner*.
-
-The rule is deliberately narrow, and both halves of it matter:
-
-- it runs **only when the word as typed was not found at all**, so *bebe* is
-  never quietly turned into *bebé* — both are words, the first lookup succeeds,
-  and this never runs;
-- it accepts **only the same word with its accents restored**, so *jamon* is
-  never turned into *jabón*, which is a different word rather than a carelessly
-  spelled one.
-
-`server/accents.js`.
-
-### Where definitions come from
-
-**The RAE, always** — that is the point of the page, and the Spanish wording is
-the authoritative text. Wiktionary appears in two places and neither replaces
-it: as a short English gloss beside the headword in English mode, and as a
-stand-in only when the RAE itself cannot be reached, in which case the entry
-says so plainly rather than letting the authority change silently.
-
-### Where example sentences come from
-
-Not from a model. Asking a frontier model to write one short sentence is absurd
-on its face, and on a free tier it is also the thing that drains the quota — a
-class looking words up would have exhausted a day's allowance before lunch.
-
-| | Source | Cost |
-| --- | --- | --- |
-| Example sentences | [Tatoeba](https://tatoeba.org) — real sentences by native speakers, already paired with English translations (CC BY) | free, unmetered |
-| English glosses | [Wiktionary](https://en.wiktionary.org) (CC BY-SA) | free, unmetered |
-| Definitions | RAE, via rae-api.com | 5,000/day with a key |
-| Translation | DeepL, a rules translator for Latin, then Lingva, MyMemory and Apertium — **never a model** | a free tier, then free and unmetered |
-
-A model is woken only when Tatoeba has nothing for a word, and the template
-frame is the last resort after that. Seven lookups across common and uncommon
-words cost **zero** model calls.
-
-### The translator
-
-No model, at any point. Four dedicated engines, tried in order:
-
-| | | |
-| --- | --- | --- |
-| 0.3 | **the rules translator** | Latin only, and built here out of Whitaker's Words, the decliner, the conjugator and the course vocabulary. Nothing on the open web translates Latin, so the site does it itself. See **Translating Latin without an engine** below. |
-| 0.2 | **DeepL** | A real translation engine, and the best one here for French and Spanish — what Lingva was supposed to be, answering to a published contract rather than to whether Google feels like serving a volunteer's proxy today. Free tier is 500,000 characters a month. **No Latin**, which is why the rules translator exists. |
-| 0 | **Wikipedia** | for names and titles. Machine translation renders them literally: "Cuban Missile Crisis" becomes *"crisis de los misiles cubanos"*, which says the missiles were Cuban when they were Soviet. Wikipedia's cross-language links hold the name each language actually uses — *Crisis de los misiles de Cuba*. |
-| 1 | **Lingva** | a Google Translate front end — best quality, free, no key. Volunteer-run, so several instances are listed in `LINGVA_INSTANCES`, and one that fails is rested for a minute rather than re-asked on every translation. |
-| 2 | **MyMemory** | a crowd translation memory. Believed outright when the answer is its own machine translation, and otherwise only when its stored candidates agree with each other. |
-| 3 | **Apertium** | open-source rule-based translation. Clumsy — *Test me* comes back as *Me pruebo* — but always up and it never invents content. It has no English–French pair, so French goes through Catalan in two hops and everything that comes out is marked uncertain. Latin has no Apertium route at all, in any direction. |
-
-Apertium is the **floor**, not the usual answer. Spanish normally lands on
-Lingva; it only reaches Apertium when everything above it has declined, which at
-the time of writing is all the time. Judge the translator's quality when Lingva
-is back.
+The words themselves are still marked in the sentence — a colour and a dotted
+rule, not a strike. That says "this word came through untouched", which is what
+tells the reader what the report is about.
 
 ### Translating Latin without an engine
 
 Latin is the one language nothing will translate. DeepL has no pair for it,
 Apertium has no route to it in any direction, and MyMemory returns *dog de
 puella* for "the dog of the girl" and *puella complens the Farmer* for "the boy
-praises the farmer". For a while a model filled the gap; models are out of the
-translation chain now, and Latin cannot simply be left broken.
+praises the farmer" — and, asked for Latin at all, will happily answer in
+Malagasy. For a while a model filled the gap; no model is in the translation
+chain now either. Latin cannot simply be left broken.
 
 So the site translates Latin itself, from parts it already had. Four sources, each doing the one thing it is good at:
 
@@ -371,15 +257,16 @@ urbe — city (abl. sg. / dat. sg.) · capta — take (nom. pl. / acc. pl.) ·
 milites — soldier (nom. pl. / acc. pl.) · redierunt — return (3rd pl. perfect)
 ```
 
-This waits at the very bottom of the chain, because MyMemory's Latin-into-
-English is occasionally right and a correct sentence beats a correct list.
+This waits at the very bottom of the chain: it is the last thing tried, because
+a sentence beats a list whenever a sentence can honestly be had. It is what a
+deployment with no model still gets, and it is no longer what anybody reads
+first — see *[Reading it twice](#reading-it-twice)*.
 
-**Into Latin, the words in Latin order** — and this one sits *above* the
-free engines, which is not symmetry but measurement. Asked for "the boy who
-praises the farmer is happy", MyMemory returns *boy qui derae agricola est
-happy*: Latin words and English ones in a heap, which a reader could copy out
-believing it. Dictionary forms in the right order are less than a translation
-and worth more, because they are true.
+**Into Latin, the words in Latin order** — and this one sits directly under the
+rules translator rather than at the bottom. That is not symmetry but
+measurement: a heap of half-translated words is something a reader could copy
+out believing it, and dictionary forms in the right order are less than a
+translation and worth more, because they are true.
 
 The order is not guesswork even where the grammar is. Latin drops a pronoun
 subject its verb already carries, so *ego* goes; the verb goes last, because
@@ -396,458 +283,178 @@ admits the sentence is beyond it, because the reader cannot tell the difference
 and is here to learn. Latin output is still checked word by word afterwards, as
 it always was.
 
-### No model translates
+### Reading it twice
 
-**Gemini and OpenRouter answer off-topic chat and nothing else.** Their credits
-are a fixed monthly allowance, and translation fires as you type — every pause a
-different prefix, and so a different cache miss — which would drain the month on
-half-sentences nobody asked about. The chain is dedicated engines only.
+The gloss above is true and nearly useless to read. This is a real answer the
+site used to give:
 
-It was not always. For a stretch a model sat at the top, because Lingva had
-died everywhere and what remained could not do the job. DeepL is the answer to
-that: a real engine, better than a model at French and Spanish, billed by the
-character against a large allowance rather than by the request against a small
-one.
+```
+non — not · itio — ? · magnus — big (nom. sg.) · vita — life (nom. sg. /
+voc. sg. / abl. sg.) · est — is (3rd sg. present) · ita — so
+```
 
-The cost was Latin, which no dedicated engine translates — and rather than
-leave that broken, the site now translates Latin itself out of the morphology
-it already had. See **Translating Latin without an engine** above.
+Every piece of that is correct and the reader still has to do all the work. So a
+model assembles it into a sentence — which is the one thing the rest of this
+site refuses to let a model do, because a model asked to translate Latin
+produces fluent, confident and occasionally invented English.
 
-`server/translate-model.js` is kept and still tested, and is not in the
-`ENGINES` list.
+**The answer is to ask twice, along two routes that fail differently.**
 
-The translator also waits **900ms** after you stop typing rather than 650. Every
-pause is a DeepL request against a shared monthly allowance, so a beat more
-patience is a lesson's worth of headroom.
+1. **Directly.** The Latin goes to the model as Latin.
+2. **From the pieces.** The same sentence goes as the word list — every word
+   with its meanings and the grammar a parser found on it — and the model is
+   asked only to assemble what it is given.
 
-The agreement rule on MyMemory exists because its segments can be wrong in ways
-no score exposes: *"Buenos días, ¿cómo estás?"* comes back as *"Good morning
-**Najlaa** how are you?"* — a stranger's name, at the top confidence score.
-Neither the quality field nor the source segment separates that from a good
-answer, since the memory genuinely holds three different translations of the
-same sentence. Disagreement does.
+Neither route sees the other's answer. A hallucination in the first has no
+reason to match a hallucination in the second, so a sentence both routes arrive
+at independently is one the morphology and the model both support. Agreement is
+evidence; disagreement is a warning, and the page shows it rather than hiding
+it. Both readings and the whole word list live behind **See more information**.
 
-**But agreement alone was too strict**, and it cost French and Latin their only
-translator. The memory rarely holds the same sentence twice, so *le chien de la
-fille* — the top candidate, and correct — was thrown out for sharing the page
-with *La rumeur* and *Of the girl*. Spanish never showed the damage because
-Apertium answers after it; French and Latin have no Apertium pair, so a veto
-there left them with nothing.
+**The direct route is what you read.** The first version showed the grounded one
+whenever the two differed, on the reasoning that it had the cases and tenses in
+front of it. Measured against real sentences that was plainly wrong:
 
-What separates the two cases is not the score. The score says how close the
-*source* is to something stored, so a wrong translation of a well-known sentence
-still scores 0.99 — *Tengo hambre* → *"I have hunger"* at 1.00, *"cashapp me"*
-at 0.99. It is **where the candidate came from**. MyMemory translates the
-sentence itself only when its memory holds nothing close, and marks that one
-`MT!`: one engine's answer, with no crowd to disagree with. Where a stored
-translation does match there is no `MT!` at all, and the vote still decides — so
-the Najlaa sentence is still refused.
-
-And when nothing is confident, the memory's best guess is returned **labelled**
-rather than withheld. Spanish never reaches that, because Apertium answers
-first. French and Latin reach it whenever the memory holds a sentence twice and
-its copies disagree, and there the choice is between a doubtful sentence that
-says it is doubtful and an error message that helps nobody: a student can weigh
-a translation marked uncertain, and cannot weigh a blank page.
-
-**A name has to contain something that is not an everyday word.** Guarding the
-edges of a candidate is not enough: *am* was missing from that list while *is*,
-*are*, *was* and *were* were on it, Wikipedia has an article called "I Am", and
-so every sentence a student is most likely to write came back wearing an album
-title — *I am tired* → **I Am** *fatigué*. Both the whole-input lookup and the
-in-sentence search now refuse a span made entirely of ordinary words, in all
-three languages.
-
-Names inside a sentence are handled too, and separately: the whole-input lookup
-cannot see them, and a translator renders them literally wherever they appear.
-Every span of two to five words is a candidate — capitalisation is **not**
-required, since a student types "the cuban missile crisis" in lower case and
-still deserves the real name — and all of them are checked in a single
-Wikipedia request. Each match is translated on its own to learn how this engine
-renders it, and that rendering swapped for the real name, keeping whatever
-capitalisation the position called for.
-
-Telling a name from an ordinary phrase is the hard part: "history class" is a
-Wikipedia article too, and translating a sentence about one used to come back
-talking about social studies. Wikipedia capitalises a title only where the words
-are proper nouns, so the title itself decides — *Cuban Missile Crisis* and
-*Statue of Liberty* are names, *Social studies* and *Train station* are not. "The Cuban Missile
-Crisis was a serious event" now comes back as *"La crisis de los misiles de
-Cuba fue un acontecimiento grave."*
-
-Wikipedia is only asked for things that look like names — two to eight words,
-no sentence punctuation — and the article the query lands on has to *be* the
-phrase, not merely resemble it. Both guards matter: without the first, a
-sentence gets looked up as though it were a title; without the second, "la casa
-de papel" comes back as "Money Heist" from a loosely matching article. Anything
-else falls through to the translators untouched.
-
-Apertium is a floor rather than a choice — it renders "Me gustaría aprender
-español contigo" as *"It would like me learn Spanish with you"* — so it is only
-reached when both better engines are unavailable. Results are cached, and the
-pane names the engine behind each translation.
-
-Corpus sentences are attached to the word rather than to a sense, because a
-sentence merely contains the word — it does not promise to illustrate one
-particular meaning. Tatoeba's search also returns relatives, so "madrugar" can
-come back with "madrugador"; sentences containing the word itself are ranked
-first, then the ones short enough for a learner to hold in their head.
-
-### Idioms
-
-Most idioms already survive translation — "it's raining cats and dogs" comes
-back as *llueve a cántaros*, "he kicked the bucket" as *estiró la pata*. The
-ones that do not come back word for word: *cost an arm and a leg* became *un
-brazo y una pierna*.
-
-The tempting repair is to flatten the idiom first — "it cost a lot" → *costó
-mucho* — which is accurate and teaches the wrong thing, because Spanish has its
-own idiom and a learner should meet it. So `server/idioms.js` pairs each idiom
-with its **equivalent** rather than a paraphrase, and the plain meaning is shown
-beside the translation as a note:
-
-> it cost an arm and a leg **=** costó un ojo de la cara
-> *to be extremely expensive*
-
-Hand-written and hand-checked, like the grammar notes, and only the idioms a
-translator actually gets wrong are listed. Matching ignores case and accents,
-works inside a sentence, and is capped at two notes per translation.
-
-**"Gets wrong" has to mean this rendering, not this idiom in general.** The
-stored form is a citation — *llueve a cántaros*, third person present — and an
-engine that produced the idiom in some other inflection has got it right. Pasting
-the citation form over *está lloviendo a cántaros* gives **"está llueve a
-cántaros"**: worse than the literal translation the feature exists to repair, and
-wrong in a way a learner would copy.
-
-So the idiom is only put in where it is genuinely absent, checked on both the
-sentence and the span, by comparing the part of it that does not inflect. That
-is everything after the verb in Spanish; the French forms open with a pronoun, so
-the tail is checked too, and either hit counts. The test is deliberately
-generous — a false yes leaves the engine's wording alone and shows the note,
-which costs nothing, while a false no breaks the grammar.
-
-The note is shown either way. The pairing is the thing being taught.
-
-There is one table per language — 26 Spanish, 28 French, none for Latin, which
-is not a language anyone is translating idiom for idiom — rather than one table
-with an extra column, because the sets barely overlap: the idioms a translator
-fumbles going into Spanish are not the ones it fumbles going into French, and
-half of each list has no counterpart in the other. French gets *coûter les yeux
-de la tête*, *casser sa pipe*, *quand les poules auront des dents*.
-
-### Keeping OpenRouter free
-
-Three guards in `server/providers/openrouter.js`, none of which trusts the
-others:
-
-1. **A model id must end in `:free`.** Anything else is refused before a request
-   is built.
-2. **Every request carries `provider.max_price` of zero** on prompt, completion,
-   request and image. OpenRouter enforces this itself — a paid model comes back
-   *"No endpoints found that satisfy the max price for this request"* rather
-   than being billed.
-3. **The advertised price is checked against `/models`** before first use. A
-   `:free` name that actually charges is refused, and so is a model that cannot
-   be verified — a failed lookup closes the gate rather than opening it.
-
-`npm test` covers all three, offline, including a `:free`-suffixed model that
-secretly charges.
-
-Those are the code-side guards. Do these two on the account as well, because
-they hold even if this code is wrong:
-
-- **Do not add a payment method**, and keep the credit balance at zero. With no
-  credits a paid model returns 403 instead of charging.
-- **Set a credit limit on the key** at <https://openrouter.ai/settings/keys>.
-  A key with a limit cannot spend past it, whatever asks it to.
-
-When the allowance runs out, two translucent strips roll in from opposite
-corners and cross into an X over the whole viewport. It carries an **I
-understand** button, because an undismissable tape would also lock the visitor
-out of the conjugator and the dictionary, which cost nothing and still work.
-
-After that it escalates rather than repeating itself. Every message is still
-checked by the tutor first, so questions about the subject answer normally and
-free — in whichever of the three languages the site is on. An
-off-topic one with nothing left behind it gets a short notice at the top that
-fades on its own — until five arrive within fifteen seconds, at which point the
-tape returns. Acknowledging it resets the count.
-
-### The key to the other languages
-
-The site offers **Spanish and English**. French and Latin are absent from the
-menu, and `mode: french` and `mode: latin` do nothing, until somebody types
-**`profe`** into the padlock — which opens them **for that browser and no
-other**.
-
-That is the whole difference from the lock next door. The lock is a switch a
-teacher throws over a room; this is a key a person is given. One student being
-shown the French side must not put French in front of the other twenty-four, so
-the answer is remembered in that browser's storage and nowhere else.
-
-The server holds no state for it at all. It knows only the word — a passcode
-checked in code that ships to every visitor is a passcode published to every
-visitor — and answers `opened: true` without recording anything. Clearing the
-site's storage is how a browser gives the key back.
-
-**There is no passcode that takes the languages away again.** There was one, and
-it was wrong: a word that closed French and Latin would have reached into every
-browser in the room, which is precisely the thing this is not. `AP_Lit` still
-seals the whole site for everybody — that one is meant to. `RELEASE_PASSCODE`
-changes the word.
-
-### The teacher's lock
-
-The padlock at the left of the header seals the site **for everyone at once**,
-not just this browser: the switch lives on the server (`server/routes/lock.js`)
-and clients poll it, so a locked room reaches someone already mid-page. Anyone
-holding the passcode can throw it either way, including from the tape itself, so
-nobody is stranded. It is `TEACHER_PASSCODE`, default `AP_Lit`, matched without
-regard to case or surrounding spaces.
-
-The lock is held in memory, so restarting the server clears it — a deliberate
-failsafe against being locked out by a process nobody is watching.
-
-### Switching subject
-
-Two ways, and both stay.
-
-**`mode: latin`** in the translator, which is how the other languages are
-reached too and how they were meant to be found — by knowing the phrase.
-
-**The left-hand button of the language switch**, which opens a menu: the three
-subjects, and below them the choice of reading the interface in that language
-rather than in English. Both live in the menu because the button cannot do two
-different things on the same click and stay predictable — an earlier version
-switched the interface on the first click and opened the menu on the second, so
-pressing **LA** in Latin mode turned the interface Latin instead of offering the
-languages.
-
-The typed command is the hidden way in; the menu is the way back out for anyone
-who found it by accident.
-
-Switching subject **clears the query as well as the view**. Every page keeps
-what you looked at in the URL — `?v=parler`, `?q=sobremesa` — so without this the
-Latin conjugator would open on a French verb. There is no notice either: the
-whole page changing language is announcement enough.
-
-### Site language
-
-The interface is Spanish. The **ES / EN** switch in the header offers English
-behind a passcode; getting it wrong seals the entire page with tape until the
-right code is entered, and the lock survives a reload. Strings live in
-`public/js/lib/i18n.js`; a language change re-renders the current view.
-
-In French mode the same switch reads **FR / EN**, and English sits behind the
-same passcode. Latin reads **LA / EN** with neither side gated, since English is
-the working language of a Latin lesson rather than a way round it.
-
-**A change of subject takes the interface with it**: the site speaks whatever it
-is about, Latin included. An earlier version kept English across the switch on
-the grounds that the reader had paid a passcode for it, which meant choosing a
-language and then not being given it. English is one click away in the menu.
-
-What the site is *about* stays in its own language either way — verb forms,
-dictionary headwords, the subject pronouns in the conjugation tables. Grammatical labels do
-follow the interface, and so do grounded chat answers: ask in English while the
-site is in Spanish and the conjugation still comes back in Spanish, because that
-is the language you chose to work in. Only the model fall-through mirrors the
-language of the question.
-
-In English the conjugation tables lead with the English tense name and keep the
-Spanish one underneath. Capitalisation belongs to the role rather than the
-string, so the leading name is always capitalised and the hint never is.
-
-### One easter egg
-
-Translating **"graduation 2028"**, in any capitalisation, doesn't translate
-anything — it fires confetti and a full-screen *¡Olé!*. Canvas only, no library.
-
-### The profe's interjections
-
-Three expressions she actually used, spelled as the RAE has them, fired on the
-kind of moment that earned them rather than on every message:
-
-| | When |
+| | *quod me nutrit me destruit* |
 | --- | --- |
-| **¡Olé!** | a word found in the dictionary |
-| **¡Mecachis en todo!** | a question outside what the tutor covers, and on the tape |
-| **¡La madre que me parió!** | a verb that is both irregular *and* stem-changing |
+| direct | that which nourishes me destroys me |
+| grounded | Because you urinate, it suckles; you urinate, it demolishes |
 
-French has counterparts on the same three moments — *Et voilà !*, *Zut alors !*,
-*Oh là là !* — fired where a verb is both irregular and takes *être*, which is
-about as much as one French verb can ask of a learner. Latin has *Euge!*, *Eheu!*
-and *Mehercle!*, which are at least things a Roman said. All of them are
-stand-ins; only the Spanish ones are things she actually said.
+The grounded route is only ever as good as the gloss it is handed, and the gloss
+had read *me* as a form of *meio*. Given that, the model assembled exactly what
+it was told to — faithfully and uselessly. A route that inherits a wrong word
+cannot recover from it; a route reading the Latin can. So the second route is a
+**check**, not a candidate.
 
-## The French side
+**It is a much better check since it started seeing alternatives.** The gloss
+commits to one reading per word because a line of text has room for one, and
+that ranking is a heuristic — it read *veni* as the genitive of *venum*, "sale",
+rather than "I came", which is defensible in isolation and hopeless in *veni
+vidi vici*. The reader still sees the winner; the assembling route now gets
+every reading and picks the one that makes a sentence.
 
-Typing **`mode: french`** into the translator — in either pane, in any
-capitalisation, with or without the colon — turns ProfeGPT into a French site.
-**`mode: spanish`** turns it back. The choice is remembered.
+**Counting shared words is not enough to compare them.** "The die is cast" and
+"the die has been thrown" are the same sentence and share one content word out
+of three, so a check built on word overlap alone flags nearly everything — and a
+warning that always fires is a warning nobody reads. Where the words already
+agree, that settles it for free. Where they do not, the model is asked a third
+question with a one-word answer: do these two readings mean the same thing?
 
-It is behind the Spanish site rather than beside it: no link, no menu entry,
-nothing in the navigation. You get there by knowing the phrase.
+```
+alea iacta est          agreed    the die is cast          / a die is thrown
+carpe diem …            partial   seize the day, trusting… / pluck the day, trust…
+quod me nutrit …        differs   that which nourishes me… / because me to suckle…
+```
 
-What changes:
+**Nothing changes without a model.** No key, and the chain falls through to the
+gloss exactly as before — same words, same order, same caveat on the page.
+
+### Why the second reading was so often wrong
+
+The check kept firing, and the user was right to ask why: a model handed English
+meanings and the grammar of each word ought to agree with a model reading the
+Latin far more often than it did. Three things were feeding it bad pieces.
+
+**The gloss and the grammar were different words.** This is what the page showed
+for *me*:
+
+```
+me — me [2nd sg. present]
+```
+
+The gloss is the course's word for *me*, the pronoun. The grammar belongs to
+*meio*, "to urinate" — the reading the parser ranked first. Two different words
+on one line, because the gloss was resolved from the *surface form* while the
+grammar came from the *analysis*. Anything reading that as a pair is being told
+something untrue, which is how *quod me nutrit me destruit* became "because me
+to suckle me to destroy". A reading's gloss and its grammar now come from the
+same reading.
+
+**The parser has no pronouns.** Asked about *me* the morphology service answers
+with exactly one reading, and it is the verb. So the personal and reflexive
+pronouns are a table now, checked before the parser like the particles and
+prepositions already were — about thirty forms that have not changed in two
+thousand years, and among the commonest words in the language.
+
+**The meanings are dictionary entries, not English.** *defendit* is glossed "I
+defend" and is third person singular; the assembling model was told to use only
+the meanings it was given, so it did, literally. It is now told that the pieces
+are dictionary forms and that inflecting them is its job.
+
+Measured across the same sentences afterwards: *quod me nutrit me destruit* went
+from `differs` to `partial` and now reads "Because it suckles me, it destroys
+me"; *urbe capta milites redierunt* and *cogito ergo sum* went to `agreed`. What
+still disagrees traces to specific holes in the morphology service rather than
+to the design — *veni* comes back as a present, *iacta* as a noun.
+
+**The second reading is not shown.** It exists to disagree. Printing a wrong
+sentence beside the right one asks the reader to weigh two things they have no
+way to weigh; the verdict is what they can use.
+
+### Comparatives and superlatives
+
+*kinder* came back as *benignus* — the positive. Wiktionary answers "kinder"
+with "comparative of kind", the lookup followed that pointer, and the degree was
+the one thing it threw away.
+
+The degree is taken off first now, the adjective behind it resolved, and the
+Latin form read from the Latin dictionary — where Whitaker's prints all four:
+*benignus, benigna -um, benignior -or -us, benignissimus -a -um*.
+
+Four things had to be got right, and each was found by it being wrong:
+
+- **Read by shape, not by position.** *validus, valida, validum* is three
+  genders and no degrees; taking the third part made *validum*, the neuter, the
+  comparative of "strong". A comparative ends in *-ior*, a superlative in
+  *-imus*.
+- **Build what the dictionary omits.** Whitaker's lists no degrees for plenty of
+  ordinary adjectives, so the regular rule fills in — with the exceptions every
+  course teaches: *-er* doubles to *-errimus*, and the six in *-lis* give
+  *-limus*, so *facillimus* and not *facilissimus*.
+- **The suppletives are written out.** *malus* is not *malior, malissimus*.
+- **Check the base is really an English adjective.** Stripping *-est* off
+  *biggest* leaves *bigg*, which is a kind of barley — so it resolved, and
+  "biggest" came back as *benignissimus*, the superlative of "kind", arrived at
+  through a cereal. *kinde* is an attested spelling of *kind* whose definition
+  is "obsolete form of kind", and reading that definition gave *obsoletior*.
+
+And the degree had to survive the declining. Whitaker's answers *longior* with
+the whole family, so building the citation from its principal parts started
+again at the base and "a longer road" came out *longa via*. A comparative keeps
+its own citation and declines as a two-termination adjective; a superlative as
+an ordinary first-and-second. *maxima urbs*, *benignior puella* — agreement and
+degree at once.
+
+### Two gaps this closed
+
+**Whitaker's does not know every word.** *itio* is an ordinary noun — "a going" —
+and it came back as `itio — ?` from a sentence that had otherwise decoded fine.
+Wiktionary has it, and the gloss was the one path that never asked: it now
+primes the whole sentence in one batch before glossing any of it.
+
+**A word nothing has a meaning for is reportable.** It joins the untranslatable
+words under the report button, so the gap goes into `logs/reports.txt` instead of
+being a question mark the reader can do nothing about.
+
+### The chain, end to end
+
+Four engines, tried in order, and none of them is a language model:
 
 | | |
 | --- | --- |
-| the header switch | **ES \| EN** becomes **FR \| EN** — English is still behind the same passcode |
-| the translator | French ↔ English, with French idioms and French Wikipedia for names |
-| the conjugator | French tables, and the three tabs become **-er / -ir / -re** |
-| the dictionary | a free French dictionary, credited where its licence requires it |
-| the tutor | French grammar, French verb forms, answers in French |
-| the interface | every string, in French or English |
-| the allowance | **shared** — the same five off-topic questions per window |
+| **Wikipedia** | names and titles. Machine translation renders them literally; Wikipedia's cross-language links hold the established name instead. Looking up what Latin actually calls a thing is not a guess. |
+| **the rules translator** | the site's own grammar, both directions. See above. |
+| **the English→Latin glossary** | dictionary forms in Latin word order, when the grammar is beyond the rules. |
+| **the assembled sentence** | Latin→English only, and only with a model: read twice and checked against itself. See above. |
+| **the Latin→English glossary** | every form with its readings, last of all, and the whole answer when there is no model. |
 
-What does not change: the theme, the wallpaper, the teacher's lock, the
-passcode, the confetti, and the shape of every page. It is the same site
-pointed at a different language, not a second site.
-
-The two sides never mix. Ask a French question in Spanish mode and the tutor
-declines it, and the other way round — each has its own grammar notes, its own
-verb list and its own dictionary, and the chat clears when you switch, because
-a Spanish transcript is not history a French tutor could have produced.
-
-### How it is put together
-
-One axis was added — `public/js/lib/study.js`, the language the site is *about*
-— and everything language-specific hangs off it. It is deliberately separate
-from `lib/i18n.js`, which is the language of the *chrome*: in French mode the
-interface is French or English, in Spanish mode Spanish or English, and someone
-who paid the passcode for English stays in English across the switch.
-
-The routing that decides what a question means is **shared**. `lib/tutor.js`
-holds it, and `lib/tutor-es.js` and `lib/tutor-fr.js` are packs it reads: the
-conjugation engine to call, the words that signal an intent, the shape of the
-paradigm, and the sentences the tutor says in its own voice. That was worth the
-refactor — the interesting behaviour is all in the routing, and two copies of it
-would have drifted apart within a week. The conjugation page works the same way:
-one renderer, two sets of tense lists.
-
-The string tables are the exception, and are duplicated on purpose. The English
-half differs too — "Spanish questions are free" and "French questions are free"
-are different sentences, and so is every mention of the dictionary behind each
-side — so a third column would have been a table of near-misses.
-
-### The French conjugator
-
-`public/js/lib/conjugator-fr.js`, built the same way as the Spanish one — rules
-first, data only where rules run out:
-
-1. **Regular endings** for the three groups: `-er`, `-ir` with the `-iss-`
-   infix, and `-re`. The `-oir` verbs are irregular to a verb.
-2. **Spelling that only preserves the sound** — `commencer → commençons`,
-   `manger → mangeons`, `payer → paie`.
-3. **The mute-e stem changes** — `lever → lève`, `appeler → appelle`,
-   `acheter → achète`, `préférer → préfère`.
-4. **Explicit irregulars**, inherited by prefixed derivatives, so `comprendre`
-   comes free from `prendre` and `découvrir` from `couvrir`.
-
-Two things have no Spanish counterpart and shape the code.
-
-**The auxiliary.** Compound tenses take *avoir* or *être*, and the *être* ones
-agree with their subject, so the table shows `je suis allé(e)` and `nous sommes
-allé(e)s` rather than one string. Which auxiliary a verb takes is a chip on the
-verb card, because it is half of learning its compound tenses.
-
-**The stem splits rather than shifting.** French changes the stem before a
-*mute* ending — je, tu, il, ils of the present and subjunctive — and leaves it
-alone before nous and vous, where the ending is heard. Every verb carries a
-strong stem and a weak one; for most verbs they are the same string.
-
-The rules that took the most care:
-
-- **`-eler` / `-eter` are checked before the plainer `e_er` shape**, because
-  their stems satisfy both — otherwise *appeler* comes out *j'apèle*.
-- **A single consonant after `e`, but one or two after `é`.** *lever → lève* and
-  *régler → règle*, while *rester* stays *je reste* — two consonants after the
-  `e` and the rule does not apply. That one line is the difference between
-  correct French and *je rèste*.
-- **`é` keeps its accent through the future** where `e` does not:
-  *je préférerai*, but *je lèverai*.
-- **`percevoir` is a prefixing of `cevoir`, not of `voir`.** Spelled out as its
-  own entry it fell through to the shorter base and came back *je percevois*.
-- **The `-uire` family is a rule**, not twelve near-identical entries, and a
-  handful of them end in `-ui` rather than `-uit`.
-
-`npm test` checks 163 reference forms against the Bescherelle paradigms, and a
-further 183 that the page's tense lists and the engine's tables agree — a tense
-named on the page but absent from the table would otherwise show as a quietly
-missing row.
-
-### Where French definitions come from
-
-**There is no queryable authority for French** the way the RAE is for Spanish.
-The obvious candidate publishes no API, its search is a POST so no URL carries a
-word, and its entries live at opaque ids resolvable only by running its
-JavaScript. Scraping that would be fragile and unkind.
-
-So definitions come from the **Wiktionnaire** — French definitions of French
-words, CC BY-SA — which `server/dictionary-fr.js` reads as wikitext and
-normalises into exactly the shape the RAE route already returns, so the page and
-the tutor never learn which dictionary answered. Every entry carries a link to
-a single line at the foot of an entry naming the source and its licence, which
-CC BY-SA requires. It is a footer rather than a banner: the page does not
-lecture the reader about where its words came from, and does not hide it
-either.
-
-Example sentences come from Tatoeba as before, asked for French rather than
-Spanish; the English gloss beside the headword comes from the French section of
-en.wiktionary.
-
-Lookups follow redirects, which is not a detail: a French headword is titled
-with a typographic apostrophe — *aujourd’hui*, *presqu’île*, *d’accord* — and
-nobody types one. The straight-apostrophe spelling is a redirect on the wiki, so
-three of the commonest words in the language used to come back "not in the
-dictionary" until it was asked to resolve them.
-
-**One lookup is up to three Wikimedia requests** — the entry, a search when the
-word was typed without its accents, and that English gloss — so a class of
-twenty-five looking words up at once is a burst, and Wikimedia answers a burst
-with 429s that persist for a while afterwards. A dictionary that dies the moment
-a whole class uses it is not a dictionary. `server/throttle.js` therefore holds
-the calls to three lanes with a gap in each.
-
-Three is measured, not guessed. Twenty-five simultaneous lookups, run twice
-over: one lane took 75s, three took 23s, six took 40s, and none of them drew a
-429 — past three the host simply stops answering any faster, so further lanes
-queue behind its own pacing instead of the queue's. Before the throttle the same
-sweep returned 6 of 22.
-
-### The French translator
-
-The same chain, with a longer road at the bottom: **Wikipedia → Lingva →
-MyMemory → Apertium through Catalan**.
-
-Apertium has **no English–French pair** — it has `spa↔eng` and `spa↔fra`, but
-not the one this needs. Pivoting through a third language was tried and
-rejected once, on the grounds that Apertium is already "a floor rather than a
-choice" and a double hop compounds its mistakes. That was right while Lingva sat
-above it. It stopped being right when Lingva went down everywhere and MyMemory
-began rationing by IP, because the French page then had nothing whatever to
-show.
-
-So the pivot exists, through **Catalan**, and everything it produces is marked
-uncertain on the page. It is genuinely rough — *The black cat sleeps on the old
-table* comes back as *Les rêves de chat noirs dans la table vieille*, the first
-hop having read *sleeps* as a noun — but a clumsy sentence a student is told to
-check beats a blank page, which is the same bargain Apertium already is for
-Spanish. Catalan rather than Spanish because it fails less badly where it
-matters: *Where is the station?* is *Où est la gare ?* through Catalan against
-*Où Il est la #chaîne ?* through Spanish, and that `#` is Apertium's marker for
-a word it could not translate at all.
-
-**Latin gets no pivot**, because there is no language between it and English
-that Apertium can reach — it has no Latin pair in any direction. Nor does Latin
-use Lingva, MyMemory or Apertium at all any more: asked for Latin, MyMemory
-returns *Malagasy*, and "…the First World War hero who died in the Cuban Missile
-Crisis" came back as "…maherifo Worlde, izay maty tao amin'ny Krizin'ny
+Lingva, MyMemory, Apertium and DeepL are gone with the Spanish and French sides
+they were built for. Not one of them could do Latin, and one was worse than
+useless at it: "…the First World War hero who died in the Cuban Missile Crisis"
+came back from MyMemory as "…maherifo Worlde, izay maty tao amin'ny Krizin'ny
 Balafomanga Kiobana" — a real translation into a language nobody asked for,
-wearing enough Latin to pass a glance. The Latin chain is this site's own code
-from end to end.
+wearing enough Latin to pass a glance. The chain is this site's own code from
+end to end, apart from the encyclopedia and the morphology behind it.
 
 ### Phrases Latin says its own way
 
@@ -868,101 +475,96 @@ I love you               →  te amo
 ```
 
 It is hand-written and unapologetically so. An idiom is by definition the thing
-a general rule gets wrong, and the site already keeps one of these for Spanish
-and French — this is the one place a list is the right shape rather than a gap
-waiting to be filled.
+a general rule gets wrong, which makes this the one place where a list is the
+right shape rather than a gap waiting to be filled.
 
-Lingva is still the engine that would make French good rather than merely
-present, and Lingva instances are volunteer-run. Of eighteen once listed
-publicly, **none currently answer**: eleven no longer resolve at all, three sit
-behind a Cloudflare challenge (`cf-mitigated: challenge` — an interactive one,
-which no server can pass and which this project will not try to evade), and the
-rest return 500, which is Google refusing the instance rather than the instance
-being down. A host that fails is **rested for a minute** before it is asked
-again.
+## The chat page
 
-That is worth more than it sounds. The translator fires on a debounce as you
-type, so re-asking a dead instance every time cost a timeout per keystroke-pause
-before anything else was even tried. With two dead hosts configured, the first
-translation pays 2.5s and every one after it takes 0.7s. Nothing is disabled
-permanently — the rest expiring is what puts a host back — and while they are
-all resting Lingva simply steps aside and the chain carries on beneath it.
+The tutor answers from data the site already holds — the conjugation engine, the
+decliner, Whitaker's Words, the course vocabulary, and a set of hand-written
+grammar notes. Nothing it says about the language is generated, so nothing about
+the language can be invented. The cost is that its scope is finite, and it says
+so rather than bluffing.
 
-### When translation is down
+### Two answers, not three
 
-It is, at the time of writing, for French and Latin. Worth writing down what was
-checked, because the answer is not obvious and the temptation is to keep looking.
+What happens to a question depends on whether the site can ground it, and
+nothing else.
 
-| | |
-| --- | --- |
-| Apertium | 133 installed pairs — **no Latin, no English–French** |
-| Lingva | the surviving instances answer 500: the app is up, Google is refusing it |
-| SimplyTranslate | 200 with an empty translation — the same failure, same cause |
-| LibreTranslate | 51 languages, has French, **no Latin**; the main instance now needs a key |
-| MyMemory | answers, but nothing it returned passed the agreement rule *(since fixed — see the chain above)* |
+**A question the site can ground** is answered immediately, from the site's own
+data, and costs nothing. Conjugations, declensions, parses, stage vocabulary,
+dictionary entries, translations, the grammar notes. This is most of what
+anybody asks a Latin site.
 
-Lingva and SimplyTranslate are both Google front ends and both broke the same
-way, so it is the endpoint that whole category uses. **Self-hosting would not
-have helped**, which is worth knowing before spending an afternoon on it.
+**Anything else** goes to the model, whatever it is about.
 
-MyMemory was the interesting near-miss, and it is the one that turned out to be
-ours rather than theirs. Its French is mostly right — *Où est la bibliothèque ?*,
-*Le chien de la fille* — but its three candidates never agree with each other,
-so the rule meant to catch its bad days was rejecting its good ones too. That is
-fixed: French translates again, through MyMemory, in both directions.
+There was a third case for a while, and it is worth recording why it went. Any
+question that did not look like it was about Latin used to be turned away
+unanswered, on the reasoning that a classroom should not be handed a general
+chatbot on the school's key. This is not a classroom — it is one person's site —
+so the gate came off both ends: the browser no longer classifies the subject,
+and the system prompt no longer instructs the model to refuse.
 
-Its Latin is not a near-miss. *I am tired* came back as *ego sum stultus*, "I am
-stupid", and *the boy praises the farmer* as *puella complens the Farmer*. So
-Latin output is checked rather than shown — see below.
+### One incidental word is not a topic
 
-**The site degrades honestly.** Spanish is unaffected, since Apertium is a real
-translator rather than a proxy and nothing can rate-limit it. French now has
-Apertium beneath it too, through Catalan. Latin says it could not translate
-rather than showing a guess, and everything else —
-both conjugators, the decliner, three dictionaries, the stages, the tutor —
-never touched a translation engine to begin with.
+Taking the gate off exposed something the gate had been hiding. Asked *"what is
+a good way to cook risotto"*, the tutor answered with a note on **the dative** —
+confidently, and without consulting the model, because it believed it had
+grounded the question.
 
-The instances left in the default list are up and serving; it is Google refusing
-*them*, which is a thing that passes. Keeping them listed is what lets the site
-pick the service back up on its own.
+The dative's keyword list contains **"to"**, which is right: it *is* "the *to*
+or *for* case", and that is how somebody would look it up. But a single keyword
+match scored 3 and the bar for answering was 3, so one of the commonest words in
+English was carrying a topic on its own.
 
-**If it stays down**, the only engine that covers both French and Latin is the
-Google Cloud Translation API — official, 500k characters a month free, and it
-wants a billing account. That is a deliberate cost, not an oversight.
+Raising the bar is the obvious fix and the wrong one — it breaks *"what is the
+genitive"*, which is also a single keyword and is also a real question. The
+weight is what was wrong, not the threshold. Four keywords across the whole
+grammar are ordinary English — *of*, *to*, *for*, *when* — and they now score 1
+instead of 3: enough to break a tie between two topics that otherwise match
+equally, never enough to decide alone. An exact match still short-circuits to
+100, so *"the dative"* is unaffected.
 
-**Self-hosting**, if the machine allows it, is still the answer to rate limiting
-specifically, and an entry may carry its own scheme:
+Measured across two dozen questions, that changed the answer to exactly five —
+risotto, the airport, dinner, the train to London, a good book to read — and to
+no grammar question at all.
 
-```bash
-docker run -d -p 3100:3000 --restart unless-stopped \
-  --name lingva ghcr.io/thedaviddelta/lingva-translate:latest
+### No allowance
 
-LINGVA_INSTANCES=http://localhost:3100,lingva.lunar.icu
-```
+There was one: five questions per browser per half hour, metered by a signed
+cookie, with tape that rolled across the chat panel when they ran out.
 
-A self-hosted instance on a free tier spins down when idle and can take most of
-a minute to wake, which is longer than the default patience; `LINGVA_TIMEOUT_MS`
-raises it.
+It was there because a class of twenty-five asking a chatbot whatever they liked
+would empty a free tier by lunch, and because the school's key was paying. There
+is no class. Both reasons went with it, so the allowance did too — along with
+`server/quota.js`, the per-browser identity that fed it, `SESSION_SECRET`, and
+the tape and toast components that had nothing else to say.
 
-## The Latin side
+The trade is worth stating plainly, since nothing now caps anything. With a free
+Groq key there is nothing to spend either way. With `ANTHROPIC_API_KEY` set
+instead, the only limit is the spend limit on the account — which is where a
+limit of that kind belongs.
 
-Typing **`mode: latin`** turns ProfeGPT into a Latin site. Everything the French
-side does, plus the things Latin needs and a modern language does not.
+### The model
 
-| | |
-| --- | --- |
-| the header switch | **LA \| EN**, and **neither side is gated** |
-| the conjugator | five conjugations, active and passive, from the principal parts |
-| **a declensions page** | the five noun declensions and the adjectives, in every case |
-| **a stages page** | the Cambridge Latin Course vocabulary, stages 1–28 |
-| the dictionary | Whitaker's Words: principal parts, and every reading of the form |
-| the translator | every Latin word parsed, and the case corrected where it is wrong |
-| the tutor | 26 grammar topics, answering **in English** |
+Two providers, tried in order: **Groq** (free) and then **Anthropic** (paid).
+Whichever is configured. Without any key the tutor still answers everything it
+could ground anyway, which is most of the page.
 
-**The passcode is gone.** English is the working language of a Latin lesson
-rather than a way round it, so there is nothing there to protect. But the chat
-answers in English whatever the switch says — a Latin tutor replying in Latin
-would be a joke at the reader's expense.
+Gemini and OpenRouter were in this chain and are not any more.
+
+The same chain serves the translator's Latin→English route — see *[Reading it
+twice](#reading-it-twice)* — and the dictionary's example sentences. Nothing
+else on the site touches it.
+
+**Groq's default model here reasons before it answers, and that reasoning comes
+out of the token budget.** At 400 tokens the short prompt was fine while the
+long one thought its way through a whole word list, hit the cap, and returned a
+*successful response with nothing in it* — not an error, just silence, which
+read as "that route declined" and quietly halved the check. The budget is 1500
+now. It is worth knowing about before debugging an empty string.
+
+## The dictionary
 
 ### Whitaker's Words
 
@@ -993,58 +595,40 @@ both are used. *canem* belongs to *canes* (early, rare) and *canis* (very
 frequent); leading with the archaic one is how *the dog of the girl* first came
 back as *canes puellae*.
 
-### Accurate declensions in the translator
+Example sentences come from **Tatoeba** where it has real ones, and an English
+gloss from **Wiktionary**. Both are corpora rather than models: free, unmetered,
+and quoting somebody rather than inventing. A model is only asked when the
+corpus has nothing, and if there is no model either the entry simply carries no
+example. There is deliberately no template frame beneath that — a made-up Latin
+sentence with the wrong case on it is worse than no sentence, and the parses are
+the useful part of a Latin entry anyway.
 
-This was the requirement, and it is the interesting part.
+### Hearing the word
 
-**No free engine produces reliably correct Latin.** Google is good on simple
-sentences and wrong on ordinary ones. Of eight case-critical phrases it got
-seven right and fumbled the eighth — *the dog of the girl* → **canem puellae**,
-the dog in the accusative when nothing is doing anything to it. A site that
-shows a student that and says nothing has taught them the wrong ending.
+A dictionary that cannot say the word out loud is half a dictionary for anybody
+learning to speak. A speaker button sits beside the headword — filled cone,
+stroked waves, because an all-outline speaker is mush at 16px.
 
-So every Latin translation gets two things done to it.
+**The budget is the shape of the feature.** The free ElevenLabs tier is 10,000
+characters a month for the whole site, so only single words are spoken, every
+clip is cached by word and by the browser, and a class of twenty-five looking up
+*puella* spends six characters once rather than a hundred and fifty. The
+guard against sentences lives next to the spending rather than only at the
+route, because a length cap alone lets "the quick brown fox jumps over it"
+through at 33 characters.
 
-**Every word is parsed**, and the pane shows the result. Not one reading but
-*all* of them, because a Latin ending is routinely ambiguous — *agricolae* is
-genitive, dative and nominative plural at once, and picking one would be telling
-the reader something the word does not say. Anything Whitaker's cannot recognise
-at all is flagged, which is the real check on machine translation.
+**The engine is told which language it is speaking.** It used to be left to
+infer it from the text, and one word is not much to infer from — a Latin word
+read as English is not Latin at all.
 
-**A wrong case is corrected where the English leaves no doubt.** An English noun
-phrase with no verb in it has a nominative head, full stop — so a head noun in
-some other case is an error that can be *put right* rather than merely reported.
-The headword gives the dictionary parts, the decliner builds the nominative from
-them, and the pane says what changed and why:
+**And the page says what that is, beside the button.** No speech model has
+Latin, so it is Italian phonology — closer to church Latin than to the classical
+pronunciation a Cambridge course teaches. Better to say so than to let somebody
+learn it wrong.
 
-> **canis puellae**
-> *case corrected: canem → canis. "the dog of the girl" has no verb, so its head
-> noun is nominative. canem is accusative singular common.*
+Without a key the button removes itself rather than standing there failing.
 
-Nothing is invented and nothing is guessed. Where the construction is not
-unambiguous the translation is left alone and the parse is shown instead, which
-is the honest half of the same idea.
-
-**And a sentence with English still in it is not offered as an answer.** A word
-Whitaker's does not know, which also appears in the English that was asked
-about, is not a doubtful reading — it is a word the engine gave up on and copied
-across. *the boy praises the farmer* → *puella complens **the Farmer***. The
-translation is struck through, the note says which words were left behind, and
-it points at the word-by-word parse instead. This is the page where a student
-decides what to write down, so a sentence that is not a translation must not
-look like one.
-
-**The number has to match too.** A nominative is not enough: *boy* came back as
-*pueri*, which is nominative — and plural. So the English head noun's number is
-read first, and the correction is to the nominative *singular* or *plural* as
-the source requires. *boy* → **puer**, *boys* → **pueri**.
-
-Whitaker's does not analyse most of the personal pronouns — *ego*, *tu*, *nos*,
-*vos* all come back empty — so those are allowed through by name rather than
-flagged as not being Latin.
-
-Apertium has no Latin pair either, so the chain is Wikipedia → Lingva →
-MyMemory, as it is for French. Lingva handles Latin well; MyMemory does not.
+## The conjugator and the decliner
 
 ### The conjugator
 
@@ -1064,8 +648,7 @@ The rules that took the care:
   is plain third. The same test a textbook gives.
 - **A compound only counts across a real Latin prefix.** Without that list any
   verb ending in the letters of a base inherits from it, and *moneo* becomes
-  *mon-* plus *eo* — conjugating as *monis, monit, moneunt*. The same bug the
-  French side had with *percevoir* and *voir*.
+  *mon-* plus *eo* — conjugating as *monis, monit, moneunt*.
 - **Deponents are passive in form and active in meaning**, so the forms carrying
   their active sense *are* the passive ones. Everything is built both ways and
   the right set chosen at the end. Their imperfect subjunctive is built on an
@@ -1081,15 +664,33 @@ dictionary quotes it and why the engine needs it.
 
 You do not have to know it, though. Give the nominative alone and the dictionary
 supplies the rest — *rex* becomes *rex, regis* and the page says where the second
-word came from. Give a **wrong** one and it refuses: *puer, pueris* is not a
-word, puer's genitive is *pueri*, and declining it as a third declension noun
-would produce a whole table of forms that do not exist. See
+word came from.
+
+**Or give the genitive alone**, which is the more useful direction and was the
+one that did not work. A reader meets *regis* in a text and wants to know what
+it belongs to; the genitive is the form that *carries* the declension, so a word
+given as one is more use than a nominative, not less. Whitaker's says outright
+that *regis* is the genitive singular of *rex, regis* — and the lookup was
+throwing that away and answering "the dictionary does not have that word" about
+a word it had just parsed, because it only ever checked whether the typed word
+was somebody's **nominative**. It checks both ends now, and says which half it
+filled in, since giving the genitive completes the nominative rather than the
+other way round.
+
+Give a **wrong** genitive and it still refuses: *puer, pueris* is not a word,
+puer's genitive is *pueri*, and declining it as a third declension noun would
+produce a whole table of forms that do not exist. See
 `public/js/lib/latin-lookup.js`.
 
-The tabs cover the five declensions and the adjectives. **Clicking a tab that is
-already open offers its genders** — a second and third declension neuter decline
-differently enough to need their own table, and there is otherwise no way to
-reach one without knowing a neuter noun to type.
+The tabs cover the five declensions and the adjectives. **The second and third
+open a menu rather than a table**, because a neuter of either declines
+differently enough to need its own — nominative, accusative and vocative fall
+together, and the nominative plural is *-a*.
+
+The rule used to be "click the tab you are already on", which meant the first
+click quietly chose the masculine for you and only a second one admitted there
+had been a choice. A reader who came for *bellum* got *dominus* and no reason to
+think anything else existed. A tab holding two paradigms asks which.
 
 The third declension is the awkward one, as it is for a student. **i-stems**
 differ in four cells and are detected by the three rules a textbook gives —
@@ -1104,34 +705,6 @@ shares the nominative. Read as a two-termination adjective it produces
 *ingente*, which is not a word.
 
 `npm test` checks 121 reference forms against the standard paradigms.
-
-### Hearing the word
-
-A dictionary that cannot say the word out loud is half a dictionary for anybody
-learning to speak, and these three languages are exactly the ones where the
-spelling does not tell you the sound: *chaleureux*, *corazón*, *puella*. A
-speaker button sits beside the headword — filled cone, stroked waves, the same
-drawing logic as the padlock, because an all-outline speaker is mush at 16px.
-
-**The budget is the shape of the feature.** The free ElevenLabs tier is 10,000
-characters a month for the whole site, so only single words are spoken, every
-clip is cached by word and by the browser, and a class of twenty-five looking up
-*chaleureux* spends ten characters once rather than two hundred and fifty. The
-guard against sentences lives next to the spending rather than only at the
-route, because a length cap alone lets "the quick brown fox jumps over it"
-through at 33 characters.
-
-**The engine is told which language it is speaking.** It used to be left to
-infer it from the text, and one word is not much to infer from: *couvercle* came
-back as "couvercol", an English speaker sounding out French spelling. The v2.5
-models take a language code and the site always knows which side it is on.
-
-**Latin says what it is, beside the button.** No speech model has Latin, so it
-is Italian phonology — closer to church Latin than to the classical
-pronunciation a Cambridge course teaches. Better to say so than to let somebody
-learn it wrong.
-
-Without a key the button removes itself rather than standing there failing.
 
 ### The stages page
 
@@ -1164,14 +737,11 @@ left out rather than guessed at.
 The page says as much, on the page, where a reader revising for a test will see
 it. Adding a stage is adding a key to `public/js/data/stages-la.js`; one entry is
 `['latin', 'english']`.
-
 ## Design
 
 **Dark and light.** The choice is stamped onto `<html data-theme>` by an inline
 script in the page head, before the first paint, so the site never flashes the
-wrong palette. The **subject** goes on `<html data-study>` in the same script and
-for the same reason — the wallpaper is chosen in CSS, so it has to be right
-before anything is drawn. It follows the system setting until you press the toggle, then
+wrong palette. It follows the system setting until you press the toggle, then
 remembers. Colours that get painted to canvas — the hero network, the wallpaper
 strength — are CSS custom properties the JS reads back, so the palette has a
 single home.
@@ -1179,32 +749,36 @@ single home.
 Icons are drawn sprites in `public/js/lib/dom.js`, not emoji or text glyphs:
 those render differently on every platform and the hairline ☀/☾ characters
 disappeared against the header. Solid bodies with stroked details, because an
-all-outline padlock turns to mush at the 16px they run at. Each was rendered at
+all-outline speaker turns to mush at the 16px they run at. Each was rendered at
 real size in both palettes before being wired in.
+
+**The favicon is a temple and a translation mark in one drawing.** The pediment
+is doubled: a second temple front of the same size sits behind and up to the
+right, offset the way the two panels of a translation logo overlap. Two bare
+triangles read as a mountain range, which is what the first attempt looked like
+— the bar under the back one is what makes the pair read as two of the same
+thing, one behind the other. There is no background plate, so the silhouette is
+the icon rather than a square badge with a picture on it, and it sits on a light
+tab and a dark one alike. Three columns rather than four, and nothing narrower
+than five units in a 64 box: at 16px a column is one pixel and a gap is one
+pixel, and a fourth turns the colonnade into a grey smear. It was checked by
+rendering it at 16 and 32 and looking at the pixels, not by trusting the vector.
 
 **Inter** throughout — headings uppercase at weight 700 with `letter-spacing:
 -0.03em`. A system monospace is kept only for literal code inside chat replies.
 Flat colour: no gradients, no rounded corners.
 
 Between the translator and the dictionary search, a photograph fades in behind
-the page and parallaxes against the scroll. **One city per subject, at night in
-the dark palette and by day in the light one** — the city the language belongs
-to:
+the page and parallaxes against the scroll: **the Colosseum at night in the dark
+palette, Rome by day in the light one.** Two photographs, each a webp with a
+jpeg fallback. Madrid and Paris went with the languages they belonged to.
 
-| | dark | light |
-| --- | --- | --- |
-| Spanish | Gran Vía at night | the Plaza de Cibeles by day |
-| French | Paris at night | Notre-Dame by day |
-| Latin | the Colosseum at night | Rome by day |
-
-Six photographs, each a webp with a jpeg fallback. A theme-coloured scrim keeps
-the text in front readable; the strengths were calibrated by rendering the actual
-composite with text over it rather than guessing.
-
-The six rules are ordered rather than fought over with `!important`. A subject
-rule carries the same weight as the light-mode rule it has to beat, so it comes
-after it in the file; each subject's light rule carries one attribute more, so it
-wins over its own dark one wherever it sits.
+A theme-coloured scrim keeps the text in front readable. **It is lighter than it
+was** — the photograph was being masked to the point of being a texture rather
+than a picture, so the hero scrim came down from 0.62 to 0.46 and the wallpaper's
+from 0.55 to 0.38 (0.72 to 0.56 in the light palette). The chat keeps the heavy
+one: it is long-form text over the busiest part of the frame, which is a
+different problem.
 
 It runs behind the hero and the translator on the home page, and as a band
 behind the header on the conjugation and dictionary pages, fading out as the
@@ -1212,10 +786,11 @@ next section rises into view.
 
 Both sources are about 1024 px wide, which is well short of a modern display, so
 the photo carries a 1.5 px blur: it turns the upscaling softness into something
-that reads as depth of field instead of as a low-resolution image. **For genuinely
-higher resolution, drop a larger original into `public/assets/` under the same
-names** — nothing in the code assumes the current dimensions. The Paris night
-photograph is the smallest at 706px and leans on the blur hardest.
+that reads as depth of field instead of as a low-resolution image. **For
+genuinely higher resolution, drop a larger original into `public/assets/` under
+the same names** — nothing in the code assumes the current dimensions. This
+matters more now that the scrim is lighter: less cloth over the photograph means
+more of the photograph to see.
 
 The image is declared as a plain `url()` followed by an `image-set()`, rather
 than through a custom property. A `var()` whose value a browser cannot parse is
@@ -1227,246 +802,163 @@ edge: the hero is masked out over its last stretch while the wallpaper is
 already fading up underneath it.
 
 The highlight colour is blue — `#4d8dff` on the dark palette, `#1d5fd0` on the
-light one — with teal as the second language's marker so the two stay
-distinguishable.
+light one — with teal marking the English side of the translator so the two
+panes stay distinguishable.
+
+**The detail and report panels are one component.** Both open the same overlay,
+so the focus handling and the three ways out — Escape, the backdrop, the close
+button — are written once. It is a plain element rather than a `<dialog>`: the
+page already has its own scrim and card styling, and a modal dialog's backdrop
+cannot be themed alongside them. On a narrow screen it fills the viewport
+instead of floating in it.
+
+**A dropdown says it is one.** The second and third declension tabs carry an
+arrow, and open their menu on any click. It used to be a middle dot — a mark,
+not a signal: it said something was there without saying it opened.
+
+**The More button is a button dressed as a link.** Every declaration in its rule
+matches `.nav__links a`, and that is not laziness — it sits in the same row and
+has to read as one of them. `font: inherit` was not enough on its own: it picked
+up the body's 16px and 1.65 line-height, so the word sat a size large and a
+pixel low against its neighbours, and `color: inherit` made it the wrong grey.
+The transparent bottom border is what puts it on the same baseline as a link
+that can be underlined. Its chevron is drawn in CSS rather than iconified, and
+turns to point at the menu it opened.
 
 ## Configuration
 
-Everything except the chat works with no setup. To turn on the chat and get
-better translations and real example sentences:
+**Everything works with no setup at all.** The translator, the conjugator, the
+decliner and the dictionary's definitions use no key and no model. Copy
+`.env.example` to `.env` only to add the two things that do:
 
-```bash
-cp .env.example .env      # then put your key in it
-```
+| | |
+| --- | --- |
+| `GROQ_API_KEY` | free. Answers a Latin question the site cannot ground, and writes the dictionary's example sentences when no corpus has one. |
+| `ELEVENLABS_API_KEY` | the spoken word on the dictionary page. Without it the speaker button removes itself rather than standing there failing. |
 
-| Variable | Effect |
-| -------- | ------ |
-| `GEMINI_API_KEY` | Free. The primary tier for off-topic chat, translation and example sentences. |
-| `GROQ_API_KEY` | Free. Another tier. |
-| `OPENROUTER_API_KEY` | Free. The overflow tier — see *Keeping OpenRouter free* above. |
-| `OPENROUTER_MODEL` | Comma-separated `:free` model ids, tried in order. |
-| `ANTHROPIC_API_KEY` | **Paid.** Only reached if it is the only key set, or `LLM_PROVIDER=anthropic`. |
-| `LLM_PROVIDER` | Pin one: `gemini`, `groq`, `openrouter` or `anthropic`. |
-| `PORT` | Defaults to `4000`. |
-| `CHAT_FREE_LIMIT` | Off-topic chat questions per window, shared by all three languages. Default `5`; set `0` to seal the chat immediately and see the tape. |
-| `RELEASE_PASSCODE` | Opens French and Latin for the browser that types it in the padlock. They are closed until it is. Default `profe`. |
-| `LINGVA_INSTANCES` | Comma-separated Lingva hosts, tried in order; an entry may carry a scheme, so a self-hosted instance is `http://localhost:3100`. See *[The French translator](#the-french-translator)*. |
-| `LINGVA_TIMEOUT_MS` | How long to wait for an instance. Default `12000`; raise it for a self-hosted one that spins down. |
-| `CHAT_WINDOW_MINUTES` | Length of that window. Default `30`. |
+`ANTHROPIC_API_KEY` is the paid alternative to Groq and `LLM_PROVIDER` forces
+one instead of auto-detecting. **Groq retires models without warning**, and its
+endpoint answers a dead one with "does not exist or you do not have access to
+it" — which reads like a key problem and is not. `llama-3.3-70b-versatile` was
+the default here until it was decommissioned; `openai/gpt-oss-120b` is the
+current one, and `GROQ_MODEL` overrides it against
+[the list of what is live](https://console.groq.com/docs/models).
 
-Without a key:
-
-- **Translation** falls back to [MyMemory](https://mymemory.translated.net/) (free, no key, daily quota).
-- **Example sentences** fall back to a per-part-of-speech template, labelled as such in the UI.
-- **Chat** answers from the site's own data and declines the rest.
+`REPORT_LOG_DIR` says where the translator's reports are written, and
+`TRUST_PROXY` belongs only behind a proxy you control — it makes that log's rate
+limit believe `X-Forwarded-For`, which any client can send.
 
 ## Where things live
 
-Files marked **·fr** or **·la** are the French or Latin counterpart of the one
-above them.
-
 ```
 server/
-  index.js              express app: /api routes, static files, SPA fallback
-  quota.js              sliding-window allowance — one bucket, both languages
-  llm.js                picks a provider — free tiers first
-  corpus.js             Tatoeba sentences and Wiktionary glosses, either language
-  throttle.js           three lanes onto Wikimedia, so a whole class at once
-                        does not draw a 429
-  translators.js        the engine chain; every engine takes the pair as codes
-  idioms.js             one idiom table per language
-  deepl.js              the best engine in the chain, and the first asked
-  speech.js             pronunciation: one word, cached, told which language
-  dictionary-fr.js   ·fr a free dictionary, parsed from wikitext
-  latin.js           ·la Whitaker's Words: principal parts, and the parse of
-                         any form, ranked by how common each headword is
-  latin-check.js     ·la parses a translation and corrects a wrong case
-  latin-translate.js ·la the rules translator, both directions, and the
-                         word-by-word fallback beneath it
-  latin-lexicon.js   ·la which Latin word means which English one — the course
-                         list, then Wiktionary
-  latin-idioms.js    ·la the phrases Latin says its own way
+  index.js              routes, static files, the SPA fallback
   env.js                reads .env without a dependency
-  providers/            gemini.js, groq.js, anthropic.js, openrouter.js
-  routes/
-    translate.js        dedicated engines, never a model
-    speak.js            one spoken word, refusing anything that is not one
-    dictionary.js       picks a dictionary by `study`, then normalises both
-                        into one shape; rejects what is not a word before
-                        spending a request on it
-    verbs.js            RAE's own conjugation tables, normalised to our shape
-    chat.js             SSE streaming chat
+  llm.js                picks a provider: Groq, then Anthropic
+  translators.js        the chain — Wikipedia, the rules, the two glossaries
+  latin-translate.js    the rules translator, both directions, and the
+                        word-by-word fallback beneath it
+  latin-sentence.js     the same sentence read twice and checked against
+                        itself, which is the Latin→English answer
+  latin-lexicon.js      which Latin word means which English one — the course
+                        list, then Wiktionary
+  latin-idioms.js       the phrases Latin says its own way
+  latin.js              Whitaker's Words, through Alpheios
+  latin-check.js        parses the result, and corrects a head noun's case
+  corpus.js             Tatoeba sentences and Wiktionary glosses
+  speech.js             pronunciation: one word, cached, told its language
+  identity.js           where a request came from, for the report log's limit
+  throttle.js           one queue per upstream host
+  translate-model.js    the guards around a model that no longer translates —
+                        kept, and still tested
+  providers/            groq, anthropic, and the shared SSE reader
+  routes/               translate, dictionary, chat, speak, report
+
 public/
-  index.html            app shell
-  styles.css            the whole design system
-  js/
-    app.js              history-API router
-    lib/study.js        the language the site is *about*, and the mode command
-    lib/conjugator.js   the Spanish conjugation engine
-    lib/conjugator-fr.js ·fr the French one: two stems, two auxiliaries
-    lib/conjugator-la.js ·la the Latin one: five conjugations, both voices,
-                             built from the principal parts
-    lib/decliner-la.js ·la the five declensions, and the adjectives
-    lib/latin-lookup.js ·la fills in a missing genitive, refuses a wrong one
-    lib/restriction.js  the subjects a teacher has left available
-    lib/network.js      the hero node network
-    lib/markdown.js     DOM-building markdown renderer (no innerHTML)
-    lib/tutor.js        intent routing for the chat — shared by both languages
-    lib/tutor-es.js     what the router needs to know about Spanish
-    lib/tutor-fr.js  ·fr the same, for French
-    lib/tutor-la.js  ·la the same for Latin, plus the two intents only it has
-                         — declining a noun, and looking up a course stage
-    lib/chat-session.js the conversation, held outside the view so navigating
-                        away cannot interrupt an answer
-    lib/theme.js        dark/light switching
-    lib/tape.js         the X that seals the chat when the allowance is gone
-    lib/wallpaper.js    the Madrid photo: parallax, scrim, scroll fade
-    lib/i18n.js         every interface string — one table per study language
-    lib/language-switch.js  the ES/EN — or FR/EN — switch and its passcode gate
-    data/grammar.js     22 grammar explanations, Spanish and English
-    data/grammar-fr.js ·fr 23 more, French and English
-    data/verbs.js       stem changes, irregulars, the search index
-    data/verbs-fr.js ·fr irregulars, the -er spelling exceptions, 232 verbs
-    data/grammar-la.js ·la 26 more, English only — see The Latin side
-    data/verbs-la.js ·la principal parts, irregulars, deponents, 133 verbs
-    data/stages-la.js ·la the course vocabulary, hand-compiled, Books I–III
-    views/              one module per page, driven by the study language
-    views/declensions.js ·la the five declensions
-    views/stages.js  ·la vocabulary by stage
-test/
-  conjugator.test.js       204 reference forms checked against RAE paradigms
-  conjugator-fr.test.js ·fr 163 checked against the Bescherelle paradigms
-  latin.test.js         ·la 308 on the declension and conjugation engines, the
-                                number a corrected case takes, the course data,
-                                and every stage reachable six ways
-  latin-translate.test.js ·la 105 on the two-way lexicon, the English word
-                                shapes, clause splitting and the idiom table
-  markdown.test.js          20 on the renderer, mostly that tables are tables
-  conjugator-view.test.js  981 that the page's tense lists match every engine,
-                               and that every verb in every index conjugates
-  tutor.test.js             70 checks on intent routing and the form index
-  tutor-fr.test.js      ·fr  70 that the French pack drives the same router
-  tutor-la.test.js      ·la  44 on the Latin pack and its two extra intents
-  corpus.test.js            24 checks on sentence ranking and gloss extraction
-  translators.test.js       75 checks on engine order, names, the agreement
-                               rule, the DeepL and Latin routes, and what a
-                               failing Lingva instance is given
-  translate-model.test.js   27 on the guards around a model that no longer
-                               translates — kept, because the module is
-  speech.test.js            17 on what may be spoken and what is refused
-                               before a character of the month is spent
-  idioms.test.js            31 checks on idiom pairing in both directions
-  quota.test.js             18 checks on the sliding window and refunds
-  identity.test.js          15 checks on per-browser identity and its signature
-  lock.test.js              21 on the padlock, against a real express app, and
-                               that the two switches never reach each other
-  openrouter.test.js        20 checks on the guards that keep OpenRouter free
+  index.html            the shell, and the pre-paint theme script
+  styles.css            every style, one file
+  js/app.js             the router, the header, the More menu
+  js/lib/
+    dom.js              el(), icon(), the sprite table, fetch helpers
+    i18n.js             the interface language: Latin or English
+    language-switch.js  LA | EN
+    theme.js            dark and light
+    wallpaper.js        the photograph, and its parallax
+    network.js          the hero's node animation
+    markdown.js         chat replies, built as nodes — never innerHTML
+    conjugator-la.js    the conjugation engine
+    decliner-la.js      the declension engine
+    latin-lookup.js     fills in a missing genitive, refuses a wrong one
+    tutor.js            the grounded tutor's routing, and the scope test
+    tutor-la.js         everything the routing needs to know about Latin
+    chat-session.js     the conversation, held outside the view
+  js/data/
+    verbs-la.js         model verbs and their principal parts
+    grammar-la.js       the hand-written grammar notes
+    stages-la.js        the course vocabulary, by stage
+  js/views/             home, conjugator, declensions, stages, dictionary, chat
+
+test/                   offline, no network, a couple of seconds
 ```
 
-`npm test` runs all 2,213, offline, in a couple of seconds.
+`npm test` runs all 802 checks.
 
-## The conjugation engine
-
-There are three, one per language: `public/js/lib/conjugator.js` for Spanish,
-`conjugator-fr.js` for French and `conjugator-la.js` for Latin — see *[The French
-conjugator](#the-french-conjugator)* and *[The conjugator](#the-conjugator)* for
-the other two, and `decliner-la.js` for the declensions Latin also needs. All
-build paradigms from rules rather than a form table.
-
-`public/js/lib/conjugator.js` applies its rules in this order:
-
-1. **Regular endings** for the three classes.
-2. **Orthographic changes** that only preserve pronunciation — `buscar → busqué`,
-   `llegar → llegué`, `coger → cojo`, `conocer → conozco`, `leer → leyó`,
-   `construir → construyo`, `gruñir → gruñó`, `seguir → sigo`.
-3. **Stem changes** — `pensar → pienso`, `dormir → durmió`, `enviar → envío`.
-4. **Explicit irregulars**, inherited by prefixed derivatives, so `obtener`
-   comes free from `tener` and `proponer` from `poner`.
-
-`npm test` checks 204 reference forms. The engine was also cross-checked
-cell-by-cell against RAE's own tables (~1,200 cells) during development.
-
-On the conjugation page the local engine renders instantly, then RAE's own table
-is fetched and merged over it when the verb is in the dictionary — so the forms
-you see are authoritative where RAE has them, and generated where it doesn't.
-The badge on the verb card tells you which.
-
-Neither French nor Latin has an equivalent to merge — no French authority
-publishes no API, and Whitaker's is a parser rather than a table of paradigms —
-so there the local engine *is* the table and the badge is left off rather than
-claiming an authority behind it.
+```
+latin.test.js             299 on the declension and conjugation engines, the
+                              number a corrected case takes, and the course data
+latin-translate.test.js   105 on the two-way lexicon, the English word shapes,
+                              clause splitting and the idiom table
+conjugator-view.test.js   230 that every tense the page names exists in the
+                              table the engine builds
+tutor-la.test.js           49 on intent routing, the form index, and which
+                              questions are in scope and which are not
+translators.test.js        21 on engine order, the name lookup and its guards
+report.test.js             16 on what reaches the log, in what shape, and what
+                              is refused before it gets there
+translate-model.test.js    27 on the guards around a model that no longer
+                              translates
+markdown.test.js           20 on the renderer that never touches innerHTML
+identity.test.js            7 on the address, and on when a forwarded header
+                              may be believed
+corpus.test.js             11 on how a corpus sentence is chosen
+speech.test.js             17 on what may be spoken, and what is refused before
+                              a character of the month is spent
+```
 
 ## Deploying
 
-This is a Node server, not a static site, so GitHub Pages and Netlify's static
-hosting cannot run it — the chat, dictionary and lock all need the server.
-Anything that runs Node works: Render, Railway, Fly.io, or a VPS.
-
-Whatever you pick, it needs to be **one instance**. The allowance, the teacher's
-lock and the dictionary cache are all held in memory, so a second instance would
-have its own copy of each — a locked site would be unlocked for half the class.
-
 ### Render
 
-There is a `render.yaml` in the repo, so this is a Blueprint rather than a form
-to fill in:
+`render.yaml` is a blueprint: point Render at the repository and it reads it.
+The service is a **web service**, not a static site — the chat, the dictionary
+and the translator's morphology lookups all need a server.
 
-1. *New → Blueprint* on Render, and point it at this repository.
-2. It reads `render.yaml` and prompts for the keys marked `sync: false`.
-3. Deploy.
+Two things in it are not defaults and matter. **`numInstances: 1`**, because the
+dictionary caches and the report log's rate limit are held in memory and a
+second instance gets its own copy of each. And a **mounted disk at `/var/data`**, with
+`REPORT_LOG_DIR` pointing at it: the reports are a file, and a deploy replaces
+the checkout. Without the disk every report is lost at the next push, which
+defeats the point of collecting them.
 
-The Blueprint pins **one instance** and a `/api/health` check. The instance
-count is not a performance choice — see below.
-
-To do it by hand instead: build `npm install`, start `npm start`, instance
-count 1, and set the variables below.
-
-**Change both passcodes before anyone has the URL.** `TEACHER_PASSCODE` and
-`RELEASE_PASSCODE` both have defaults, and the defaults are in the source of a
-public repository — anyone who reads it can seal your site, or help themselves
-to French and Latin. The English-interface passcode in
-`public/js/lib/i18n.js` is client-side and therefore public by construction; it
-keeps a class honest, and nothing more.
-
-The server already reads `PORT` from the environment, binds on all interfaces,
-and exposes `GET /api/health` for a health check.
-
-### Environment variables in production
-
-| Variable | Why it matters live |
-| --- | --- |
-| `SESSION_SECRET` | Keeps browser identities, and therefore allowances, across restarts. Without it a restart hands everyone a fresh five. |
-| `TRUST_PROXY=1` | Set when behind a load balancer. Only affects the address fallback now that identity is per browser, but still worth getting right. |
-| `GEMINI_API_KEY` | Free tier, ~20 requests a day. Fine as the first tier, not as the only one. |
-| `OPENROUTER_API_KEY` | The overflow, and in practice where most traffic lands. Free models only. |
-| `RAE_API_KEY` | **Get one.** Anonymous dictionary access is 100 lookups a day, which one class will exhaust. Free at <https://rae-api.com/login>. |
-| `TEACHER_PASSCODE` | **Change it.** The default is in a public repo. |
-| `RELEASE_PASSCODE` | **Change it.** Same reason — it decides who gets French and Latin. |
-| `RELEASE_PASSCODE` | **Change it.** Same reason — it opens the subjects again. |
-| `LINGVA_INSTANCES` | Worth setting. Without a working instance, French and Latin translation falls to MyMemory alone. |
-| `DEEPL_API_KEY` | The single biggest quality difference on the French and Spanish sides — it is asked first and is better than everything under it. Free tier, 500k characters a month; a key ending `:fx` is routed to the free host automatically. It has no Latin. |
-| `MYMEMORY_EMAIL` | Worth setting **on the deployed site**. MyMemory rations anonymous use by IP and a host's IP is shared, so translation can work locally and answer 429 in production — which is exactly what Render did. Naming a contact address is MyMemory's own way of asking for the larger allowance, 1,000 → 10,000 words a day. It is sent with every translation, so use an address you don't mind them having. |
-| `CHAT_FREE_LIMIT` | Off-topic questions per visitor per window. Default 5. |
+Every key is `sync: false` — Render holds the value, and the file only names it.
+Nothing secret belongs in a file that is in a repository, private or not.
 
 ### Things that will surprise you otherwise
 
-- **Free tiers sleep.** Render's free plan spins down when idle; the first
-  request afterwards is slow, and the lock and allowances reset. That reset is
-  harmless — arguably a feature for the lock — but the delay is visible.
-- **The lock clears on every deploy and restart**, by design. Nobody should be
-  locked out by a process nobody is watching.
+- **The site is one page.** Every route falls through to `index.html`, so a
+  refresh on `/declinationes` works, but any new route needs adding to `ROUTES`
+  in `public/js/app.js` as well as to the header.
+- **Code and markup revalidate on every load; photographs cache for a year.** A
+  single-page app can otherwise keep a stale module alive in an open tab for
+  days, because navigating between pages never re-fetches it.
+- **The morphology is a network call.** Whitaker's is reached through Alpheios,
+  so the translator, the decliner's genitive lookup and the dictionary all need
+  the internet even though none of them needs a key. The tests do not.
 
 ## Notes
 
-- Dictionary data comes from [rae-api.com](https://rae-api.com), which serves
-  the RAE's *DLE* as JSON. `dle.rae.es` itself blocks direct requests.
-  Anonymous access is **10 requests a minute and 100 a day** — enough for
-  development, not for a class. A free self-service key at
-  <https://rae-api.com/login> raises it to **60/minute and 5,000/day**; set
-  `RAE_API_KEY` and it is sent automatically. Being rate-limited surfaces as a
-  429 with a "come back in N minutes" message rather than a generic failure.
-- The model-backed paths (off-topic chat, model translation, generated example
-  sentences) have not been exercised against a live API — no provider key was
-  available when they were built. The Gemini and Groq request shapes come from
-  their current docs; the Anthropic one is verified against the SDK. Every path
-  that runs *without* a key has been tested end to end.
+The Latin is real Latin where Latin has a word for the thing, and a respectable
+coinage where it does not — *colloquium* for the chat, *stadia* for the course's
+stages. Reading the interface in Latin is a curiosity to opt into rather than
+the default behaviour of anything important, which is why the site works exactly
+the same in English.

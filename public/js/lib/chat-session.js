@@ -14,45 +14,14 @@
 import { answer as askTutor } from './tutor.js';
 import { getJson } from './dom.js';
 import { lang } from './i18n.js';
-import { studyLang } from './study.js';
 
 const state = {
   messages: [],        // { role, content, provider? } — the visible transcript
   streaming: null,     // { reply, provider, error } while a model is answering
-  quota: null,
   enabled: false,
   language: null,
   loaded: false,
-  acknowledged: false, // the visitor has dismissed the "allowance spent" tape
-  blocked: [],         // timestamps of off-topic questions refused since then
 };
-
-/** Enough refusals close enough together to mean it is not sinking in. */
-const BURST_COUNT = 5;
-const BURST_MS = 15000;
-
-export function acknowledgeQuota() {
-  state.acknowledged = true;
-  state.blocked = [];
-  emit();
-}
-
-/**
- * Record an off-topic question that had no allowance behind it.
- * @returns {'toast'|'tape'} how firmly to say no
- */
-function recordBlocked() {
-  const now = Date.now();
-  state.blocked = state.blocked.filter((at) => now - at < BURST_MS);
-  state.blocked.push(now);
-
-  if (state.blocked.length >= BURST_COUNT) {
-    state.acknowledged = false;
-    state.blocked = [];
-    return 'tape';
-  }
-  return 'toast';
-}
 
 const listeners = new Set();
 
@@ -78,7 +47,6 @@ export async function loadStatus() {
   try {
     const status = await getJson('/api/chat/status');
     state.enabled = Boolean(status.enabled);
-    state.quota = status.quota || null;
   } catch {
     state.enabled = false;
   }
@@ -129,16 +97,6 @@ export async function ask(text, { needsKeyNote } = {}) {
     result = { confident: false, blocks: [{ type: 'md', text: String(error.message) }] };
   }
 
-  // Out of allowance, and the tutor could not ground it. Say no proportionately
-  // rather than sealing the page over and over.
-  if (!result.confident && state.enabled && state.quota && state.quota.remaining <= 0) {
-    state.messages.pop();
-    state.streaming = null;
-    state.refusal = state.acknowledged ? recordBlocked() : 'tape';
-    emit('refused');
-    return;
-  }
-
   // Grounded answers land immediately and cost nothing.
   if (result.confident || !state.enabled) {
     const blocks = result.confident || !needsKeyNote
@@ -160,17 +118,12 @@ async function streamFromModel() {
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history.slice(-20), study: studyLang() }),
+      body: JSON.stringify({ messages: history.slice(-20) }),
     });
 
     if (!response.ok || !response.body) {
       const failure = await response.json().catch(() => ({}));
-      if (response.status === 429) state.quota = failure.quota || { ...state.quota, remaining: 0 };
-      throw new Error(failure.error || {
-        fr: `Le serveur a répondu ${response.status}.`,
-        la: `The server responded ${response.status}.`,
-        es: `El servidor respondió ${response.status}.`,
-      }[studyLang()]);
+      throw new Error(failure.error || `The server responded ${response.status}.`);
     }
 
     const reader = response.body.getReader();
@@ -191,10 +144,7 @@ async function streamFromModel() {
         let event;
         try { event = JSON.parse(chunk.slice(5).trim()); } catch { continue; }
 
-        if (event.type === 'quota') {
-          state.quota = event.quota;
-          emit();
-        } else if (event.type === 'provider' || (event.type === 'done' && event.provider)) {
+        if (event.type === 'provider' || (event.type === 'done' && event.provider)) {
           state.streaming.provider = event.provider;
         } else if (event.type === 'delta') {
           state.streaming.reply += event.text;
@@ -211,11 +161,7 @@ async function streamFromModel() {
       state.messages.push({
         role: 'assistant',
         content: '',
-        error: {
-          fr: 'La réponse est arrivée vide.',
-          la: 'The answer came back empty.',
-          es: 'La respuesta llegó vacía.',
-        }[studyLang()],
+        error: 'The answer came back empty.',
       });
     }
   } catch (error) {

@@ -36,6 +36,8 @@ import {
   latinNounParts,
 } from './latin-lexicon.js';
 import { formOf, declineAdjective } from '../public/js/lib/decliner-la.js';
+import { englishSentence, latinSentence } from './latin-sentence.js';
+import { tagLatin, readingAt, UPOS_TO_POS } from './udpipe.js';
 import { latinIdiom } from './latin-idioms.js';
 import { conjugate } from '../public/js/lib/conjugator-la.js';
 
@@ -51,6 +53,44 @@ const LATIN_PREPOSITIONS = {
 };
 
 /** How each preposition reads in English. */
+/**
+ * Words ending in *-que*, *-ve* or *-ne* that are not carrying an enclitic.
+ *
+ * Splitting *-que* has to be the default: Latin writes "and" on the back of the
+ * word it joins, and the result usually parses as something else entirely, so
+ * waiting for the whole word to fail means never splitting at all. *virumque* is
+ * a perfectly good genitive plural of *virus*, "of poisons", and that is not
+ * what Virgil wrote. The exceptions are listed instead.
+ */
+const NOT_ENCLITIC = new Set([
+  'que', 'neque', 'atque', 'itaque', 'denique', 'undique', 'usque', 'absque',
+  'quisque', 'quaeque', 'quodque', 'quemque', 'cuiusque', 'cuique', 'quoque',
+  'uterque', 'utraque', 'utrumque', 'plerumque', 'quicumque', 'quaecumque',
+  'quodcumque', 'ubicumque', 'utcumque', 'cumque', 'namque', 'susque',
+]);
+
+/**
+ * The personal and reflexive pronouns, spelled out.
+ *
+ * The commonest words in the language, and the morphology service does not have
+ * them: asked about *me* it answers with exactly one reading, the verb *meio*,
+ * "to urinate". Checked before the parser, like the particles and prepositions
+ * below, because there is nothing here for a parser to work out.
+ */
+const PRONOUN_FORMS = {
+  ego: ['I', 'nom. sg.'], mei: ['of me', 'gen. sg.'], mihi: ['to me', 'dat. sg.'],
+  me: ['me', 'acc. sg. / abl. sg.'],
+  tu: ['you', 'nom. sg.'], tui: ['of you', 'gen. sg.'], tibi: ['to you', 'dat. sg.'],
+  te: ['you', 'acc. sg. / abl. sg.'],
+  nos: ['we / us', 'nom. pl. / acc. pl.'], nostri: ['of us', 'gen. pl.'],
+  nostrum: ['of us', 'gen. pl.'], nobis: ['to us / by us', 'dat. pl. / abl. pl.'],
+  vos: ['you', 'nom. pl. / acc. pl.'], vestri: ['of you', 'gen. pl.'],
+  vestrum: ['of you', 'gen. pl.'], vobis: ['to you / by you', 'dat. pl. / abl. pl.'],
+  sui: ['of himself', 'gen.'], sibi: ['to himself', 'dat.'],
+  se: ['himself / herself / themselves', 'acc. / abl.'],
+  sese: ['himself / herself / themselves', 'acc. / abl.'],
+};
+
 const PREPOSITION_ENGLISH = {
   in: 'in', ad: 'to', ex: 'out of', e: 'out of', ab: 'from', a: 'from', de: 'about',
   cum: 'with', sine: 'without', pro: 'for', sub: 'under', per: 'through', post: 'after',
@@ -319,10 +359,47 @@ function fail(message) {
 
 /* ------------------------------------------------------------------ English */
 
+/**
+ * English plurals the rules do not reach.
+ *
+ * "The womans are good" is what a bare *-s* rule produces, and English keeps
+ * enough of these that a rule alone is not usable: the irregulars, the nouns
+ * that do not change, and the uncountables that should never take a plural at
+ * all. *furniture* became "furnitures" and *arms* became "armses".
+ */
+const IRREGULAR_PLURALS = {
+  man: 'men', woman: 'women', child: 'children', person: 'people', foot: 'feet',
+  tooth: 'teeth', goose: 'geese', mouse: 'mice', louse: 'lice', ox: 'oxen',
+  die: 'dice', penny: 'pence', wife: 'wives', life: 'lives', knife: 'knives',
+  leaf: 'leaves', thief: 'thieves', wolf: 'wolves', shelf: 'shelves',
+  half: 'halves', calf: 'calves', loaf: 'loaves', self: 'selves',
+};
+
+/** Nouns that are the same in the plural. */
+const UNCHANGED = new Set([
+  'sheep', 'fish', 'deer', 'series', 'species', 'means', 'offspring', 'aircraft',
+]);
+
+/** Nouns with no plural, which a count would be wrong about anyway. */
+const UNCOUNTABLE = new Set([
+  'furniture', 'water', 'wine', 'bread', 'gold', 'silver', 'blood', 'money',
+  'advice', 'news', 'music', 'peace', 'courage', 'anger', 'work', 'help',
+  'information', 'knowledge', 'wisdom', 'strength', 'weather', 'grain', 'sand',
+]);
+
 export function pluralise(noun) {
-  if (/(?:[sxz]|ch|sh)$/.test(noun)) return `${noun}es`;
-  if (/[^aeiou]y$/.test(noun)) return `${noun.slice(0, -1)}ies`;
-  return `${noun}s`;
+  const word = String(noun ?? '');
+  const key = word.toLowerCase();
+
+  if (IRREGULAR_PLURALS[key]) return IRREGULAR_PLURALS[key];
+  if (UNCHANGED.has(key) || UNCOUNTABLE.has(key)) return word;
+  // Already plural, so leave it: *arma* is glossed "arms".
+  if (/(?:[^aeiou]s|ies|men|people|children)$/.test(key)) return word;
+
+  if (/(?:[sxz]|ch|sh)$/.test(word)) return `${word}es`;
+  if (/[^aeiou]y$/.test(word)) return `${word.slice(0, -1)}ies`;
+  if (/(?:[^f]f|fe)$/.test(word)) return `${word.replace(/fe?$/, '')}ves`;
+  return `${word}s`;
 }
 
 export function thirdPerson(verb) {
@@ -342,8 +419,40 @@ export function pastOf(verb) {
 /** The first usable sense of a gloss: "girl, (female) child/daughter" → "girl". */
 export function firstSense(definition) {
   const clean = String(definition ?? '').replace(/\s*\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
-  const first = clean.split(/[;,/]/)[0]?.trim();
-  return first || null;
+  // A full stop divides senses as surely as a semicolon does. Whitaker's writes
+  // "suckle. breast feed", and taken whole that reached the page as a gloss with
+  // a sentence break in the middle of it.
+  const first = clean.split(/[;,/]|\.\s+/)[0]?.trim();
+  return (first || '').replace(/\.$/, '') || null;
+}
+
+/**
+ * The English for one *reading* of a word, resolved from that reading's own
+ * headword.
+ *
+ * Distinct from glossFor below, which starts from the surface form — right for
+ * the rules translator, where the surface form is the thing being translated,
+ * and wrong here. Starting from the surface produced a genuinely incoherent
+ * entry:
+ *
+ *   me — me [2nd sg. present]
+ *
+ * The gloss is the course's word for *me*, the pronoun; the grammar belongs to
+ * *meio*, "to urinate", which is the reading the parser ranked first. Two
+ * different words in one line, and anything reading that as a pair is being
+ * told something untrue.
+ *
+ * The order matters as much as the source. Whitaker's own definition comes
+ * before the Wiktionary priming because it arrives *attached to this reading*,
+ * so it cannot be about a different word — where the priming is keyed on the
+ * bare spelling and turned *Musa* into "song" and *ob* into "in the direction
+ * of", both of which Whitaker's had defined correctly.
+ */
+function readingGloss(analysis) {
+  if (!analysis?.lemma) return null;
+  return firstSense(
+    courseGloss(analysis.lemma) ?? analysis.definition ?? latinGlossOf(analysis.lemma),
+  );
 }
 
 /**
@@ -991,13 +1100,42 @@ const SUM = 'sum, esse, fui, futurus';
  */
 async function adjectiveLike(english) {
   const direct = await latinWord(english, 'adjective');
-  if (direct) return { citation: adjectiveCitation(direct.analysis.principalParts), surface: direct.surface };
+  if (direct) {
+    /**
+     * A comparative or superlative keeps its own citation.
+     *
+     * Whitaker's answers *longior* with the whole family — *longus, longa -um,
+     * longior -or -us, longissimus -a -um* — so building the citation from
+     * those principal parts starts again at the base, and "a longer road" came
+     * out *longa via*. The degree survived the lookup and died in the declining.
+     */
+    const degreed = degreeCitation(direct.surface);
+    if (degreed) return { citation: degreed, surface: direct.surface };
+    return { citation: adjectiveCitation(direct.analysis.principalParts), surface: direct.surface };
+  }
 
   for (const candidate of await latinCandidates(english)) {
     if (!/(?:us|a|um)$/.test(candidate)) continue;
     const stem = candidate.replace(/(?:us|a|um)$/, '');
     if (!stem) continue;
     return { citation: `${stem}us, ${stem}a, ${stem}um`, surface: candidate };
+  }
+  return null;
+}
+
+/**
+ * The citation for a form that is already a comparative or a superlative.
+ *
+ * A comparative declines as a two-termination adjective in *-ior, -ius*; a
+ * superlative as an ordinary first-and-second in *-us, -a, -um*. Null for
+ * anything else, which is most words.
+ */
+function degreeCitation(surface) {
+  const word = String(surface ?? '').toLowerCase();
+  if (/ior$/.test(word)) return `${word}, ${word.slice(0, -3)}ius`;
+  if (/(?:issimus|errimus|illimus|imus)$/.test(word)) {
+    const stem = word.slice(0, -2);
+    return `${stem}us, ${stem}a, ${stem}um`;
   }
   return null;
 }
@@ -1527,7 +1665,7 @@ async function taggedPhrases(tokens) {
  * assembling the translator could not. Presenting this as a translation would
  * be the same lie as MyMemory's, in better handwriting.
  */
-export async function latinWordByWord(text) {
+export async function latinWordList(text) {
   const tokens = tokenise(text).filter(isWord);
   if (!tokens.length) fail('nothing to translate');
   // No length limit worth failing on. Capping this at twenty words is exactly
@@ -1535,38 +1673,135 @@ export async function latinWordByWord(text) {
   // Malagasy; a long sentence is the case that needs decoding most.
   if (tokens.length > GLOSS_LIMIT) fail('too long even to gloss');
 
+  // Whitaker's word list has holes — *itio* is an ordinary noun it does not
+  // have — and Wiktionary fills them. One batch, before glossing anything.
+  await primeLatinGlosses(tokens).catch(() => {});
+
+  // The sentence read as a sentence, so a word with several readings can be
+  // settled by its context rather than by a fixed rule. See server/udpipe.js.
+  const tagged = await tagLatin(text);
+
   const glossed = [];
-  for (const token of tokens) {
+  for (const [position, token] of tokens.entries()) {
     const surface = fold(token);
 
-    const particle = PARTICLES[surface];
-    if (particle?.english) { glossed.push(`${token} — ${particle.english}`); continue; }
-    if (PREPOSITION_ENGLISH[surface]) {
-      glossed.push(`${token} — ${PREPOSITION_ENGLISH[surface]}`);
+    // The closed classes first: the parser either does not have them, or has a
+    // different word under the same spelling.
+    const pronoun = PRONOUN_FORMS[surface];
+    if (pronoun) {
+      glossed.push({
+        word: token, gloss: pronoun[0], grammar: pronoun[1], known: true,
+        readings: [`${pronoun[0]} [${pronoun[1]}]`],
+      });
       continue;
     }
 
-    const analyses = await analyse(token).catch(() => null);
-    if (!analyses?.length) { glossed.push(`${token} — ?`); continue; }
+    const particle = PARTICLES[surface];
+    if (particle?.english) {
+      glossed.push({ word: token, gloss: particle.english, grammar: '', known: true, readings: [particle.english] });
+      continue;
+    }
+    if (PREPOSITION_ENGLISH[surface]) {
+      glossed.push({
+        word: token, gloss: PREPOSITION_ENGLISH[surface], grammar: '', known: true,
+        readings: [PREPOSITION_ENGLISH[surface]],
+      });
+      continue;
+    }
+
+    let analyses = await analyse(token).catch(() => null);
+
+    /**
+     * An enclitic is a separate word written onto the back of another.
+     *
+     * How hard to try depends on which is commoner, the enclitic or the ending
+     * it looks like. *-que* is everywhere and its lookalikes are listed, so it
+     * is split even when the whole word parses. *-ne* and *-ve* are the other
+     * way round — third declension ablatives end in *-ine* by the hundred — so
+     * those are split only when the word as written means nothing at all.
+     */
+    let enclitic = null;
+    for (const [suffix, english, always] of [['que', 'and', true], ['ve', 'or', false], ['ne', '(question)', false]]) {
+      if (!surface.endsWith(suffix) || surface.length <= suffix.length + 2) continue;
+      if (NOT_ENCLITIC.has(surface)) break;
+      if (!always && analyses?.length) continue;
+      const stem = token.slice(0, -suffix.length);
+      // eslint-disable-next-line no-await-in-loop
+      const stemAnalyses = await analyse(stem).catch(() => null);
+      if (!stemAnalyses?.length) continue;
+      analyses = stemAnalyses;
+      enclitic = english;
+      break;
+    }
+
+    if (!analyses?.length) {
+      const loose = firstSense(latinGlossOf(surface));
+      glossed.push({ word: token, gloss: loose ?? '?', grammar: '', known: Boolean(loose), readings: [] });
+      continue;
+    }
 
     /**
      * Which reading to show when a form has several.
      *
      * A noun before a verb, unless the word stands last, where Latin puts its
-     * verb — *canis* is "dog" far more often than "you sing", and glossing it
-     * as a verb in "canis puellae" was simply unhelpful. The locative is
-     * skipped for the same reason it is skipped upstream: it is real, and it is
-     * never what a beginner's sentence means.
+     * verb — *canis* is "dog" far more often than "you sing".
      */
     const last = token === tokens[tokens.length - 1];
     const ranked = [...analyses].sort((one, other) => rankPos(one.pos, last) - rankPos(other.pos, last));
 
+    // The parser read the whole sentence; the ranking above read a part of
+    // speech. Where it names a lemma Whitaker's also has, that is the reading
+    // the sentence is using. Nothing is discarded — the rest stay underneath.
+    const inContext = readingAt(tagged, position, token);
+    if (inContext) {
+      const wanted = fold(inContext.lemma);
+      const byLemma = ranked.findIndex((entry) => fold(entry.lemma) === wanted);
+      const byPos = ranked.findIndex((entry) => entry.pos === UPOS_TO_POS[inContext.upos]);
+      const chosen = byLemma !== -1 ? byLemma : byPos;
+      if (chosen > 0) ranked.unshift(...ranked.splice(chosen, 1));
+    }
+
     const analysis = ranked[0];
-    const gloss = glossFor(surface, analysis) ?? '?';
-    glossed.push(`${token} — ${gloss}${describe(analysis.inflections)}`);
+
+    // Every reading, not just the winner: the ranking is a heuristic, and
+    // anything assembling the sentence can pick the one that makes one.
+    const readings = [];
+    for (const candidate of ranked.slice(0, 4)) {
+      const sense = readingGloss(candidate);
+      if (!sense) continue;
+      const grammar = describe(candidate.inflections).replace(/^\s*\(|\)\s*$/g, '');
+      const shape = `${sense}${grammar ? ` [${grammar}]` : ''}`;
+      if (!readings.includes(shape)) readings.push(shape);
+    }
+
+    const top = readingGloss(analysis);
+    const fallback = glossFor(surface, analysis) ?? '?';
+    const carried = enclitic && (top ?? fallback) !== '?'
+      ? `${top ?? fallback} ${enclitic === '(question)' ? '(a question)' : `+ "${enclitic}"`}`
+      : null;
+
+    glossed.push({
+      word: token,
+      gloss: carried ?? top ?? fallback,
+      // Without the surrounding brackets: the caller decides how to show it.
+      grammar: top ? describe(analysis.inflections).replace(/^\s*\(|\)\s*$/g, '') : '',
+      known: (top ?? fallback) !== '?',
+      readings,
+    });
   }
 
-  return glossed.join(' · ');
+  return glossed;
+}
+
+/** The same list as one line, which is what the page shows without a model. */
+export function renderWordList(words) {
+  return words
+    .map(({ word, gloss, grammar }) => `${word}: ${gloss}${grammar ? ` (${grammar})` : ''}`)
+    .join(' · ');
+}
+
+export async function latinWordByWord(text) {
+  return renderWordList(await latinWordList(text));
 }
 
 /**
@@ -1623,19 +1858,19 @@ export async function englishGlossary(text) {
       ? (singularsOf(token).find((one) => latinFor(one).length) ?? token)
       : token;
 
-    if (FUNCTION_GLOSS[token]) { glossed.push(`${token} — ${FUNCTION_GLOSS[token]}`); continue; }
+    if (FUNCTION_GLOSS[token]) { glossed.push(`${token}, ${FUNCTION_GLOSS[token]}`); continue; }
 
     let found = null;
     for (const guess of [singular, ...verbCandidates(token)]) {
       const [first] = await latinCandidates(guess);
       if (first) { found = first; break; }
     }
-    glossed.push(found ? `${token} — ${found}` : `${token} — ?`);
+    glossed.push(found ? `${token}, ${found}` : `${token}, ?`);
   }
 
   // Only if there was nothing at all to say. With a dictionary behind it rather
   // than a word list, that should not happen for English.
-  if (glossed.every((entry) => entry.endsWith('— ?'))) fail('no Latin for any of it');
+  if (glossed.every((entry) => entry.endsWith(', ?'))) fail('no Latin for any of it');
 
   /**
    * The words, put into Latin order rather than listed.
@@ -1650,7 +1885,7 @@ export async function englishGlossary(text) {
   // A word with no Latin stays visible, in brackets and in English. Dropping it
   // would hand back a sentence quietly missing a piece of what was asked.
   const words = glossed.map((entry) => {
-    const [english, latin] = entry.split(' — ');
+    const [english, latin] = entry.split(', ');
     return !latin || latin === '?' ? `[${english}]` : latin;
   });
 
@@ -1681,7 +1916,17 @@ export async function englishGlossary(text) {
 }
 
 /** What this engine calls itself, so the chain can tell its work from a guess. */
-export const LATIN_RULES_ENGINE = 'Whitaker’s Words';
+/**
+ * What produced a translation, said accurately.
+ *
+ * This was "Whitaker's Words" for every engine here, and Whitaker's does not
+ * translate anything: it is the dictionary the words are looked up in, the way
+ * a bilingual dictionary is not the translator of a book. Naming it as the
+ * engine credited it for work it did not do, on every line of output.
+ */
+export const LATIN_RULES_ENGINE = 'the rules';
+export const GLOSSARY_ENGINE = 'the glossary';
+export const MODEL_ENGINE = 'a model';
 
 export async function latinRules(text, from, to) {
   if (from === 'la' && to === 'en') {
@@ -1704,7 +1949,7 @@ export async function latinRules(text, from, to) {
  */
 export async function englishToLatinGloss(text, from, to) {
   if (from !== 'en' || to !== 'la') throw new Error(`the glossary is en|la only, not ${from}|${to}`);
-  return { text: await englishGlossary(text), engine: LATIN_RULES_ENGINE, wordByWord: true };
+  return { text: await englishGlossary(text), engine: GLOSSARY_ENGINE, wordByWord: true };
 }
 
 /**
@@ -1714,5 +1959,59 @@ export async function englishToLatinGloss(text, from, to) {
  */
 export async function latinToEnglishGloss(text, from, to) {
   if (from !== 'la' || to !== 'en') throw new Error(`the gloss is la|en only, not ${from}|${to}`);
-  return { text: await latinWordByWord(text), engine: LATIN_RULES_ENGINE, wordByWord: true };
+  const words = await latinWordList(text);
+  return { text: renderWordList(words), words, engine: GLOSSARY_ENGINE, wordByWord: true };
+}
+
+/**
+ * English into Latin, written by a model and checked by translating it back.
+ *
+ * Falls through to the glossary when there is no model, so a deployment with no
+ * key behaves exactly as it did.
+ */
+export async function englishToLatinSentence(text, from, to) {
+  if (from !== 'en' || to !== 'la') throw new Error(`the Latin sentence route is en|la only, not ${from}|${to}`);
+
+  const sentence = await latinSentence(text);
+  if (!sentence) throw new Error('no model configured to write a sentence');
+
+  return {
+    text: sentence.text,
+    engine: LATIN_RULES_ENGINE,
+    reading: {
+      back: sentence.back,
+      agreement: sentence.agreement,
+      verdict: sentence.verdict ?? null,
+      confidence: sentence.confidence,
+      repaired: sentence.repaired === true,
+    },
+    assembled: true,
+  };
+}
+
+/**
+ * The same sentence out of Latin, assembled into English and checked against
+ * itself. See server/latin-sentence.js.
+ */
+export async function latinToEnglishSentence(text, from, to) {
+  if (from !== 'la' || to !== 'en') throw new Error(`the sentence route is la|en only, not ${from}|${to}`);
+
+  const words = await latinWordList(text);
+  const sentence = await englishSentence(text, words);
+  if (!sentence) throw new Error('no model configured to assemble a sentence');
+
+  return {
+    text: sentence.text,
+    words,
+    engine: MODEL_ENGINE,
+    reading: {
+      direct: sentence.direct,
+      grounded: sentence.grounded,
+      agreement: sentence.agreement,
+      verdict: sentence.verdict ?? null,
+      confidence: sentence.confidence,
+      repaired: sentence.repaired === true,
+    },
+    assembled: true,
+  };
 }

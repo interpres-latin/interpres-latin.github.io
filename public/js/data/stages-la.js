@@ -26,7 +26,7 @@ export const COURSE = {
 };
 
 /** Shown on the page, because a reader deserves to know how firm this is. */
-export const PROVENANCE = 'Hand-compiled from the course, not published data — check against your book. Every word is verified against Whitaker’s Words.';
+export const PROVENANCE = 'Hand-compiled from the course, not published data, check against your book. Every word is verified against Whitaker’s Words.';
 
 export const STAGES = {
   1: {

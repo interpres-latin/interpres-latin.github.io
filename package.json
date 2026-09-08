@@ -1,13 +1,14 @@
 {
-  "name": "profegpt",
+  "name": "interpres",
   "version": "0.1.0",
   "private": true,
-  "description": "ProfeGPT — a Spanish site with French and Latin behind it: translator, conjugation and declension tables, dictionaries and a grounded tutor.",
+  "description": "Interpres — a Latin site: a two-way translator built on its own grammar, conjugation and declension tables, Whitaker’s Words and a grounded tutor.",
   "type": "module",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node test/conjugator.test.js && node test/conjugator-fr.test.js && node test/latin.test.js && node test/latin-translate.test.js && node test/conjugator-view.test.js && node test/markdown.test.js && node test/tutor.test.js && node test/tutor-fr.test.js && node test/tutor-la.test.js && node test/quota.test.js && node test/identity.test.js && node test/lock.test.js && node test/corpus.test.js && node test/speech.test.js && node test/translate-model.test.js && node test/translators.test.js && node test/idioms.test.js && node test/openrouter.test.js"
+    "test": "node test/latin.test.js && node test/latin-translate.test.js && node test/conjugator-view.test.js && node test/markdown.test.js && node test/tutor-la.test.js && node test/identity.test.js && node test/corpus.test.js && node test/speech.test.js && node test/translate-model.test.js && node test/translators.test.js && node test/report.test.js",
+    "test:parse": "node test/latin-parse.test.js"
   },
   "engines": {
     "node": ">=20"

@@ -54,4 +54,4 @@ export function throttle(name, gap, task) {
 }
 
 /** Wikimedia asks for a descriptive agent with a way to make contact. */
-export const USER_AGENT = 'ProfeGPT/1.0 (https://github.com/yuzhe-chen/profegpt; educational language site)';
+export const USER_AGENT = 'Interpres/1.0 (Latin learning site)';

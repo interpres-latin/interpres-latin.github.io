@@ -1,26 +1,21 @@
 /**
  * Picks whichever language-model provider is configured.
  *
- * Free tiers come first, so the site costs nothing to run unless you
+ * The free tier comes first, so the site costs nothing to run unless you
  * deliberately point it at a paid one. Set LLM_PROVIDER to force a choice.
  *
- * Nothing here is on the critical path for Spanish questions — those are
- * answered by the grounded tutor in the browser, from the site's own data.
- * The model is only reached for off-topic questions, translations and the
- * dictionary's example sentences.
+ * Nothing here is on the critical path. Latin questions are answered by the
+ * grounded tutor in the browser, from the site's own data, and anything that is
+ * not about Latin is turned away without a model being woken at all. What
+ * reaches a model is the narrow middle: a Latin question the site's own data
+ * cannot answer, and the dictionary's example sentences.
  */
 
-import * as gemini from './providers/gemini.js';
 import * as groq from './providers/groq.js';
-import * as openrouter from './providers/openrouter.js';
 import * as anthropic from './providers/anthropic.js';
 
-/**
- * Preference order. Free tiers first, and OpenRouter last among them because
- * it is the designated overflow: the primary's allowance is spent before
- * anything reaches it.
- */
-const PROVIDERS = [gemini, groq, openrouter, anthropic];
+/** Preference order: the free tier, then the paid one. */
+const PROVIDERS = [groq, anthropic];
 
 export function activeProvider() {
   const forced = process.env.LLM_PROVIDER?.trim().toLowerCase();
@@ -67,7 +62,7 @@ function required() {
   const provider = activeProvider();
   if (provider) return provider;
   const error = new Error(
-    'No language-model provider is configured. Set GEMINI_API_KEY (free), GROQ_API_KEY (free) or ANTHROPIC_API_KEY.',
+    'No language-model provider is configured. Set GROQ_API_KEY (free) or ANTHROPIC_API_KEY.',
   );
   error.status = 503;
   error.code = 'NO_PROVIDER';
@@ -75,11 +70,11 @@ function required() {
 }
 
 /**
- * Walk the chain until one provider answers. Translation and the dictionary's
- * example sentences come through here, and they used to give up on the first
- * provider's bad day — which, on a free tier with a daily cap, is most of the
- * time. The chat route walks the chain itself, because it has to interleave
- * quota accounting with the attempts.
+ * Walk the chain until one provider answers. The dictionary's example sentences
+ * come through here, and they used to give up on the first provider's bad day —
+ * which, on a free tier with a daily cap, is most of the time. The chat route
+ * walks the chain itself, because it has to interleave quota accounting with
+ * the attempts.
  */
 export async function ask(options) {
   const chain = providerChain();

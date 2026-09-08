@@ -7,11 +7,12 @@
  * be invented; the cost is that its scope is finite, and it says so when a
  * question falls outside.
  *
- * The routing here is language-neutral. Everything specific to a language —
- * which engine to call, which words signal an intent, what the tutor says in
- * its own voice — comes from a pack: lib/tutor-es.js or lib/tutor-fr.js. The
- * two sides therefore share one set of decisions rather than drifting apart,
- * which matters because the interesting behaviour is all in the routing.
+ * The routing is kept apart from the language it routes: everything specific to
+ * Latin — which engine to call, which words signal an intent, what the tutor
+ * says in its own voice — comes from lib/tutor-la.js. There is one pack now,
+ * where there were three, but the seam is worth keeping: it is what makes the
+ * routing testable without the data, and the data replaceable without the
+ * routing.
  *
  * Every answer is a list of blocks the chat view knows how to render:
  *   { type: 'md',    text }
@@ -19,17 +20,14 @@
  *   { type: 'links', label, items: [{ label, href }] }
  */
 
-import { PACK as ES } from './tutor-es.js';
-import { PACK as FR } from './tutor-fr.js';
 import { PACK as LA } from './tutor-la.js';
-import { studyLang } from './study.js';
 import { fold, getJson, postJson } from './dom.js';
 
-const PACKS = { es: ES, fr: FR, la: LA };
+const PACKS = { la: LA };
 
-/** The pack for the language the site is currently about. */
+/** The pack for the language the site is about, which is Latin. */
 function activePack(override = null) {
-  return PACKS[override] ?? PACKS[studyLang()] ?? ES;
+  return PACKS[override] ?? LA;
 }
 
 /**
@@ -184,9 +182,9 @@ function conjugationAnswer(pack, verb, language, { tense = null, person = null }
       const label = pack.TENSE_LABELS[tense][language];
       blocks.push({
         type: 'md',
-        text: `**${form}** — ${pack.PERSON_LABELS[person]}, ${label} ${pack.labels.of[language]} *${result.verb}*.`,
+        text: `**${form}**: ${pack.PERSON_LABELS[person]}, ${label} ${pack.labels.of[language]} *${result.verb}*.`,
       });
-      return withVerbLink(pack, blocks, result.verb, language);
+      return withVerbLink(pack, blocks, result.verb, language, result.principalParts);
     }
   }
 
@@ -203,20 +201,39 @@ function conjugationAnswer(pack, verb, language, { tense = null, person = null }
       type: 'table',
       caption: pack.TENSE_LABELS[key][language],
       head: [pack.labels.person[language], pack.labels.form[language]],
-      rows: pack.PERSONS.map((p) => [pack.PERSON_LABELS[p], forms[p] || '—']),
+      rows: pack.PERSONS.map((p) => [pack.PERSON_LABELS[p], forms[p] || '-']),
     });
   }
 
   if (!tense) blocks.push({ type: 'md', text: pack.labels.otherTenses[language] });
 
-  return withVerbLink(pack, blocks, result.verb, language);
+  return withVerbLink(pack, blocks, result.verb, language, result.principalParts);
 }
 
-function withVerbLink(pack, blocks, verb, language) {
+/**
+ * The link has to carry what the conjugator can actually open on.
+ *
+ * A Latin verb is conjugated from its principal parts and refuses anything
+ * less — *capio* alone tells you nothing about *cepi* — so linking to the
+ * lemma sent the reader to a page that answered "a Latin verb cannot be
+ * conjugated without its principal parts", about the very verb it had just
+ * finished conjugating. The label stays the lemma, because that is the word
+ * being talked about; the href carries all four parts.
+ *
+ * The parts come from the conjugation that was just done where there was one,
+ * and from the pack otherwise — a form lookup names a verb without conjugating
+ * it. See conjugationTarget in lib/tutor-la.js.
+ */
+function verbHref(pack, verb, principalParts = null) {
+  const target = principalParts || pack.conjugationTarget?.(verb) || verb;
+  return `/conjugacion?v=${encodeURIComponent(target)}`;
+}
+
+function withVerbLink(pack, blocks, verb, language, principalParts = null) {
   blocks.push({
     type: 'links',
     label: pack.labels.fullTable[language],
-    items: [{ label: verb, href: `/conjugacion?v=${encodeURIComponent(verb)}` }],
+    items: [{ label: verb, href: verbHref(pack, verb, principalParts) }],
   });
   return blocks;
 }
@@ -228,7 +245,7 @@ async function dictionaryAnswer(pack, word, language) {
 
   const blocks = [{
     type: 'md',
-    text: `${exclaim(pack, 'good')}**${data.word}**${data.entries[0]?.origin ? ` — *${data.entries[0].origin}*` : ''}`,
+    text: `${exclaim(pack, 'good')}**${data.word}**${data.entries[0]?.origin ? ` (*${data.entries[0].origin}*` : ''}`,
   }];
 
   const lines = senses.map((sense, index) => {
@@ -264,7 +281,7 @@ async function translationAnswer(pack, text, from, language) {
     { type: 'md', text: `**${data.translation}**` },
     {
       type: 'md',
-      text: `_«${text}» — ${pack.labels.translatedWith[language]} ${data.engine || 'MyMemory'}._`,
+      text: `_«${text}», ${pack.labels.translatedWith[language]} ${data.engine || 'MyMemory'}._`,
     },
   ];
   // The array is what every caller wants; the translation rides along for the
@@ -298,7 +315,7 @@ function formLookupAnswer(pack, word, language) {
 
   const lines = matches.slice(0, 4).map((match) => {
     const who = match.person ? `${pack.PERSON_LABELS[match.person]}, ` : '';
-    return `- **${word}** — ${who}${match.label[language]} ${pack.labels.of[language]} *${match.verb}*`;
+    return `- **${word}**: ${who}${match.label[language]} ${pack.labels.of[language]} *${match.verb}*`;
   });
 
   return [
@@ -307,7 +324,7 @@ function formLookupAnswer(pack, word, language) {
       type: 'links',
       label: pack.labels.conjugation[language],
       items: [...new Set(matches.slice(0, 4).map((m) => m.verb))]
-        .map((verb) => ({ label: verb, href: `/conjugacion?v=${encodeURIComponent(verb)}` })),
+        .map((verb) => ({ label: verb, href: verbHref(pack, verb) })),
     },
   ];
 }
@@ -343,6 +360,24 @@ function keywordPattern(key) {
   return `\\b${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`;
 }
 
+/**
+ * Keywords that are also ordinary English, and cannot carry a topic alone.
+ *
+ * Four of them across the whole grammar: the genitive is "the *of* case", the
+ * dative "the *to* or *for* case", and time expressions answer "*when*". They
+ * are exactly how somebody would look those topics up, so they earn their place
+ * in the lists — and they are also four of the commonest words in English, so a
+ * single one of them appearing inside a longer sentence is evidence of nothing.
+ *
+ * "What is a good way *to* cook risotto" was being answered with a note on the
+ * dative, on the strength of that one word.
+ *
+ * They still score, so they break a tie between two topics that otherwise match
+ * equally; they simply score too little to reach the threshold on their own.
+ * An exact match is unaffected — it returns 100 before this is reached.
+ */
+const WEAK_KEYWORDS = new Set(['of', 'to', 'for', 'when']);
+
 function scoreTopic(pack, topic, folded) {
   const bare = folded.replace(pack.LEADING_ARTICLE, '');
   let score = 0;
@@ -350,7 +385,8 @@ function scoreTopic(pack, topic, folded) {
     const key = fold(keyword);
     if (folded === key || bare === key) return 100;
     if (new RegExp(keywordPattern(key)).test(folded)) {
-      score += key.includes(' ') ? 6 : 3;
+      if (key.includes(' ')) score += 6;
+      else score += WEAK_KEYWORDS.has(key) ? 1 : 3;
     }
   }
   return score;
@@ -599,6 +635,16 @@ export async function answer(question, { language = null, force = false, study =
   // 8. a lower-confidence topic match is better than nothing
   if (!askedSomethingSpecific && ranked[0]?.score >= 3) return respond(topicAnswer(ranked[0].topic, lang));
 
+  /**
+   * Nothing grounded it, which says only that the site's own data could not
+   * reach it — not that it should not be answered.
+   *
+   * There was a topic gate here for a while: anything that did not look like a
+   * Latin question was refused outright, on the reasoning that a classroom
+   * should not be handed a general chatbot. This is not a classroom. So the
+   * question goes to the model, and these blocks are what a reader sees only
+   * when there is no model configured to send it to.
+   */
   return {
     blocks: [{ type: 'md', text: pack.outOfScope(lang, exclaim(pack, 'bad')) }],
     confident: false,

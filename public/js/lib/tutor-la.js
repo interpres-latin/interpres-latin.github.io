@@ -79,7 +79,7 @@ async function declensionBlocks(word, { asked = '' } = {}) {
     if (resolved.error === 'wrong-genitive') {
       return [{
         type: 'md',
-        text: `The genitive of **${resolved.lemma}** is **${resolved.expected}**, not what you typed — so I can't decline that. Try *${resolved.lemma}, ${resolved.expected}*.`,
+        text: `The genitive of **${resolved.lemma}** is **${resolved.expected}**, not what you typed, so I can't decline that. Try *${resolved.lemma}, ${resolved.expected}*.`,
       }];
     }
     if (resolved.error === 'unknown') {
@@ -87,7 +87,7 @@ async function declensionBlocks(word, { asked = '' } = {}) {
       // "decline boy" to the dictionary, which looked up *decline*.
       return [{
         type: 'md',
-        text: `I don't know the Latin word **${parseParts(word)[0] ?? word}**. If it is a noun, give the genitive too — *puella, puellae* — and I can decline it from that.`,
+        text: `I don't know the Latin word **${parseParts(word)[0] ?? word}**. If it is a noun, give the genitive too, *puella, puellae*, and I can decline it from that.`,
       }];
     }
     return null;
@@ -122,7 +122,7 @@ async function declensionBlocks(word, { asked = '' } = {}) {
   if (kind === 'adjective') {
     const blocks = [{
       type: 'md',
-      text: `**${parts.join(', ')}** — ${result.family} declension adjective${result.terminations ? `, ${result.terminations}-termination` : ''}.${completed}`,
+      text: `**${parts.join(', ')}**: ${result.family} declension adjective${result.terminations ? `, ${result.terminations}-termination` : ''}.${completed}`,
     }];
     for (const genderName of ['masculine', 'feminine', 'neuter']) {
       const table = result.table[genderName];
@@ -130,7 +130,7 @@ async function declensionBlocks(word, { asked = '' } = {}) {
         type: 'table',
         caption: genderName,
         head: ['case', 'singular / plural'],
-        rows: CASE_ORDER.map((c) => [c, `${table.singular[c] || '—'} · ${table.plural[c] || '—'}`]),
+        rows: CASE_ORDER.map((c) => [c, `${table.singular[c] || ','} · ${table.plural[c] || ','}`]),
       });
     }
     blocks.push({
@@ -144,13 +144,13 @@ async function declensionBlocks(word, { asked = '' } = {}) {
   return [
     {
       type: 'md',
-      text: `**${result.lemma}, ${result.genitive}** — ${ordinal(result.declension)} declension${result.gender ? `, ${result.gender}` : ''}${result.iStem ? ', i-stem' : ''}. Stem **${result.stem}-**.${completed}`,
+      text: `**${result.lemma}, ${result.genitive}**: ${ordinal(result.declension)} declension${result.gender ? `, ${result.gender}` : ''}${result.iStem ? ', i-stem' : ''}. Stem **${result.stem}-**.${completed}`,
     },
     {
       type: 'table',
       caption: 'singular / plural',
       head: ['case', 'form'],
-      rows: CASE_ORDER.map((c) => [c, `${result.table.singular[c] || '—'} · ${result.table.plural[c] || '—'}`]),
+      rows: CASE_ORDER.map((c) => [c, `${result.table.singular[c] || ','} · ${result.table.plural[c] || ','}`]),
     },
     {
       type: 'links',
@@ -168,11 +168,11 @@ function stageBlocks(input) {
   if (!stage) {
     return [{
       type: 'md',
-      text: `I only have stages ${STAGE_NUMBERS[0]}–${STAGE_NUMBERS.at(-1)} — that is Book I of the Cambridge Latin Course. ${PROVENANCE}`,
+      text: `I only have stages ${STAGE_NUMBERS[0]}–${STAGE_NUMBERS.at(-1)}, that is Book I of the Cambridge Latin Course. ${PROVENANCE}`,
     }];
   }
   return [
-    { type: 'md', text: `### Stage ${stage.number} — *${stage.title}*\n\n${stage.setting ? `${stage.setting[0].toUpperCase()}${stage.setting.slice(1)}. ` : ''}${stage.words.length} words.` },
+    { type: 'md', text: `### Stage ${stage.number}, *${stage.title}*\n\n${stage.setting ? `${stage.setting[0].toUpperCase()}${stage.setting.slice(1)}. ` : ''}${stage.words.length} words.` },
     {
       type: 'table',
       caption: `stage ${stage.number}`,
@@ -191,7 +191,7 @@ async function parseBlocks(word) {
 
   const lines = entries.slice(0, 4).map((sense) => {
     const parse = sense.parses?.length ? sense.parses.slice(0, 3).join('; ') : '';
-    return `- **${sense.headword ?? data.word}** — ${sense.description}${parse ? `\n    · ${parse}` : ''}`;
+    return `- **${sense.headword ?? data.word}**: ${sense.description}${parse ? `\n    · ${parse}` : ''}`;
   });
 
   return [
@@ -223,6 +223,16 @@ export const PACK = {
   },
 
   KNOWN_VERBS: new Set([...PARTS.keys()].map(fold)),
+
+  /**
+   * What /conjugacion has to be given to open on a verb.
+   *
+   * The page conjugates from principal parts and refuses anything less, so a
+   * link carrying the lemma alone lands on "a Latin verb cannot be conjugated
+   * without its principal parts" — about the verb the answer had just finished
+   * conjugating. The lemma stays the label; this is what goes in the href.
+   */
+  conjugationTarget: (verb) => PARTS.get(String(verb).toLowerCase()) ?? verb,
 
   // Latin infinitives end in -re, but the tutor is given lemmas, not
   // infinitives — so the test is the first principal part's ending.
@@ -322,7 +332,7 @@ export const PACK = {
     const bits = [`${ordinalConjugation(result.class)} conjugation`];
     if (result.deponent) bits.push('deponent');
     if (result.flags.derivedFrom) bits.push(`compound of *${result.flags.derivedFrom}*`);
-    return `**${result.principalParts}**${gloss ? ` — *${gloss}*` : ''}. ${bits.join(', ')}.`;
+    return `**${result.principalParts}**${gloss ? `, *${gloss}*` : ''}. ${bits.join(', ')}.`;
   },
 
   isHairy: (result) => result.deponent || result.flags.irregular,
@@ -330,19 +340,19 @@ export const PACK = {
   capabilities() {
     return `Here's what I can do, and all of it comes from the site's own data:
 
-- **Conjugate** any verb — *conjugate rego*, *conjugate capio in the perfect*
-- **Decline** any noun or adjective — *decline puella, puellae* · *decline bonus, bona, bonum*
-- **Parse a form** — *parse canem* tells you it is the accusative singular of *canis*
-- **Look words up** in Whitaker's Words, with principal parts — *what does flumen mean*
-- **Translate** phrases, with every Latin word's case shown — *how do you say "the dog of the girl" in Latin*
-- **Stage vocabulary** — *stage 5* gives you that stage's words
+- **Conjugate** any verb, *conjugate rego*, *conjugate capio in the perfect*
+- **Decline** any noun or adjective, *decline puella, puellae* · *decline bonus, bona, bonum*
+- **Parse a form**: *parse canem* tells you it is the accusative singular of *canis*
+- **Look words up** in Whitaker's Words, with principal parts, *what does flumen mean*
+- **Translate** phrases, with every Latin word's case shown, *how do you say "the dog of the girl" in Latin*
+- **Stage vocabulary**: *stage 5* gives you that stage's words
 - **Explain grammar**: the cases, each case in turn, the five declensions, agreement, adjectives, principal parts, the tenses, the passive, deponents, participles, the ablative absolute, indirect statement, the subjunctive, purpose and result, relative pronouns, pronouns, commands, gerund and gerundive, numbers and time, and word order.
 
-I answer in English — a Latin tutor replying in Latin would not be much help.`;
+I answer in English, a Latin tutor replying in Latin would not be much help.`;
   },
 
   outOfScope(language, exclaim) {
-    return `${exclaim}That one's outside what I cover. I answer from the site's own data — the conjugator, the decliner, Whitaker's Words and a set of grammar notes — so I'd rather say nothing than invent an answer.
+    return `${exclaim}That one's outside what I cover. I answer from the site's own data, the conjugator, the decliner, Whitaker's Words and a set of grammar notes, so I'd rather say nothing than invent an answer.
 
 Try *decline rex, regis*, *conjugate capio*, *parse canem*, *stage 5*, or *the ablative absolute*. Type **help** for the full list.`;
   },

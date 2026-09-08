@@ -175,8 +175,81 @@ async function ask(form, attempt = 0) {
  * caching. Recording a failed request as "no such word" for a day is how
  * `canem` briefly stopped being the accusative of *canis*.
  */
+
+/* ------------------------------------------------------------- the pronouns */
+
+/**
+ * The personal and reflexive pronouns, written out.
+ *
+ * The morphology service does not have them. Asked about *ego* it answers
+ * nothing at all, and asked about *me* it answers with the verb *meio*, "to
+ * urinate" — so the dictionary told a reader that *ego* is not a Latin word,
+ * and every path built on this one inherited the same hole.
+ *
+ * A closed class is a list. There are about thirty forms, they have not changed
+ * in two thousand years, and they are among the commonest words in the
+ * language, so they are answered from here before the service is asked.
+ *
+ * Shaped exactly like an analysis from the wire, so nothing downstream has to
+ * know the difference.
+ */
+const PRONOUNS = {
+  ego:     ['ego, mei', 'ego', 'I', [['nominative', 'singular', '1st']]],
+  mei:     ['ego, mei', 'ego', 'of me', [['genitive', 'singular', '1st']]],
+  mihi:    ['ego, mei', 'ego', 'to/for me', [['dative', 'singular', '1st']]],
+  me:      ['ego, mei', 'ego', 'me', [['accusative', 'singular', '1st'], ['ablative', 'singular', '1st']]],
+  nos:     ['nos, nostrum', 'nos', 'we, us', [['nominative', 'plural', '1st'], ['accusative', 'plural', '1st']]],
+  nostrum: ['nos, nostrum', 'nos', 'of us', [['genitive', 'plural', '1st']]],
+  nostri:  ['nos, nostrum', 'nos', 'of us', [['genitive', 'plural', '1st']]],
+  nobis:   ['nos, nostrum', 'nos', 'to/for us, by us', [['dative', 'plural', '1st'], ['ablative', 'plural', '1st']]],
+
+  tu:      ['tu, tui', 'tu', 'you', [['nominative', 'singular', '2nd']]],
+  tui:     ['tu, tui', 'tu', 'of you', [['genitive', 'singular', '2nd']]],
+  tibi:    ['tu, tui', 'tu', 'to/for you', [['dative', 'singular', '2nd']]],
+  te:      ['tu, tui', 'tu', 'you', [['accusative', 'singular', '2nd'], ['ablative', 'singular', '2nd']]],
+  vos:     ['vos, vestrum', 'vos', 'you', [['nominative', 'plural', '2nd'], ['accusative', 'plural', '2nd']]],
+  vestrum: ['vos, vestrum', 'vos', 'of you', [['genitive', 'plural', '2nd']]],
+  vestri:  ['vos, vestrum', 'vos', 'of you', [['genitive', 'plural', '2nd']]],
+  vobis:   ['vos, vestrum', 'vos', 'to/for you, by you', [['dative', 'plural', '2nd'], ['ablative', 'plural', '2nd']]],
+
+  sui:     ['sui', 'sui', 'of himself/herself/itself/themselves', [['genitive', '', '3rd']]],
+  sibi:    ['sui', 'sui', 'to/for himself/herself/themselves', [['dative', '', '3rd']]],
+  se:      ['sui', 'sui', 'himself, herself, itself, themselves', [['accusative', '', '3rd'], ['ablative', '', '3rd']]],
+  sese:    ['sui', 'sui', 'himself, herself, itself, themselves', [['accusative', '', '3rd'], ['ablative', '', '3rd']]],
+};
+
+function pronounAnalysis(word) {
+  const entry = PRONOUNS[String(word).toLowerCase()];
+  if (!entry) return null;
+  const [headword, lemma, definition, forms] = entry;
+
+  return [{
+    headword,
+    frequency: 'very frequent',
+    age: '',
+    standing: 0,
+    principalParts: headword.split(',').map((part) => part.trim()),
+    lemma,
+    pos: 'pronoun',
+    declension: '',
+    conjugation: '',
+    gender: '',
+    definition,
+    inflections: forms.map(([grammaticalCase, number, person]) => ({
+      stem: lemma, suffix: '', pos: 'pronoun', declension: '', conjugation: '',
+      case: grammaticalCase, number, gender: '', person, tense: '', mood: '', voice: '', degree: '',
+    })),
+  }];
+}
+
 export async function analyse(word) {
   const key = String(word).toLowerCase();
+
+  // The closed class first: the service does not have it, and a word it does
+  // have under the same spelling is the wrong word.
+  const pronoun = pronounAnalysis(key);
+  if (pronoun) return pronoun;
+
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL) return hit.value;
 

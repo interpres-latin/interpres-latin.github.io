@@ -11,16 +11,15 @@
  *
  * A model is only asked when both come back empty.
  *
- * Both are asked for whichever language the site is currently about, so the
- * sentence in a result is keyed `text` rather than by a language code.
+ * The sentence in a result is keyed `text` rather than by a language code,
+ * which is what let this file follow the site's subject when it had more than
+ * one. It has one now, and the codes below are the only ones asked for.
  */
 
 import { throttle, USER_AGENT } from './throttle.js';
 
 /** Tatoeba and Wiktionary disagree about language codes; this is the bridge. */
 const CORPUS_LANGUAGES = {
-  es: { tatoeba: 'spa', wiktionary: 'es' },
-  fr: { tatoeba: 'fra', wiktionary: 'fr' },
   la: { tatoeba: 'lat', wiktionary: 'la' },
 };
 
@@ -49,8 +48,8 @@ function usable(text) {
  * Real sentences using the word, with their English translations.
  * @returns {Promise<Array<{text: string, en: string}>|null>}
  */
-export function tatoebaExamples(word, limit = 2, language = 'es') {
-  const codes = CORPUS_LANGUAGES[language] ?? CORPUS_LANGUAGES.es;
+export function tatoebaExamples(word, limit = 2, language = 'la') {
+  const codes = CORPUS_LANGUAGES[language] ?? CORPUS_LANGUAGES.la;
   return cached(`tatoeba:${language}:${word}`, async () => {
     const url = `${TATOEBA}?from=${codes.tatoeba}&to=eng&query=${encodeURIComponent(word)}&sort=relevance`;
     const response = await fetch(url, {
@@ -103,8 +102,8 @@ function stripMarkup(html) {
  * A short English gloss for a word in the language the site is about.
  * @returns {Promise<string[]|null>}
  */
-export function wiktionaryGloss(word, limit = 3, language = 'es') {
-  const codes = CORPUS_LANGUAGES[language] ?? CORPUS_LANGUAGES.es;
+export function wiktionaryGloss(word, limit = 3, language = 'la') {
+  const codes = CORPUS_LANGUAGES[language] ?? CORPUS_LANGUAGES.la;
   return cached(`wiktionary:${language}:${word}`, async () => {
     // Shares Wikimedia's limit with the Wiktionnaire, so it shares the queue.
     const response = await throttle('wikimedia', 180, () => fetch(`${WIKTIONARY}/${encodeURIComponent(word)}`, {

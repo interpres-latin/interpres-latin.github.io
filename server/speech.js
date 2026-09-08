@@ -55,7 +55,11 @@ const MODEL = 'eleven_turbo_v2_5';
  * approximation, and the page says so beside the button rather than leaving a
  * reader to assume otherwise.
  */
-const SPEECH_LANGUAGE = { es: 'es', fr: 'fr', la: 'it', en: 'en' };
+// No speech model has Latin, so it is spoken with Italian phonology — closer
+// to church Latin than to the classical pronunciation a Cambridge course
+// teaches. The page says so beside the button rather than letting anybody learn
+// it wrong.
+const SPEECH_LANGUAGE = { la: 'it', en: 'en' };
 
 /** 64 kbps mono is ample for one spoken word and a quarter the bytes. */
 const FORMAT = 'mp3_44100_64';
@@ -89,7 +93,7 @@ function voice() {
  * @returns {Promise<{audio: Buffer, cached: boolean}>}
  * @throws {Error & {status?: number, spent?: boolean}}
  */
-export async function speak(word, study = 'es') {
+export async function speak(word, study = 'la') {
   const key = process.env.ELEVENLABS_API_KEY?.trim();
   if (!key) {
     const error = new Error('No speech key configured');

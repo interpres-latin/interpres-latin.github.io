@@ -24,28 +24,30 @@ globalThis.fetch = async (url) => {
 // --- prefers sentences that actually contain the word ---------------------
 payload = {
   results: [
-    sentence('Es un madrugador convencido.', 'He is a committed early riser.'),
-    sentence('Mañana tenemos que madrugar.', 'We have to get up early tomorrow.'),
+    sentence('Canicula in horto dormit.', 'The puppy sleeps in the garden.'),
+    sentence('Canis in via currit.', 'The dog runs in the street.'),
   ],
 };
-let found = await tatoebaExamples('madrugar', 2);
+let found = await tatoebaExamples('canis', 2);
 ok('a sentence containing the word outranks a relative',
-  found[0].text === 'Mañana tenemos que madrugar.', found.map((f) => f.text).join(' | '));
+  found[0].text === 'Canis in via currit.', found.map((f) => f.text).join(' | '));
 
-// --- accent-insensitive matching -----------------------------------------
-payload = { results: [sentence('Un rincón entrañable.', 'A lovely corner.'), sentence('Nada aquí.', 'Nothing here.')] };
-found = await tatoebaExamples('entrañable', 1);
-ok('matching ignores accents', found[0].text === 'Un rincón entrañable.', found[0]?.text);
+// --- macron-insensitive matching ------------------------------------------
+// A text prints *puella* and a dictionary prints *puĕlla*; they are the same
+// word, and a reader who typed one must be shown the other.
+payload = { results: [sentence('Puĕlla epistulam scribit.', 'The girl writes a letter.'), sentence('Nihil hic.', 'Nothing here.')] };
+found = await tatoebaExamples('puella', 1);
+ok('matching ignores macrons', found[0].text === 'Puĕlla epistulam scribit.', found[0]?.text);
 
 // --- skips sentences with no English --------------------------------------
 payload = {
   results: [
-    { text: 'Sin traducción alguna.', translations: [[{ lang: 'fra', text: 'Pas de traduction.' }]] },
-    sentence('El perro duerme.', 'The dog sleeps.'),
+    { text: 'Nulla translatio.', translations: [[{ lang: 'fra', text: 'Pas de traduction.' }]] },
+    sentence('Servus laborat.', 'The slave works.'),
   ],
 };
-found = await tatoebaExamples('perro', 5);
-ok('an untranslated sentence is dropped', found.length === 1 && found[0].en === 'The dog sleeps.',
+found = await tatoebaExamples('servus', 5);
+ok('an untranslated sentence is dropped', found.length === 1 && found[0].en === 'The slave works.',
   JSON.stringify(found));
 
 // --- shorter is better, all else equal ------------------------------------
@@ -67,59 +69,32 @@ ok('a failed lookup yields nothing rather than throwing',
   (await tatoebaExamples('unreachable-word')) === null);
 
 // --- Wiktionary glosses ---------------------------------------------------
+//
+// The page holds a section per language and only the Latin one is wanted: an
+// English entry under the same spelling is a different word that happens to
+// look the same, which is exactly what a dictionary must not conflate.
 globalThis.fetch = async () => ({
   ok: true,
   json: async () => ({
-    es: [{ partOfSpeech: 'Verb', definitions: [{ definition: 'to <a href="/x">get up</a> early' }, { definition: '' }] }],
-    fr: [{ partOfSpeech: 'Verb', definitions: [{ definition: 'French, not wanted' }] }],
+    la: [{ partOfSpeech: 'Verb', definitions: [{ definition: 'to <a href="/x">rise</a> early' }, { definition: '' }] }],
+    en: [{ partOfSpeech: 'Noun', definitions: [{ definition: 'English, not wanted' }] }],
   }),
 });
-const gloss = await wiktionaryGloss('madrugar');
+const gloss = await wiktionaryGloss('surgo');
 ok('a gloss comes back', Array.isArray(gloss) && gloss.length === 1, JSON.stringify(gloss));
-ok('markup is stripped', gloss[0] === 'to get up early', gloss[0]);
+ok('markup is stripped', gloss[0] === 'to rise early', gloss[0]);
 ok('empty definitions are skipped', !gloss.includes(''));
-ok('other languages are ignored', !gloss.some((g) => /French/.test(g)));
-
-// --- the language is a parameter, not a constant --------------------------
-const frenchGloss = await wiktionaryGloss('manger-fr-test', 3, 'fr');
-ok('French mode reads the French section', frenchGloss?.[0] === 'French, not wanted',
-  JSON.stringify(frenchGloss));
+ok('other languages are ignored', !gloss.some((g) => /English/.test(g)));
 
 let requested = null;
 globalThis.fetch = async (url) => {
   requested = String(url);
   return { ok: true, json: async () => ({ results: [] }) };
 };
-await tatoebaExamples('manger', 2, 'fr');
-ok('and Tatoeba is asked for French sentences', /from=fra/.test(requested), requested);
-await tatoebaExamples('madrugar-2', 2);
-ok('while Spanish stays the default', /from=spa/.test(requested), requested);
+await tatoebaExamples('surgo-2', 2);
+ok('Tatoeba is asked for Latin sentences', /from=lat/.test(requested), requested);
 
 
-
-// --- putting the accents back on a word that was typed without them -------
-// "jamon" is not in any dictionary; "jamón" is. The lookup used to fail and the
-// question went to a language model, spending one of the reader's free five to
-// be told something the dictionary knew.
-const { accentedForm, foldAccents } = await import('../server/accents.js');
-
-for (const [typed, candidates, expected, why] of [
-  ['jamon', ['jamón'], 'jamón', 'the RAE suggests it in its own 404'],
-  ['corazon', ['corazón', 'corazonada'], 'corazón', 'and ignores the near-misses'],
-  ['flaner', ['flâner', 'flânes', 'flâné'], 'flâner', 'the French search folds accents'],
-  ['eleve', ['eleve', 'Eleve', 'élève', 'élevé'], 'élève', 'case alone is not an accent'],
-  ['ecole', ['Ecole', 'école', 'École'], 'école', 'nor is a capital'],
-  ['jamon', ['jabón', 'jamones'], null, 'a different word is never substituted'],
-  ['perro', ['perro'], null, 'nor an identical one'],
-  ['xyz', [], null, 'nothing to offer'],
-]) {
-  ok(`"${typed}" -> ${expected ?? 'nothing'} — ${why}`, accentedForm(typed, candidates) === expected,
-    String(accentedForm(typed, candidates)));
-}
-
-ok('folding strips accents', foldAccents('jamón') === 'jamon');
-ok('and lowercases', foldAccents('École') === 'ecole');
-ok('and leaves a plain word alone', foldAccents('perro') === 'perro');
 
 if (failures.length) {
   console.error(`\n✗ ${failures.length} of ${checked} corpus checks failed:\n`);

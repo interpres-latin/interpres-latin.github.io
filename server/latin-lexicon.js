@@ -21,6 +21,230 @@
 import { allWords } from '../public/js/data/stages-la.js';
 import { COMMON_VERBS, MODEL_VERBS, IRREGULARS } from '../public/js/data/verbs-la.js';
 import { throttle, USER_AGENT } from './throttle.js';
+import { analyse } from './latin.js';
+
+/**
+ * Comparatives and superlatives that are not built from their adjective.
+ *
+ * English suppletion, the same handful Latin has: *good, better, best* against
+ * *bonus, melior, optimus*. Nothing about "better" says "good", so the pair has
+ * to be written down.
+ */
+const IRREGULAR_DEGREE = {
+  better: ['good', 'comparative'], best: ['good', 'superlative'],
+  worse: ['bad', 'comparative'], worst: ['bad', 'superlative'],
+  less: ['little', 'comparative'], least: ['little', 'superlative'],
+  elder: ['old', 'comparative'], eldest: ['old', 'superlative'],
+  further: ['far', 'comparative'], furthest: ['far', 'superlative'],
+  farther: ['far', 'comparative'], farthest: ['far', 'superlative'],
+};
+
+/**
+ * The adjective behind an English comparative or superlative.
+ *
+ * Several spellings have to be tried because English spells the base back
+ * differently depending on the word: *nicer* wants its *e* returned, *happier*
+ * its *y*, *bigger* one of its *g*s taken away. The candidates are offered in
+ * turn and the first that resolves to a Latin adjective wins.
+ *
+ * Only ever reached after a direct lookup has failed, which is what keeps
+ * *mother* from being read as the comparative of *moth*.
+ *
+ * @returns {{bases: string[], degree: 'comparative'|'superlative'}|null}
+ */
+export function englishDegree(word) {
+  const plain = String(word ?? '').toLowerCase().trim();
+
+  const irregular = IRREGULAR_DEGREE[plain];
+  if (irregular) return { bases: [irregular[0]], degree: irregular[1] };
+
+  for (const [suffix, degree] of [['est', 'superlative'], ['er', 'comparative']]) {
+    if (!plain.endsWith(suffix) || plain.length <= suffix.length + 2) continue;
+    const stem = plain.slice(0, -suffix.length);
+
+    /**
+     * Most likely base first, because the first one that is an English
+     * adjective wins and the leftovers are often real words meaning something
+     * else. *bigg* is a kind of barley; tried before *big* it took "biggest"
+     * all the way to a Latin superlative of the wrong adjective.
+     */
+    const bases = [];
+    // "bigger" doubled its g; "hotter" its t.
+    if (/([bdgklmnprt])\1$/.test(stem)) bases.push(stem.slice(0, -1));
+    // "happier" turned its y into an i.
+    if (stem.endsWith('i')) bases.push(`${stem.slice(0, -1)}y`);
+    /**
+     * The bare stem before the restored *e*.
+     *
+     * *kinde* is an attested English spelling of *kind*, and Wiktionary defines
+     * it as "obsolete form of kind" — so tried first it resolved, through the
+     * word *obsolete* in its own definition, to *obsoletior*. The stem itself is
+     * the likelier word whenever it is a word at all, and *nic* is not one, so
+     * *nicer* still finds *nice* on the next try.
+     */
+    bases.push(stem, `${stem}e`);
+    return { bases: [...new Set(bases)], degree };
+  }
+  return null;
+}
+
+/**
+ * English synonyms, from Datamuse.
+ *
+ * A word with no Latin should not become `[horrible]` sitting in the middle of
+ * a Latin sentence. *horribilis* exists; the lexicon simply had no route from
+ * the English to it. Rather than write the missing pairs out by hand — there is
+ * no end to that list — the word is asked for its synonyms and each of those is
+ * tried in turn. *horrible* offers *atrocious*, *frightful*, *dreadful*; any of
+ * them landing is a better answer than an English word in brackets.
+ *
+ * Datamuse is free, needs no key, and exists for exactly this. Ordered by how
+ * strongly the words are associated, so the nearest synonym is tried first.
+ */
+const synonymCache = new Map();
+
+async function synonymsOf(english) {
+  const key = fold(english);
+  if (synonymCache.has(key)) return synonymCache.get(key);
+  synonymCache.set(key, []);
+
+  try {
+    const url = `https://api.datamuse.com/words?rel_syn=${encodeURIComponent(key)}&max=8`;
+    const response = await throttle('datamuse', 120, () => fetch(url, {
+      headers: { accept: 'application/json', 'user-agent': USER_AGENT },
+      signal: AbortSignal.timeout(8000),
+    }));
+    if (!response.ok) return [];
+
+    const body = await response.json();
+    const words = (Array.isArray(body) ? body : [])
+      .map((entry) => String(entry.word ?? '').toLowerCase().trim())
+      // A synonym of several words is a definition, not a word to look up.
+      .filter((word) => word && !word.includes(' ') && word !== key);
+    synonymCache.set(key, words);
+    return words;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Whether English has this word as an adjective.
+ *
+ * The guard on the degree rules. Stripping "-est" off *biggest* leaves *bigg*,
+ * which looks like nonsense and is not: it is a kind of barley, so it resolved,
+ * and *biggest* came back as *benignissimus* — the superlative of "kind",
+ * arrived at through a cereal. Every candidate base is checked against English
+ * first, and a noun is not what a comparative was built from.
+ */
+const adjectiveCache = new Map();
+
+/**
+ * The six adjectives whose superlative is *-limus* rather than *-issimus*.
+ *
+ * Every Latin course lists exactly these, because there is no rule behind them
+ * beyond "these six": *facillimus*, not *facilissimus*.
+ */
+const LIMUS = new Set(['facilis', 'difficilis', 'similis', 'dissimilis', 'gracilis', 'humilis']);
+
+/**
+ * The adjectives whose degrees are not built from them at all.
+ *
+ * The same five every course teaches, and the reason the rule below cannot be
+ * trusted on its own: *malus* is not *malior, malissimus*, it is *peior,
+ * pessimus*. Whitaker's lists some of these and not others — it gives *peior*
+ * and no superlative — so they are written out rather than half-derived.
+ */
+const SUPPLETIVE = {
+  bonus: ['melior', 'optimus'],
+  malus: ['peior', 'pessimus'],
+  magnus: ['maior', 'maximus'],
+  parvus: ['minor', 'minimus'],
+  multus: ['plus', 'plurimus'],
+};
+
+async function isEnglishAdjective(word) {
+  const key = fold(word);
+  if (adjectiveCache.has(key)) return adjectiveCache.get(key);
+  adjectiveCache.set(key, false);
+
+  try {
+    const url = `https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(key)}`;
+    const response = await throttle('wikimedia', 180, () => fetch(url, {
+      headers: { accept: 'application/json', 'user-agent': USER_AGENT },
+      signal: AbortSignal.timeout(12000),
+    }));
+    if (!response.ok) return false;
+    const body = await response.json();
+    const found = (body.en ?? []).some((section) => /adjective/i.test(section.partOfSpeech ?? ''));
+    adjectiveCache.set(key, found);
+    return found;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The comparative and superlative of a Latin adjective, from its own headword.
+ *
+ * Whitaker's quotes all four: *benignus, benigna -um, benignior -or -us,
+ * benignissimus -a -um*. Reading them off is better than building them by rule,
+ * because the rule has exceptions in exactly the words a learner meets first —
+ * *bonus* gives *melior* and *optimus*, *facilis* gives *facillimus* and not
+ * *facilissimus* — and the dictionary already knows.
+ */
+export async function latinDegreeForms(latin) {
+  const analyses = await analyse(latin).catch(() => []);
+  const adjective = analyses.find((entry) => entry.pos === 'adjective');
+  if (!adjective) return null;
+
+  /**
+   * Read by shape, not by position.
+   *
+   * Whitaker's writes an adjective's four parts compressed — *benignus,
+   * benigna -um, benignior -or -us, benignissimus -a -um* — but only when it
+   * has all four. *validus, valida, validum* is three genders and no degrees,
+   * and taking the third part on position made *validum*, the neuter, the
+   * comparative of "strong". A Latin comparative ends in *-ior* and a
+   * superlative in *-imus*; that is what to look for.
+   */
+  const parts = String(adjective.headword ?? '')
+    .split(',')
+    .map((part) => part.trim().split(/\s+/)[0]?.replace(/[^a-z]/gi, ''))
+    .filter(Boolean)
+    // Whitaker's prints consonantal i as j — *major*, *pejor*. Every other
+    // Latin word on this site is spelled the way a Cambridge text spells it.
+    .map((part) => part.replace(/j/g, 'i').replace(/J/g, 'I'));
+
+  const base = parts[0] ?? fold(latin);
+
+  const suppletive = SUPPLETIVE[base];
+  if (suppletive) return { comparative: suppletive[0], superlative: suppletive[1] };
+
+  const rest = parts.slice(1);
+  let comparative = rest.find((part) => /ior$/.test(part)) ?? null;
+  let superlative = rest.find((part) => /imus$/.test(part)) ?? null;
+
+  /**
+   * Built where the dictionary does not list them.
+   *
+   * The regular formation is the stem plus *-ior* and *-issimus*, with the two
+   * exceptions every course teaches: an adjective in *-er* doubles into
+   * *-errimus*, and the handful in *-lis* give *-limus*. Whitaker's simply omits
+   * the degrees for many perfectly ordinary adjectives — *validus* among them —
+   * and "the strongest" is a thing people say.
+   */
+  if (!comparative || !superlative) {
+    const stem = base.replace(/(?:us|is|er|e)$/, '');
+    if (!comparative && stem) comparative = `${stem}ior`;
+    if (!superlative && stem) {
+      superlative = /er$/.test(base) ? `${base}rimus`
+        : (LIMUS.has(base) ? `${stem}limus` : `${stem}issimus`);
+    }
+  }
+
+  return { comparative, superlative };
+}
 
 const fold = (word) => String(word ?? '').trim().toLowerCase();
 
@@ -291,6 +515,29 @@ export async function latinCandidates(english, depth = 0) {
 
   if (depth > 1) return [];
 
+  /**
+   * A comparative or superlative, before anything else is tried.
+   *
+   * Wiktionary answers "kinder" with "comparative of kind", and the pointer
+   * below follows it — losing the very thing the word was saying. So the degree
+   * is taken off first, the adjective behind it resolved, and the Latin degree
+   * read from the Latin dictionary: *kinder* is *benignior*, not *benignus*.
+   */
+  const degree = englishDegree(english);
+  if (degree) {
+    for (const base of degree.bases) {
+      // eslint-disable-next-line no-await-in-loop
+      if (!await isEnglishAdjective(base)) continue;
+      // eslint-disable-next-line no-await-in-loop
+      for (const candidate of await latinCandidates(base, depth + 1)) {
+        // eslint-disable-next-line no-await-in-loop
+        const forms = await latinDegreeForms(candidate);
+        const form = forms?.[degree.degree];
+        if (form) return [form];
+      }
+    }
+  }
+
   const definitions = await definitionsOf(english);
 
   // A pointer to another entry is followed before anything is read out of it.
@@ -299,6 +546,19 @@ export async function latinCandidates(english, depth = 0) {
     if (!pointer) continue;
     const followed = await latinCandidates(pointer[1].trim(), depth + 1);
     if (followed.length) return followed;
+  }
+
+  /**
+   * Before falling back on the words of a definition: the word's actual
+   * synonyms. A definition is prose and its words are a lucky dip — that path
+   * is what turned "kinde" into *obsoletior*, by reading the word *obsolete*
+   * out of "obsolete form of kind". A synonym list is a list of words that
+   * mean the same thing, which is what is wanted.
+   */
+  for (const synonym of await synonymsOf(english)) {
+    // eslint-disable-next-line no-await-in-loop
+    const found = await latinCandidates(synonym, depth + 1);
+    if (found.length) return found;
   }
 
   // Otherwise the words it was defined with, in the order they were written:

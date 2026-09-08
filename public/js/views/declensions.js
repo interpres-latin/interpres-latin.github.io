@@ -22,8 +22,14 @@ import { lang, t } from '../lib/i18n.js';
  *
  * The second and third have `variants`, because a neuter of either declines
  * differently enough to need its own table — nominative, accusative and
- * vocative fall together, and the nominative plural is -a. Clicking a tab that
- * is already open offers the choice rather than hiding it behind a search.
+ * vocative fall together, and the nominative plural is -a.
+ *
+ * **Those two open their menu on any click**, and never show a paradigm
+ * directly. The rule used to be "click the tab you are already on", which meant
+ * the first click quietly picked the masculine for you and only a second one
+ * admitted there had been a choice — so a reader after *bellum* got *dominus*
+ * and no reason to think anything else existed. A tab that holds two paradigms
+ * asks which; the caret beside it says so before the click.
  */
 const MODELS = [
   { key: '1st', parts: 'puella, puellae', gender: 'feminine', gloss: 'girl' },
@@ -93,10 +99,9 @@ export function renderDeclensions(main) {
       type: 'button',
       role: 'tab',
       onclick: () => {
-        // Clicking a tab that is already open offers its genders rather than
-        // doing nothing — which is the only way to reach a neuter paradigm
-        // without knowing a neuter noun to type.
-        if (model.variants && button.classList.contains('is-active')) {
+        // A tab with two paradigms behind it always asks which; only a tab with
+        // one answer goes straight to it.
+        if (model.variants) {
           openVariants(holder, model);
           return;
         }
@@ -104,7 +109,9 @@ export function renderDeclensions(main) {
         input.value = model.parts;
         show(model.parts, model.gender);
       },
-    }, label, model.variants ? el('span', { class: 'tabmenu__caret' }, '·') : null);
+    }, label, model.variants
+      ? el('span', { class: 'tabmenu__caret' }, icon(ICONS.caret, { size: 12, width: 2.6 }))
+      : null);
 
     holder.appendChild(button);
     tabs.appendChild(holder);
@@ -204,11 +211,15 @@ export function renderDeclensions(main) {
       return;
     }
 
-    // Say so when the genitive was supplied rather than typed, so nobody is
-    // left wondering where the second word came from.
+    // Say so when a part was supplied rather than typed, so nobody is left
+    // wondering where the second word came from — and say which part, since
+    // giving the genitive alone fills in the nominative, not the other way
+    // round.
     if (resolved.completed) {
-      results.appendChild(el('p', { class: 'notice' },
-        t('declension.completed', { parts: parts.join(', ') })));
+      results.appendChild(el('p', { class: 'notice' }, t(
+        resolved.completedFrom === 'genitive' ? 'declension.completedNominative' : 'declension.completed',
+        { parts: parts.join(', ') },
+      )));
     }
 
     results.appendChild(result.family ? adjectiveCard(result, parts) : nounCard(result, gender));
@@ -276,8 +287,8 @@ function caseTable(table) {
 
   const body = el('tbody', {}, ...CASE_ORDER.map((name) => el('tr', {},
     el('th', { scope: 'row' }, caseLabel(name)),
-    el('td', { class: table.singular[name] ? '' : 'is-empty' }, table.singular[name] || '—'),
-    el('td', { class: table.plural[name] ? '' : 'is-empty' }, table.plural[name] || '—'))));
+    el('td', { class: table.singular[name] ? '' : 'is-empty' }, table.singular[name] || ','),
+    el('td', { class: table.plural[name] ? '' : 'is-empty' }, table.plural[name] || ','))));
 
   return el('div', { class: 'tablewrap', style: { marginBottom: '14px' } },
     el('table', { class: 'conj', style: { minWidth: '0' } }, el('thead', {}, head), body));

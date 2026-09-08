@@ -6,6 +6,13 @@
  * typing *puella* on its own is a perfectly reasonable thing to do. So the
  * dictionary is asked, and it supplies the missing part.
  *
+ * It works from the other end too, and that end matters more. A reader meets
+ * *regis* in a text and wants to know what it belongs to; the genitive is the
+ * form that *carries* the declension, so a word given as one is more use than a
+ * nominative, not less. Whitaker's says outright that *regis* is the genitive
+ * singular of *rex, regis*, and this used to throw that away and answer "the
+ * dictionary does not have that word" about a word it had just parsed.
+ *
  * The same lookup catches a wrong one. *puer, pueris* is not a word: puer's
  * genitive is *pueri*, and declining the second declension noun as though it
  * were third would produce a whole table of forms that do not exist. Better to
@@ -72,6 +79,20 @@ const nominativeMatches = (sense, lemma) => {
 };
 
 /**
+ * ...or if its genitive is.
+ *
+ * Checked against the headword's own second part rather than against the
+ * parse, because the parse is routinely ambiguous — *puellae* is genitive,
+ * dative, locative, nominative plural and vocative plural at once — while
+ * "the genitive of *puella, puellae* is *puellae*" is a fact about the
+ * dictionary entry and cannot be anything else.
+ */
+const genitiveMatches = (sense, lemma) => {
+  const parts = sense.principalParts ?? parseParts(sense.headword ?? '');
+  return Boolean(parts[1]) && parts[1].toLowerCase() === lemma.toLowerCase();
+};
+
+/**
  * Settle what a reader typed into something declinable.
  *
  * @returns {Promise<{ok: boolean, parts?: string[], gender?: string,
@@ -90,25 +111,40 @@ export async function resolveLatinWord(input) {
   const noun = senses.find((sense) => sense.category === 'noun' && nominativeMatches(sense, parts[0]));
   const adjective = senses.find((sense) => sense.category === 'adjective');
 
+  /**
+   * The same word read as somebody's genitive, which only matters when one
+   * word was given and it is not a nominative.
+   *
+   * The nominative reading wins where there is one, because a word that *is* a
+   * nominative was almost certainly typed as one — *canis* is both, and it is
+   * the entry for *canis, canis* either way.
+   */
+  const byGenitive = parts.length === 1 && !noun
+    ? senses.find((sense) => sense.category === 'noun' && genitiveMatches(sense, parts[0]))
+    : null;
+
   // Nothing known: take the reader at their word if they gave two parts, and
   // admit defeat if they gave one, since there is nothing to complete it with.
-  if (!noun && !adjective) {
+  if (!noun && !adjective && !byGenitive) {
     return parts.length >= 2
       ? { ok: true, parts, kind: '', gender: '' }
       : { ok: false, error: 'unknown' };
   }
 
   if (parts.length === 1) {
-    const full = noun
-      ? (noun.principalParts ?? parseParts(noun.headword ?? ''))
+    const entry = noun ?? byGenitive;
+    const full = entry
+      ? (entry.principalParts ?? parseParts(entry.headword ?? ''))
       : adjectiveBaseParts(adjective.headword ?? '');
     if (full.length < 2) return { ok: false, error: 'unknown' };
     return {
       ok: true,
       parts: full,
-      kind: noun ? 'noun' : 'adjective',
-      gender: noun ? (noun.gender || '') : '',
+      kind: entry ? 'noun' : 'adjective',
+      gender: entry ? (entry.gender || '') : '',
       completed: true,
+      // Which half was supplied, so the page can say so accurately.
+      completedFrom: byGenitive && !noun ? 'genitive' : 'nominative',
     };
   }
 

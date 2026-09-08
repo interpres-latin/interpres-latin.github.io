@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { translate } from '../translators.js';
 import { checkLatin } from '../latin-check.js';
+import { latinToEnglishSentence } from '../latin-translate.js';
 
 export const router = Router();
 
@@ -22,24 +23,33 @@ function remember(key, value) {
  * see server/translators.js — so the box can be used all lesson without
  * touching an allowance meant for open-ended questions.
  *
- * The site always translates between English and the language it is currently
- * about, so `study` picks the other end of the pair and `from` says which way
- * round it is going.
+ * The pair is always Latin and English; `from` says which way round it is.
  */
 router.post('/', async (req, res) => {
   const text = String(req.body?.text ?? '').slice(0, MAX_INPUT);
-  const study = ['fr', 'la'].includes(req.body?.study) ? req.body.study : 'es';
-  const from = req.body?.from === 'en' ? 'en' : study;
-  const to = from === 'en' ? study : 'en';
+  const from = req.body?.from === 'en' ? 'en' : 'la';
+  const to = from === 'en' ? 'la' : 'en';
+
+  /**
+   * The model, asked for by name.
+   *
+   * Nothing reaches a model for Latin into English unless the reader presses
+   * the button. The parser is the translator; this is a second opinion on
+   * request, and it is cached separately so pressing the button does not
+   * overwrite the parse for everyone else.
+   */
+  const wantsModel = req.body?.model === true && from === 'la';
 
   if (!text.trim()) return res.json({ translation: '', engine: null });
 
-  const key = `${from}>${to}:${text}`;
+  const key = `${wantsModel ? 'model:' : ''}${from}>${to}:${text}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL) return res.json(hit.value);
 
   try {
-    const result = await translate(text, from, to);
+    const result = wantsModel
+      ? await latinToEnglishSentence(text, from, to)
+      : await translate(text, from, to);
     const payload = {
       translation: result.text,
       engine: result.engine,
@@ -49,6 +59,13 @@ router.post('/', async (req, res) => {
       // Words the engine could not translate and left as they were. The page
       // colours these rather than letting them pass as translation.
       unsure: result.unsure ?? [],
+      // Coming out of Latin: every word with its meaning and its grammar, and
+      // how far the two readings of the sentence agreed. The page keeps both
+      // behind the "see more information" button — see server/latin-sentence.js.
+      words: result.words ?? null,
+      // How the parser read each word, and why. See server/latin-parse.js.
+      parse: result.parse ?? null,
+      reading: result.reading ?? null,
     };
 
     // Latin is checked rather than trusted. Every word is parsed, so the page
@@ -69,11 +86,7 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.warn('[translate]', error.message);
     return res.status(502).json({
-      error: {
-        fr: 'Impossible de traduire pour le moment. Réessayez.',
-        la: 'Could not translate just now. Try again.',
-        es: 'No se pudo traducir ahora mismo. Inténtalo de nuevo.',
-      }[study],
+      error: 'Could not translate just now. Try again.',
       // Why each engine declined. Not shown to a reader — the page uses
       // `error` — but a translator that works on a laptop and fails on the
       // deployed site is otherwise diagnosable only from server logs, and the

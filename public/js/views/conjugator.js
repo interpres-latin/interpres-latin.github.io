@@ -1,125 +1,22 @@
-import { el, icon, ICONS, clear, debounce, fold, getJson } from '../lib/dom.js';
+import { el, icon, ICONS, clear, debounce, fold } from '../lib/dom.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
-import * as spanish from '../lib/conjugator.js';
-import * as french from '../lib/conjugator-fr.js';
 import * as latin from '../lib/conjugator-la.js';
-import * as spanishVerbs from '../data/verbs.js';
-import * as frenchVerbs from '../data/verbs-fr.js';
 import * as latinVerbs from '../data/verbs-la.js';
 import { lang, t } from '../lib/i18n.js';
-import { studyLang } from '../lib/study.js';
 
 /**
- * Everything the page needs to render a paradigm, per language.
+ * Everything the page needs to render a paradigm.
  *
- * The two engines produce the same *shape* — moods holding tenses holding
- * persons — but not the same names, so the tense lists, the mood keys and the
- * non-finite forms are all data here rather than literals in the rendering
- * code. That is the whole difference between the two sides of this page.
+ * The tense lists, the mood keys and the non-finite forms are data here rather
+ * than literals in the rendering code. That separation is worth keeping now
+ * that there is one language rather than three: it is what lets the tests below
+ * check the page against the engine at all.
  *
  * Exported for the tests, which check that every tense named here exists in the
  * table the engine actually builds — a typo would otherwise show as a silently
  * missing row rather than as an error.
  */
 export const ENGINES = {
-  es: {
-    ...spanish,
-    ...spanishVerbs,
-    moods: { indicative: 'indicativo', subjunctive: 'subjuntivo', imperative: 'imperativo', forms: 'formas' },
-    imperativeKinds: [['afirmativo', 'Afirmativo', 'do it'], ['negativo', 'Negativo', "don't do it"]],
-    imperativePersons: [['tu', 'tú'], ['usted', 'usted'], ['nosotros', 'nosotros'], ['vosotros', 'vosotros'], ['ustedes', 'ustedes']],
-    indicativeSimple: [
-      ['presente', 'Presente', 'present'],
-      ['preterito', 'Pretérito perfecto simple', 'preterite'],
-      ['imperfecto', 'Pretérito imperfecto', 'imperfect'],
-      ['futuro', 'Futuro simple', 'future'],
-      ['condicional', 'Condicional simple', 'conditional'],
-    ],
-    indicativeCompound: [
-      ['preteritoPerfecto', 'Pretérito perfecto compuesto', 'present perfect'],
-      ['pluscuamperfecto', 'Pretérito pluscuamperfecto', 'past perfect'],
-      ['preteritoAnterior', 'Pretérito anterior', 'past anterior'],
-      ['futuroPerfecto', 'Futuro compuesto', 'future perfect'],
-      ['condicionalPerfecto', 'Condicional compuesto', 'conditional perfect'],
-    ],
-    subjunctiveSimple: [
-      ['presente', 'Presente', 'present'],
-      ['imperfectoRa', 'Pretérito imperfecto', 'imperfect · -ra'],
-      ['imperfectoSe', 'Pretérito imperfecto', 'imperfect · -se'],
-      ['futuro', 'Futuro simple', 'future · rare'],
-    ],
-    subjunctiveCompound: [
-      ['perfecto', 'Pretérito perfecto compuesto', 'present perfect'],
-      ['pluscuamperfectoRa', 'Pretérito pluscuamperfecto', 'past perfect · -ra'],
-      ['pluscuamperfectoSe', 'Pretérito pluscuamperfecto', 'past perfect · -se'],
-      ['futuroPerfecto', 'Futuro compuesto', 'future perfect · rare'],
-    ],
-    nonFinite: [
-      ['conjugator.gerund', 'gerundio'],
-      ['conjugator.participle', 'participio'],
-      ['conjugator.compoundInf', 'infinitivoCompuesto'],
-      ['conjugator.compoundGer', 'gerundioCompuesto'],
-    ],
-    stemChangeLabels: {
-      'e:ie': 'e → ie',
-      'o:ue': 'o → ue',
-      'e:i': 'e → i',
-      'u:ue': 'u → ue',
-      'i:ie': 'i → ie',
-      'o:hue': 'o → hue',
-      'i:í': 'i → í',
-      'u:ú': 'u → ú',
-      uir: 'inserta y',
-    },
-    // The RAE publishes its own tables; the local ones are merged under them.
-    authoritative: true,
-  },
-
-  fr: {
-    ...french,
-    ...frenchVerbs,
-    moods: { indicative: 'indicatif', subjunctive: 'subjonctif', imperative: 'imperatif', forms: 'formes' },
-    imperativeKinds: [['affirmatif', 'Affirmatif', 'do it'], ['negatif', 'Négatif', "don't do it"]],
-    imperativePersons: [['tu', 'tu'], ['nous', 'nous'], ['vous', 'vous']],
-    indicativeSimple: [
-      ['present', 'Présent', 'present'],
-      ['imparfait', 'Imparfait', 'imperfect'],
-      ['passeSimple', 'Passé simple', 'past historic · literary'],
-      ['futur', 'Futur simple', 'future'],
-      ['conditionnel', 'Conditionnel présent', 'conditional'],
-    ],
-    indicativeCompound: [
-      ['passeCompose', 'Passé composé', 'present perfect'],
-      ['plusQueParfait', 'Plus-que-parfait', 'past perfect'],
-      ['passeAnterieur', 'Passé antérieur', 'past anterior · literary'],
-      ['futurAnterieur', 'Futur antérieur', 'future perfect'],
-      ['conditionnelPasse', 'Conditionnel passé', 'conditional perfect'],
-    ],
-    subjunctiveSimple: [
-      ['present', 'Présent', 'present'],
-      ['imparfait', 'Imparfait', 'imperfect · literary'],
-    ],
-    subjunctiveCompound: [
-      ['passe', 'Passé', 'present perfect'],
-      ['plusQueParfait', 'Plus-que-parfait', 'past perfect · literary'],
-    ],
-    nonFinite: [
-      ['conjugator.gerund', 'participePresent'],
-      ['conjugator.participle', 'participePasse'],
-      ['conjugator.compoundInf', 'infinitifPasse'],
-      ['conjugator.compoundGer', 'participeCompose'],
-    ],
-    stemChangeLabels: {
-      'e→è': 'e → è',
-      'é→è': 'é → è',
-      'y→i': 'y → i',
-      double: 'consonne doublée',
-    },
-    // There is no French authority with an API to merge in — see
-    // server/dictionary-fr.js — so the local engine is the table.
-    authoritative: false,
-  },
-
   la: {
     ...latin,
     ...latinVerbs,
@@ -164,7 +61,6 @@ export const ENGINES = {
       ['conjugator.compoundGer', 'supinum'],
     ],
     stemChangeLabels: {},
-    authoritative: false,
     // A Latin verb is conjugated from its principal parts, so the tabs and the
     // search index carry all of them rather than just the first.
     modelInput: (model) => model.parts ?? model.verb,
@@ -172,7 +68,7 @@ export const ENGINES = {
   },
 };
 
-const engine = () => ENGINES[studyLang()];
+const engine = () => ENGINES.la;
 
 export function renderConjugator(main) {
   const {
@@ -314,29 +210,20 @@ export function renderConjugator(main) {
 
     paint(result);
 
-    // Keep the URL on the verb being shown, so the page can be linked to,
-    // refreshed and shared — which is what the chat's "full table" link needs.
+    /**
+     * Keep the URL on the verb being shown, so the page can be linked to,
+     * refreshed and shared — which is what the chat's "full table" link needs.
+     *
+     * The principal parts, not the lemma. This wrote back `?v=capio` after
+     * conjugating *capio, capere, cepi, captus* perfectly well, so the address
+     * bar ended up holding the one thing this page refuses: reloading it
+     * answered "a Latin verb cannot be conjugated without its principal parts"
+     * about the verb that had just been on screen.
+     */
     const url = new URL(window.location.href);
-    url.searchParams.set('v', result.verb);
+    url.searchParams.set('v', result.principalParts || result.verb);
     history.replaceState({}, '', url.pathname + url.search);
 
-    if (!engine().authoritative) return;
-
-    // RAE's own table is authoritative when it has one; merge it in on arrival.
-    const ticket = (state.request += 1);
-    try {
-      const rae = await getJson(`/api/verbs/conjugations?verb=${encodeURIComponent(result.verb)}`);
-      if (ticket !== state.request) return;
-      paint({
-        ...result,
-        table: merge(result.table, rae.table, PERSONS),
-        source: 'rae',
-        definition: rae.definition,
-        voseo: rae.table.indicativo.presente?.voseo,
-      });
-    } catch {
-      /* offline, rate-limited, or not in the DLE — the local table stands. */
-    }
   }
 
   function paint(result) {
@@ -365,48 +252,8 @@ export function renderConjugator(main) {
 
 // ---------------------------------------------------------------------------
 
-/**
- * RAE forms win cell by cell. RAE gives no nosotros imperative and no negative
- * imperative, so both are rebuilt from the merged present subjunctive.
- *
- * Spanish only: the French side has no authority to merge, because no French
- * française publishes no API.
- */
-function merge(local, rae, PERSONS) {
-  const out = structuredClone(local);
-
-  for (const mood of ['indicativo', 'subjuntivo']) {
-    for (const [tense, forms] of Object.entries(rae[mood] ?? {})) {
-      if (!out[mood][tense]) continue;
-      for (const person of PERSONS) {
-        if (forms[person]) out[mood][tense][person] = forms[person];
-      }
-    }
-  }
-
-  for (const [person, form] of Object.entries(rae.imperativo?.afirmativo ?? {})) {
-    if (form && person in out.imperativo.afirmativo) out.imperativo.afirmativo[person] = form;
-  }
-
-  for (const [name, form] of Object.entries(rae.formas ?? {})) {
-    if (form && name in out.formas) out.formas[name] = form;
-  }
-
-  const subjunctive = out.subjuntivo.presente;
-  if (out.imperativo.afirmativo.nosotros) out.imperativo.afirmativo.nosotros = subjunctive.nosotros;
-  out.imperativo.negativo = {
-    tu: `no ${subjunctive.tu}`,
-    usted: `no ${subjunctive.el}`,
-    nosotros: `no ${subjunctive.nosotros}`,
-    vosotros: `no ${subjunctive.vosotros}`,
-    ustedes: `no ${subjunctive.ellos}`,
-  };
-
-  return out;
-}
-
 function verbCard(result, glosses) {
-  const { moods, nonFinite, stemChangeLabels, authoritative } = engine();
+  const { moods, nonFinite, stemChangeLabels } = engine();
   const gloss = glosses.get(result.verb);
   const tags = [];
 
@@ -423,14 +270,6 @@ function verbCard(result, glosses) {
   }
   if (result.flags.ortho) tags.push(el('span', { class: 'chip' }, t('conjugator.spelling', { change: result.flags.ortho })));
   if (result.flags.derivedFrom) tags.push(el('span', { class: 'chip' }, t('conjugator.likeVerb', { verb: result.flags.derivedFrom })));
-  if (result.pronominal) tags.push(el('span', { class: 'chip' }, t('conjugator.pronominal')));
-  if (result.voseo) tags.push(el('span', { class: 'chip' }, t('conjugator.voseo', { form: result.voseo.tu })));
-  // Which auxiliary a French verb takes is half of learning its compound
-  // tenses, so it earns a chip of its own.
-  if (result.auxiliary) tags.push(el('span', { class: 'chip chip--es' }, t('conjugator.auxiliary', { aux: result.auxiliary })));
-  if (authoritative || result.source === 'rae') {
-    tags.push(el('span', { class: 'chip' }, result.source === 'rae' ? t('conjugator.fromRae') : t('conjugator.generated')));
-  }
 
   const forms = result.table[moods.forms];
   return el('div', { class: 'verbcard' },
@@ -439,7 +278,7 @@ function verbCard(result, glosses) {
       el('p', { class: 'verbcard__gloss' }, result.definition || (gloss ? `“${gloss}”` : t('conjugator.fullTable'))),
       el('div', { class: 'verbcard__tags' }, tags)),
     el('div', { class: 'verbcard__forms' },
-      ...nonFinite.map(([label, key]) => formRow(t(label), forms[key] || '—'))));
+      ...nonFinite.map(([label, key]) => formRow(t(label), forms[key] || ','))));
 }
 
 function formRow(label, value) {
@@ -502,7 +341,7 @@ function tenseTable(tenses, rows, moodKey, marks, caption, { PERSONS, PERSON_LAB
       const value = forms[person];
       tr.appendChild(el('td', {
         class: [value ? '' : 'is-empty', marks.has(`${moodKey}.${key}.${person}`) ? 'is-irregular' : ''].filter(Boolean).join(' '),
-      }, value || '—'));
+      }, value || ','));
     }
     body.appendChild(tr);
   }
@@ -525,7 +364,7 @@ function imperativeTable(imperative, marks) {
       const value = imperative[kind]?.[person];
       tr.appendChild(el('td', {
         class: [value ? '' : 'is-empty', marks.has(`${moods.imperative}.${kind}.${person}`) ? 'is-irregular' : ''].filter(Boolean).join(' '),
-      }, value || '—'));
+      }, value || ','));
     }
     body.appendChild(tr);
   }

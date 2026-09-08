@@ -39,14 +39,12 @@
   --net-line-warm: 77, 141, 255;
   --net-dot: 180, 186, 198;
   --net-dot-warm: 77, 141, 255;
-  --hero-scrim: rgba(11, 12, 15, 0.62);
+  --hero-scrim: rgba(11, 12, 15, 0.46);
   --wallpaper-strength: 1;
-  --wallpaper-scrim: rgba(11, 12, 15, 0.55);
+  --wallpaper-scrim: rgba(11, 12, 15, 0.38);
+  /* The chat is long-form text over the busiest part of the photograph, so it
+     keeps a heavy scrim even where the hero has lightened. */
   --wallpaper-scrim-strong: rgba(11, 12, 15, 0.88);
-
-  --tape-fill: rgba(255, 255, 255, 0.1);
-  --tape-edge: rgba(255, 255, 255, 0.32);
-  --tape-shade: rgba(0, 0, 0, 0.28);
 
   color-scheme: dark;
 }
@@ -76,12 +74,8 @@
   --net-dot-warm: 29, 95, 208;
   --hero-scrim: rgba(244, 241, 234, 0.66);
   --wallpaper-strength: 1;
-  --wallpaper-scrim: rgba(244, 241, 234, 0.72);
+  --wallpaper-scrim: rgba(244, 241, 234, 0.56);
   --wallpaper-scrim-strong: rgba(244, 241, 234, 0.92);
-
-  --tape-fill: rgba(255, 255, 255, 0.34);
-  --tape-edge: rgba(255, 255, 255, 0.8);
-  --tape-shade: rgba(90, 74, 54, 0.16);
 
   color-scheme: light;
 }
@@ -164,8 +158,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
   /* Two declarations, not a custom property: an unparsable image-set() here is
      simply dropped and the plain url() above it stands. Inside a var() it would
      instead compute to nothing and the photo would disappear entirely. */
-  background-image: url("/assets/madrid-night.jpg");
-  background-image: image-set(url("/assets/madrid-night.webp") type("image/webp"), url("/assets/madrid-night.jpg") type("image/jpeg"));
+  background-image: url("/assets/rome-night.jpg");
+  background-image: image-set(url("/assets/rome-night.webp") type("image/webp"), url("/assets/rome-night.jpg") type("image/jpeg"));
   background-position: center 45%;
   background-size: cover;
   background-repeat: no-repeat;
@@ -174,44 +168,14 @@ button, input, textarea, select { font: inherit; color: inherit; }
   will-change: transform;
 }
 
-/* Keeps the text in front readable over the photograph, in either palette. */
+/* Rome, at night in the dark palette and by day in the light one. */
 :root[data-theme="light"] .wallpaper__photo {
-  background-image: url("/assets/madrid-day.jpg");
-  background-image: image-set(url("/assets/madrid-day.webp") type("image/webp"), url("/assets/madrid-day.jpg") type("image/jpeg"));
-}
-
-/*
- * One photograph per subject, per palette. Madrid for Spanish, Paris for
- * French, Rome for Latin — the city the language belongs to, at night in the
- * dark palette and by day in the light one.
- *
- * Order matters as much as specificity here. A subject rule has the same weight
- * as the light-mode rule above, so it has to come after it; and each subject's
- * light rule carries one attribute more, so it wins over its own dark one
- * whichever way round they are written.
- */
-:root[data-study="fr"] .wallpaper__photo {
-  background-image: url("/assets/paris-night.jpg");
-  background-image: image-set(url("/assets/paris-night.webp") type("image/webp"), url("/assets/paris-night.jpg") type("image/jpeg"));
-}
-:root[data-study="fr"][data-theme="light"] .wallpaper__photo {
-  background-image: url("/assets/paris-day.jpg");
-  background-image: image-set(url("/assets/paris-day.webp") type("image/webp"), url("/assets/paris-day.jpg") type("image/jpeg"));
-}
-
-:root[data-study="la"] .wallpaper__photo {
-  background-image: url("/assets/rome-night.jpg");
-  background-image: image-set(url("/assets/rome-night.webp") type("image/webp"), url("/assets/rome-night.jpg") type("image/jpeg"));
-}
-:root[data-study="la"][data-theme="light"] .wallpaper__photo {
   background-image: url("/assets/rome-day.jpg");
   background-image: image-set(url("/assets/rome-day.webp") type("image/webp"), url("/assets/rome-day.jpg") type("image/jpeg"));
 }
 
 .wallpaper__scrim { position: absolute; inset: 0; background: var(--wallpaper-scrim); }
 
-/* The chat is long-form text over the busiest part of the photograph, so it
-   gets a heavier scrim than a page header does. */
 .wallpaper--strong .wallpaper__scrim { background: var(--wallpaper-scrim-strong); }
 
 .hero, .translator, .finder, .features, .page, .footer { position: relative; z-index: 1; }
@@ -226,7 +190,6 @@ button, input, textarea, select { font: inherit; color: inherit; }
 :root[data-theme="light"] .msg__body strong { color: #000; }
 :root[data-theme="light"] .notice { border-color: #c9a94e; background: #fdf6e0; color: #6d5410; }
 :root[data-theme="light"] .parses__alarm { border-color: #c9a94e; background: #fdf6e0; color: #6d5410; }
-:root[data-theme="light"] .output--unreliable { text-decoration-color: #c9a94e; }
 :root[data-theme="light"] .notice code { background: #f0e5c4; }
 
 /* --- nav ------------------------------------------------------------------ */
@@ -248,22 +211,6 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 /* Sits where the accent square used to, boxed like the theme and language
    controls so the header reads as one row of switches. */
-.nav__lock {
-  position: relative;
-  flex: none;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid var(--line-hi);
-  background: transparent;
-  color: var(--text-dim);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-.nav__lock:hover { color: var(--text); border-color: var(--text-dim); background: var(--panel-hi); }
-.nav__lock.is-locked { color: var(--accent); border-color: var(--accent); }
 
 .nav__wordmark {
   font-family: var(--sans);
@@ -480,18 +427,12 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .pane__out { flex: 1; padding: 18px; font-size: 16.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; overflow-y: auto; max-height: 460px; }
 .pane__out:empty::before { content: attr(data-placeholder); color: var(--text-faint); }
 
-.idioms { border-top: 1px solid var(--line); }
-.idioms__item { padding: 12px 18px; border-left: 2px solid var(--es); background: var(--panel-hi); }
-.idioms__pair { margin: 0; font-size: 14.5px; }
-.idioms__arrow { color: var(--text-faint); }
-.idioms__meaning { margin: 4px 0 0; font-size: 12.5px; color: var(--text-dim); }
 
 /* --- Latin: the parse under a translation ---------------------------------
    Every Latin word the translator produces is checked against Whitaker's Words
    rather than trusted, so the pane grows a reading of each one. Flat, hairline,
    monospaced grammar — it is reference matter sitting under the answer, and
    should read as a footnote rather than compete with the translation. */
-.parses-pane:not(:empty) { border-top: 1px solid var(--line); padding: 12px 18px 4px; background: var(--panel-hi); }
 .parses__head { margin: 0 0 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
 .parses__row { display: grid; grid-template-columns: minmax(84px, auto) 1fr; gap: 12px; padding: 5px 0; border-top: 1px solid var(--line); font-size: 13px; }
 .parses__row:first-of-type { border-top: 0; }
@@ -509,7 +450,6 @@ button, input, textarea, select { font: inherit; color: inherit; }
    The translation is struck through rather than hidden — a student should see
    what came back and why it was rejected. */
 .parses__alarm { margin: 0 0 10px; padding: 11px 13px; border: 1px solid #574b26; background: #1d1a12; color: #d9b05c; font-size: 12.5px; font-weight: 500; }
-.output--unreliable { color: var(--text-faint); text-decoration: line-through; text-decoration-color: #d9b05c; text-decoration-thickness: 1px; }
 
 /* A word the engine could not translate and passed through untouched. Yellow,
    the same yellow the notices use, with a dotted rule so it still reads as a
@@ -630,7 +570,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
    by the language switch (a second click offers the other subjects). Flat,
    hairline, square — it is a menu, not a popover. */
 .tabmenu { position: relative; display: inline-flex; }
-.tabmenu__caret { margin-left: 6px; opacity: 0.55; }
+.tabmenu__caret { display: inline-flex; align-items: center; margin-left: 6px; opacity: 0.6; }
+.tabmenu button.is-active .tabmenu__caret { opacity: 1; }
 .tabmenu__list {
   position: absolute;
   top: calc(100% + 4px);
@@ -645,7 +586,6 @@ button, input, textarea, select { font: inherit; color: inherit; }
   gap: 2px;
 }
 .tabmenu__title { margin: 2px 6px 6px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
-.tabmenu__title--rule { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
 
 /* The stage index, grouped by book. Twenty-eight numbers in one line says
    nothing about where a book begins; a reader revising thinks in books. */
@@ -674,8 +614,6 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .tabmenu__list button.is-active { color: var(--accent); }
 /* The language switch is at the right of the header, so its menu hangs from
    that edge rather than running off the page. */
-.tabmenu__list--right { left: auto; right: 0; }
-.langswitch .tabmenu { display: inline-flex; }
 
 /* Tables inside a grammar note or a chat reply. Lighter than the conjugation
    tables — no sticky column, no minimum width — because they sit inside prose
@@ -814,68 +752,12 @@ table.conj td.is-empty { color: var(--text-faint); }
 
 /* --- the graduation easter egg -------------------------------------------- */
 
-.ole {
-  position: fixed;
-  inset: 0;
-  z-index: 95;
-  display: grid;
-  place-items: center;
-  background: var(--wallpaper-scrim);
-  backdrop-filter: blur(10px) saturate(140%);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
-  opacity: 0;
-  transition: opacity 0.35s ease;
-  cursor: pointer;
-}
-.ole.is-open { opacity: 1; }
 
-.ole__confetti { position: absolute; inset: 0; width: 100%; height: 100%; }
 
-.ole__inner { position: relative; text-align: center; transform: scale(0.94); transition: transform 0.45s cubic-bezier(0.2, 1.2, 0.3, 1); }
-.ole.is-open .ole__inner { transform: scale(1); }
 
-.ole__word {
-  font-family: var(--sans);
-  font-weight: 800;
-  font-size: clamp(74px, 19vw, 210px);
-  letter-spacing: -0.05em;
-  line-height: 1;
-  margin: 0;
-  color: var(--accent);
-}
-.ole__sub {
-  font-family: var(--sans);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.24em;
-  font-size: clamp(12px, 2.2vw, 19px);
-  margin: 18px 0 0;
-  color: var(--text);
-}
 
 /* --- transient notice ----------------------------------------------------- */
 
-.toast {
-  position: fixed;
-  top: calc(var(--nav-h) + 14px);
-  left: 50%;
-  z-index: 80;
-  transform: translate(-50%, -14px);
-  padding: 11px 20px;
-  border: 1px solid var(--line-hi);
-  background: var(--bg-raised);
-  color: var(--text);
-  font-family: var(--sans);
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: -0.01em;
-  box-shadow: 0 16px 40px -22px rgba(0, 0, 0, 0.8);
-  opacity: 0;
-  cursor: pointer;
-  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.2, 1, 0.3, 1);
-}
-.toast.is-open { opacity: 1; transform: translate(-50%, 0); }
-.toast--warn { border-color: var(--accent); color: var(--accent); }
 
 /* --- language switch ------------------------------------------------------ */
 
@@ -898,112 +780,9 @@ table.conj td.is-empty { color: var(--text-faint); }
 .langswitch__option:hover { color: var(--text); }
 .langswitch__option.is-active { background: var(--text); color: var(--bg); }
 
-.passgate {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  left: auto;
-  z-index: 60;
-  width: 268px;
-  padding: 16px;
-  background: var(--bg-raised);
-  border: 1px solid var(--line-hi);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4);
-  text-align: left;
-}
-.passgate__title { font-family: var(--sans); font-weight: 700; text-transform: uppercase; letter-spacing: -0.02em; font-size: 13px; margin: 0 0 6px; }
-.passgate__detail { margin: 0 0 12px; font-size: 13px; color: var(--text-dim); line-height: 1.6; }
-.passgate__row { display: flex; gap: 6px; }
-.passgate__row input { flex: 1; min-width: 0; border: 1px solid var(--line-hi); background: var(--panel); padding: 7px 10px; outline: none; font-size: 13px; }
-.passgate__row input:focus { border-color: var(--accent); }
-.passgate--left { right: auto; left: var(--gap); top: var(--nav-h); }
-.passgate__error { margin: 8px 0 0; font-size: 12.5px; color: var(--bad); min-height: 15px; }
 
-.passgate__cancel { display: block; margin-top: 10px; border: 0; background: none; padding: 0; color: var(--text-faint); font-size: 12.5px; cursor: pointer; text-decoration: underline; }
-.passgate__cancel:hover { color: var(--text-dim); }
 
 .nav { position: sticky; }
-.langswitch { position: relative; }
-
-/* --- tape: seals the chat, or the whole page ------------------------------ */
-
-.chat { position: relative; }
-
-.tape {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  overflow: hidden;
-  pointer-events: auto; /* this is the blocking layer */
-}
-
-.tape__strip {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: var(--tape-length, 140%);
-  height: 132px;
-  margin: -66px 0 0 calc(var(--tape-length, 140%) / -2);
-}
-.tape__strip--a { transform: rotate(var(--tape-angle-a, 22deg)); }
-.tape__strip--b { transform: rotate(var(--tape-angle-b, -22deg)); }
-
-/* The glass itself. Scaled from 0 so the strip appears to be pulled across. */
-.tape__inner {
-  width: 100%;
-  height: 100%;
-  transform: scaleX(0);
-  transform-origin: left center;
-  background: var(--tape-fill);
-  backdrop-filter: blur(8px) saturate(150%);
-  -webkit-backdrop-filter: blur(8px) saturate(150%);
-  border-top: 1px solid var(--tape-edge);
-  border-bottom: 1px solid var(--tape-edge);
-  box-shadow: 0 10px 26px -12px var(--tape-shade), inset 0 1px 0 var(--tape-edge);
-  transition: transform 1.4s cubic-bezier(0.22, 0.68, 0.3, 1);
-}
-.tape__strip--b .tape__inner { transform-origin: right center; }
-
-.tape.is-rolling .tape__strip--a .tape__inner { transform: scaleX(1); }
-.tape.is-rolling .tape__strip--b .tape__inner { transform: scaleX(1); transition-delay: 0.42s; }
-
-.tape__card {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: min(400px, calc(100% - 48px));
-  padding: 22px 24px;
-  text-align: center;
-  background: var(--bg-raised);
-  border: 1px solid var(--line-hi);
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-.tape.is-sealed .tape__card { opacity: 1; }
-
-.tape__title { font-family: var(--sans); font-weight: 700; text-transform: uppercase; letter-spacing: -0.02em; font-size: 19px; margin: 0 0 10px; }
-.tape__detail { margin: 0; font-size: 14px; color: var(--text-dim); line-height: 1.7; }
-.tape__note { margin: 12px 0 0; font-size: 12.5px; color: var(--text-faint); }
-
-.tape__dismiss { margin-top: 18px; width: 100%; justify-content: center; }
-
-.tape__form { display: flex; gap: 6px; margin-top: 14px; }
-.tape__form input { flex: 1; min-width: 0; border: 1px solid var(--line-hi); background: var(--panel); padding: 9px 12px; outline: none; font-size: 15px; text-align: center; letter-spacing: 0.3em; }
-.tape__form input:focus { border-color: var(--accent); }
-.tape__error { margin: 8px 0 0; font-size: 13px; color: var(--bad); min-height: 16px; }
-
-/* Sealing the whole page, rather than one panel. */
-.tape--page { position: fixed; inset: 0; z-index: 90; }
-html.is-sealed, html.is-sealed body { overflow: hidden; }
-
-.quota { font-size: 12px; color: var(--text-faint); }
-.quota b { color: var(--text-dim); font-weight: 400; }
-
-@media (prefers-reduced-motion: reduce) {
-  .tape__inner { transition: none; transform: scaleX(1); }
-  .tape__card { transition: none; opacity: 1; }
-}
 
 /* --- responsive ----------------------------------------------------------- */
 
@@ -1039,6 +818,42 @@ html.is-sealed, html.is-sealed body { overflow: hidden; }
   .nav__links.is-open { display: flex; }
   .nav__links a { padding: 14px 16px; font-size: 15px; border-bottom: 1px solid var(--line); }
   .nav__links a.is-active { border-bottom-color: var(--accent); }
+
+  /*
+   * The whole nav is already a dropdown here, so a second one inside it is a
+   * drawer within a drawer. The menu's contents are simply listed instead, with
+   * its label as a heading — the same items, one tap fewer.
+   *
+   * The heading keeps the drawer's own rhythm. It was 34.75px tall in a column
+   * of 53.75px rows, which is not a heading sitting above a list — it is a row
+   * that came out short. Smaller type, same box.
+   */
+  .navmore { display: block; }
+  .navmore__button {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 53.75px;
+    padding: 14px 16px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    cursor: default;
+    pointer-events: none;
+  }
+  .navmore__button::after { display: none; }
+  .navmore__list {
+    position: static;
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+  .navmore__list[hidden] { display: block !important; }
+  .navmore__list a { padding: 14px 16px; font-size: 15px; border-bottom: 1px solid var(--line); }
+
   .nav__toggle { display: flex; }
   .verbcard__forms { min-width: 100%; }
   .translator, .finder { padding: 64px 0; }
@@ -1047,4 +862,222 @@ html.is-sealed, html.is-sealed body { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+
+/* --- the More menu in the header ------------------------------------------ */
+
+.navmore { position: relative; display: inline-flex; }
+
+/*
+ * Every declaration here matches `.nav__links a`, because this button sits in
+ * the same row as those links and has to read as one of them. `font: inherit`
+ * was not enough: it picked up the body's 16px and 1.65 line-height, so the
+ * word sat a pixel low and a size large against its neighbours, and `color:
+ * inherit` made it the wrong grey. The transparent bottom border is what puts
+ * it on the same baseline as a link that can be underlined.
+ */
+.navmore__button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  padding: 4px 0;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: inherit;
+  letter-spacing: -0.01em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+/* The chevron is drawn rather than iconified: one glyph, no request, and it
+   turns to point at the menu it opened. */
+.navmore__button::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  /*
+   * No vertical nudge. `align-items: center` already centres the 5px box on the
+   * text's line box, and the -2px that used to sit here was a guess that lifted
+   * it off centre — measurable against the text box, which runs 19.13 to 38.13
+   * while the chevron was landing at 26.6 in a 19px line whose middle is 28.6.
+   */
+  transform: rotate(45deg);
+  opacity: 0.55;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+.navmore__button[aria-expanded="true"]::after { transform: rotate(225deg); opacity: 1; }
+.navmore__button:hover { color: var(--text); }
+/* The same mark a link carries when its page is open, since the page open may
+   be one of the menu's. */
+.navmore.is-active .navmore__button { color: var(--text); border-bottom-color: var(--accent); }
+.navmore.is-active .navmore__button::after { opacity: 1; }
+
+.navmore__list {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 40;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--line-hi);
+  background: var(--bg-raised);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.navmore__list a {
+  display: block;
+  padding: 8px 10px;
+  font-size: 13.5px;
+  color: var(--text-dim);
+  text-decoration: none;
+}
+.navmore__list a:hover { background: var(--panel-hi); color: var(--text); }
+.navmore__list a.is-active { color: var(--accent); }
+
+/* --- the translator's two extra panels ------------------------------------ */
+
+.pane__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-hi);
+}
+/* Nothing to explain and nothing to report: the strip disappears rather than
+   sitting there as an empty band. */
+.pane__actions:not(:has(> *:not([hidden]))) { display: none; }
+
+.pane__model { color: var(--en); border-color: var(--en); }
+.pane__model:hover { color: var(--text); border-color: var(--text-dim); background: var(--panel-hi); }
+.pane__model:disabled { opacity: 0.6; cursor: default; }
+
+.pane__report { color: #d9b05c; border-color: #574b26; }
+.pane__report:hover { color: #f0c774; border-color: #7b6a36; }
+:root[data-theme="light"] .pane__report { color: #8a6a12; border-color: #c9a94e; }
+
+/* --- modal ---------------------------------------------------------------- */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(6vh, 24px) var(--gap) var(--gap);
+  overflow-y: auto;
+  background: rgba(6, 7, 10, 0.72);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+:root[data-theme="light"] .modal { background: rgba(28, 26, 22, 0.42); }
+.modal.is-open { opacity: 1; }
+
+.is-modal, .is-modal body { overflow: hidden; }
+
+/*
+ * Wider than the pane it came from, which is the point: the reader asked to see
+ * more, so the sentence and its grammar get room they did not have on the page.
+ */
+.modal__card {
+  width: min(680px, 100%);
+  border: 1px solid var(--line-hi);
+  background: var(--bg-raised);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  transform: translateY(-8px);
+  transition: transform 0.18s ease;
+}
+.modal.is-open .modal__card { transform: none; }
+
+.modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.modal__head h2 { margin: 0; font-size: 15px; letter-spacing: -0.01em; }
+
+.modal__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line-hi);
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.modal__close:hover { color: var(--text); border-color: var(--text-dim); background: var(--panel-hi); }
+
+.detail { padding: 16px 18px 20px; }
+
+.detail__label {
+  margin: 14px 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.detail__label:first-child { margin-top: 0; }
+.detail__text { margin: 0 0 4px; font-size: 14.5px; line-height: 1.55; }
+.detail__lead { margin: 0 0 14px; font-size: 13.5px; color: var(--text-dim); line-height: 1.6; }
+.detail__engine { margin: 10px 0 16px; font-size: 12px; color: var(--text-faint); }
+.detail__words { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.detail__words .unsure { font-family: var(--mono); font-size: 13px; }
+
+.detail__note {
+  width: 100%;
+  border: 1px solid var(--line-hi);
+  background: var(--panel);
+  color: var(--text);
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13.5px;
+  resize: vertical;
+  outline: none;
+}
+.detail__note:focus { border-color: var(--accent); }
+
+/* One row of choices, wrapping. Buttons rather than a <select>, because the
+   whole point is that reporting costs a single click. */
+.reasons { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+
+.reasons__option {
+  border: 1px solid var(--line-hi);
+  background: none;
+  color: var(--text-dim);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.reasons__option:hover { color: var(--text); border-color: var(--text-dim); }
+.reasons__option.is-picked { color: var(--bg); background: var(--text); border-color: var(--text); }
+:root[data-theme="light"] .reasons__option.is-picked { color: var(--bg-raised); }
+
+.detail__send { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.detail__result { margin: 0; font-size: 12.5px; }
+.detail__result.is-good { color: var(--good, #6fbf8f); }
+.detail__result.is-bad { color: var(--bad); }
+
+.parses__lead { margin: -4px 0 10px; font-size: 12px; color: var(--text-faint); }
+
+@media (max-width: 700px) {
+  .modal { padding: 0; }
+  .modal__card { width: 100%; min-height: 100%; border: 0; }
 }

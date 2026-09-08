@@ -1,17 +1,10 @@
 import { el, icon, ICONS, clear } from '../lib/dom.js';
 import { renderMarkdown } from '../lib/markdown.js';
-import { sealWithTape } from '../lib/tape.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
-import { EXCLAMATIONS as SPANISH_EXCLAMATIONS } from '../data/grammar.js';
-import { EXCLAMATIONS as FRENCH_EXCLAMATIONS } from '../data/grammar-fr.js';
-import { EXCLAMATIONS as LATIN_EXCLAMATIONS } from '../data/grammar-la.js';
 import { t } from '../lib/i18n.js';
-import { studyLang } from '../lib/study.js';
-import { acknowledgeQuota, ask, getState, isBusy, loadStatus, subscribe } from '../lib/chat-session.js';
-import { toast } from '../lib/toast.js';
+import { ask, getState, isBusy, loadStatus, subscribe } from '../lib/chat-session.js';
 
 /** The profe's interjections, and their French counterparts. */
-const EXCLAMATIONS = { es: SPANISH_EXCLAMATIONS, fr: FRENCH_EXCLAMATIONS, la: LATIN_EXCLAMATIONS };
 
 /**
  * The chat page is a pure view over lib/chat-session.js. It owns no
@@ -19,7 +12,6 @@ const EXCLAMATIONS = { es: SPANISH_EXCLAMATIONS, fr: FRENCH_EXCLAMATIONS, la: LA
  * cannot interrupt an answer that is still generating.
  */
 export function renderChat(main) {
-  let unseal = null;
 
   const log = el('div', { class: 'chat__log' });
   const input = el('textarea', { rows: 1, placeholder: t('chat.placeholder'), 'aria-label': t('chat.messageLabel') });
@@ -121,43 +113,7 @@ export function renderChat(main) {
 
   function updateHint(state) {
     clear(hint);
-    if (!state.enabled) {
-      hint.textContent = t('chat.groundedOnly');
-      return;
-    }
-    const { quota } = state;
-    hint.append(t('chat.withModel'));
-    hint.appendChild(el('span', { class: 'quota' },
-      t('chat.otherTopics'),
-      el('b', {}, `${quota ? quota.remaining : '—'} / ${quota ? quota.limit : '—'}`),
-      t('chat.perWindow', { minutes: quota ? quota.windowMinutes : 30 })));
-  }
-
-  const pick = (kind) => {
-    const options = (EXCLAMATIONS[studyLang()] ?? EXCLAMATIONS.es)[kind];
-    return options[Math.floor(Math.random() * options.length)];
-  };
-
-  /**
-   * Seal the page once, to say the allowance is gone. It has to be dismissible:
-   * an undismissable tape over the viewport also locks the visitor out of the
-   * conjugator and the dictionary, which cost nothing and still work.
-   */
-  function rollTape(state) {
-    if (unseal) return;
-    const minutes = state.quota?.resetAt
-      ? Math.max(1, Math.ceil((state.quota.resetAt - Date.now()) / 60000))
-      : (state.quota?.windowMinutes ?? 30);
-
-    unseal = sealWithTape(document.body, {
-      title: pick('bad'),
-      detail: t('tape.quotaDetail', { minutes }),
-      note: t('tape.quotaNote'),
-      dismiss: {
-        label: t('quota.understand'),
-        onDismiss: () => { unseal = null; acknowledgeQuota(); input.focus(); },
-      },
-    });
+    hint.textContent = state.enabled ? t('chat.withModel') : t('chat.groundedOnly');
   }
 
   function resize() {
@@ -173,22 +129,10 @@ export function renderChat(main) {
       return;
     }
 
-    // An off-topic question with nothing left behind it. The first time, and
-    // again after a burst of them, that is worth the tape; in between a passing
-    // note is enough.
-    if (kind === 'refused') {
-      paint(state);
-      resize();
-      if (state.refusal === 'tape') rollTape(state);
-      else toast(t('quota.spentShort'), { tone: 'warn' });
-      return;
-    }
-
     paint(state);
     updateHint(state);
     resize();
     scrollDown();
-    if (!state.acknowledged && state.enabled && state.quota && state.quota.remaining <= 0) rollTape(state);
   }
 
   // --- wiring --------------------------------------------------------------
@@ -200,10 +144,7 @@ export function renderChat(main) {
     resize();
     const state = getState();
     ask(text, {
-      needsKeyNote: state.enabled ? null : t('chat.needsKey', {
-        limit: state.quota?.limit ?? 5,
-        minutes: state.quota?.windowMinutes ?? 30,
-      }),
+      needsKeyNote: state.enabled ? null : t('chat.needsKey'),
     });
   }
 
@@ -222,11 +163,10 @@ export function renderChat(main) {
   updateHint(state);
   resize();
   if (!state.loaded) loadStatus();
-  else if (!state.acknowledged && state.enabled && state.quota && state.quota.remaining <= 0) rollTape(state);
 
   input.focus();
 
   // Deliberately does not abort the request: the answer finishes in the
   // background and is waiting when the visitor comes back.
-  return () => { unsubscribe(); unseal?.(); stopWallpaper(); };
+  return () => { unsubscribe(); stopWallpaper(); };
 }

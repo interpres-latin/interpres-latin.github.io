@@ -4,9 +4,8 @@ import { loadEnv, ROOT } from './env.js';
 import { chainInfo, hasProvider, providerInfo } from './llm.js';
 import { router as translate } from './routes/translate.js';
 import { router as dictionary } from './routes/dictionary.js';
-import { router as verbs } from './routes/verbs.js';
 import { router as chat } from './routes/chat.js';
-import { router as lock } from './routes/lock.js';
+import { router as report } from './routes/report.js';
 import { router as speak } from './routes/speak.js';
 
 loadEnv();
@@ -20,9 +19,8 @@ app.use(express.json({ limit: '256kb' }));
 
 app.use('/api/translate', translate);
 app.use('/api/dictionary', dictionary);
-app.use('/api/verbs', verbs);
 app.use('/api/chat', chat);
-app.use('/api/lock', lock);
+app.use('/api/report', report);
 app.use('/api/speak', speak);
 
 app.get('/api/health', (_req, res) => {
@@ -54,15 +52,17 @@ app.use((req, res, next) => {
 
 app.use((error, _req, res, _next) => {
   console.error('[server]', error);
-  res.status(error.status || 500).json({ error: error.message || 'Error interno del servidor.' });
+  res.status(error.status || 500).json({ error: error.message || 'Internal server error.' });
 });
 
 const server = app.listen(PORT, () => {
-  console.log(`ProfeGPT → http://localhost:${PORT}`);
+  console.log(`Interpres → http://localhost:${PORT}`);
   const chain = chainInfo();
   if (!chain.length) {
-    console.log('  Models: none configured — the tutor, conjugator and dictionary still work;');
-    console.log('          translation falls back to MyMemory. Set GEMINI_API_KEY for a free one.');
+    console.log('  Models: none configured — translation, the conjugator, the decliner and');
+    console.log('          the dictionary all still work, since none of them uses one. Only a');
+    console.log('          Latin question the site cannot answer itself needs a model:');
+    console.log('          set GROQ_API_KEY for a free one.');
   } else {
     chain.forEach((provider, index) => {
       const role = index === 0 ? 'Model' : ' ↳ then';

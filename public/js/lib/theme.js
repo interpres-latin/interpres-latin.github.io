@@ -11,7 +11,7 @@
 
 import { clear, icon, ICONS } from './dom.js';
 
-const KEY = 'profegpt:theme';
+const KEY = 'interpres:theme';
 
 export function currentTheme() {
   return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';

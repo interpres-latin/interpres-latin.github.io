@@ -79,18 +79,31 @@ results.push(la('the cases', { language: 'la', force: true }).then((result) => {
   ok('and force cannot make it answer in Latin', result.language === 'en', result.language);
 }));
 
-// --- out of scope ----------------------------------------------------------
+// --- what the tutor cannot ground -----------------------------------------
+//
+// It says so and stops being confident, and that is all it does. There was a
+// topic gate here — anything that did not look like a Latin question was
+// refused outright — and it is gone: the site is for one person, not a class,
+// so an ungrounded question goes to the model rather than being turned away.
 results.push(la('who won the world cup in 1998').then((result) => {
   ok('declines what it cannot ground', result.confident === false);
   ok('and says so', /outside what I cover/i.test(text(result.blocks)));
+  ok('without judging the topic', result.scope === undefined, String(result.scope));
+}));
+results.push(la('can you recommend a good pizza restaurant nearby').then((result) => {
+  ok('an everyday question is not refused on its subject', result.scope === undefined, String(result.scope));
+  ok('only reported as ungrounded', result.confident === false);
+}));
+results.push(la('why is latin no longer spoken anywhere').then((result) => {
+  ok('and so is an ungrounded Latin one', result.confident === false);
+  ok('with no scope attached either', result.scope === undefined, String(result.scope));
 }));
 
-// --- the packs stay apart --------------------------------------------------
-results.push(answer('ser y estar', { study: 'es' }).then((result) => {
-  ok('Spanish still answers its own questions', result.confident);
-}));
+// What it *can* ground is unchanged, which is the half that matters: a topic
+// gate coming off must not quietly send groundable questions to a model.
 results.push(la('ser y estar').then((result) => {
-  ok('and Latin mode does not', result.confident === false, text(result.blocks).slice(0, 100));
+  ok('a question about another language is still not grounded', result.confident === false,
+    text(result.blocks).slice(0, 100));
 }));
 
 // --- "to see in Latin": a vocabulary question with no verb asking for one --

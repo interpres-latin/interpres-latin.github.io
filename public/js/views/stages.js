@@ -4,17 +4,17 @@
  * The Cambridge Latin Course teaches in numbered stages, and a student revises
  * by stage. Type a number and the whole list comes up.
  *
- * The provenance note is on the page rather than buried in a comment, because
- * these lists are hand-compiled: the course publishes no vocabulary data, so
- * the Latin and its meanings are standard but the stage a word is filed under
- * is knowledge of the course rather than a copy of the book. A reader revising
- * for a test deserves to know which parts are firm. See data/stages-la.js.
+ * The lists are hand-compiled — the course publishes no vocabulary data — and
+ * every word in them is checked against Whitaker's Words. What that provenance
+ * is worth is recorded in data/stages-la.js, where somebody maintaining the
+ * lists will find it, rather than on the page, where it sat above the answer a
+ * reader came for.
  */
 
 import { el, icon, ICONS, clear, fold } from '../lib/dom.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import {
-  allWords, BOOKS, bookOf, COURSE, findStage, PROVENANCE, STAGE_NUMBERS, STAGES,
+  allWords, BOOKS, bookOf, COURSE, findStage, STAGE_NUMBERS, STAGES,
 } from '../data/stages-la.js';
 import { lang, t } from '../lib/i18n.js';
 
@@ -63,7 +63,6 @@ export function renderStages(main) {
       el('p', {}, t('stages.lead'))),
     form,
     index,
-    el('p', { class: 'notice', style: { marginTop: '18px' } }, t('stages.provenance')),
     el('div', { style: { marginTop: '26px' } }, results),
   ));
 

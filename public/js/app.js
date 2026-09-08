@@ -6,22 +6,14 @@ import { renderDeclensions } from './views/declensions.js';
 import { renderStages } from './views/stages.js';
 import { clear } from './lib/dom.js';
 import { mountThemeToggle } from './lib/theme.js';
-import { mountLanguageSwitch, restoreLock } from './lib/language-switch.js';
-import { mountSiteLock } from './lib/site-lock.js';
-import { followStudyLanguage, t } from './lib/i18n.js';
-import { studyLang } from './lib/study.js';
+import { mountLanguageSwitch } from './lib/language-switch.js';
+import { t } from './lib/i18n.js';
 
-/**
- * `only` marks a page that exists in one study language. Latin grows two the
- * modern languages have no use for — a declension table, and the course's
- * vocabulary by stage — and asking for one in Spanish falls back to the home
- * page rather than rendering something the site is not about.
- */
 const ROUTES = [
   { path: '/', nav: 'traductor', render: renderHome },
   { path: '/conjugacion', nav: 'conjugacion', render: renderConjugator },
-  { path: '/declinationes', nav: 'declinationes', render: renderDeclensions, only: 'la' },
-  { path: '/stadia', nav: 'stadia', render: renderStages, only: 'la' },
+  { path: '/declinationes', nav: 'declinationes', render: renderDeclensions },
+  { path: '/stadia', nav: 'stadia', render: renderStages },
   { path: '/diccionario', nav: 'diccionario', render: renderDictionary },
   { path: '/chat', nav: 'chat', render: renderChat },
 ];
@@ -29,11 +21,12 @@ const ROUTES = [
 const main = document.getElementById('main');
 const links = document.querySelector('.nav__links');
 const toggle = document.querySelector('.nav__toggle');
+const more = document.querySelector('.navmore');
+const moreButton = more.querySelector('.navmore__button');
+const moreList = more.querySelector('.navmore__list');
 
 mountThemeToggle(document.querySelector('.nav__theme'));
-const refreshLanguageSwitch = mountLanguageSwitch(document.querySelector('.langswitch'));
-mountSiteLock(document.querySelector('.nav__lock'));
-restoreLock();
+mountLanguageSwitch(document.querySelector('.langswitch'));
 
 const NAV_KEYS = {
   traductor: 'translator',
@@ -46,17 +39,13 @@ const NAV_KEYS = {
 
 function paintChrome() {
   for (const link of document.querySelectorAll('[data-nav]')) {
-    const only = link.dataset.only;
-    // A link to a page this language does not have is taken out of the nav
-    // entirely rather than left to lead somewhere unhelpful.
-    link.hidden = Boolean(only) && only !== studyLang();
-    if (link.hidden) continue;
     link.textContent = t(`nav.${NAV_KEYS[link.dataset.nav]}`);
   }
+  moreButton.textContent = t('nav.more');
   document.querySelector('.skip-link').textContent = t('meta.skip');
   const footer = document.querySelector('.footer p');
   clear(footer);
-  footer.append('ProfeGPT · ', t('meta.footer'), ' ');
+  footer.append('Interpres · ', t('meta.footer'), ' ');
   footer.appendChild(Object.assign(document.createElement('a'), {
     href: t('meta.footerHref'), target: '_blank', rel: 'noopener', textContent: t('meta.footerDict'),
   }));
@@ -68,20 +57,35 @@ function paintChrome() {
 }
 
 let teardown = null;
-// Includes the query, so /conjugacion?v=ir re-renders when arriving from
+// Includes the query, so /conjugacion?v=rego re-renders when arriving from
 // /conjugacion — the verb lives in the query, not the path.
 let currentKey = null;
 
 function match(pathname) {
-  const found = ROUTES.find((route) => route.path === pathname);
-  if (!found) return ROUTES[0];
-  return !found.only || found.only === studyLang() ? found : ROUTES[0];
+  return ROUTES.find((route) => route.path === pathname) || ROUTES[0];
 }
 
-function markActive(nav) {
+/**
+ * Which nav item is lit.
+ *
+ * The home page holds two things — the hero and the translator — so being on
+ * "/" is not the same as being at the translator. At the top of the page
+ * nothing is lit; the translator lights up when its anchor is the one you are
+ * at. Every other page is a page, and lights its own link.
+ */
+function markActive(nav, hash = window.location.hash) {
+  const lit = nav === 'traductor' && !hash ? '' : nav;
   for (const link of document.querySelectorAll('[data-nav]')) {
-    link.classList.toggle('is-active', link.dataset.nav === nav);
+    link.classList.toggle('is-active', link.dataset.nav === lit);
   }
+  // A page reached from the menu still has to look reached, so the button
+  // carries the active mark on behalf of whatever is open inside it.
+  more.classList.toggle('is-active', Boolean(moreList.querySelector(`[data-nav="${lit}"]`)));
+}
+
+function closeMore() {
+  moreList.hidden = true;
+  moreButton.setAttribute('aria-expanded', 'false');
 }
 
 function scrollToHash(hash) {
@@ -101,7 +105,9 @@ async function navigate({ replace = false } = {}) {
     if (typeof teardown === 'function') teardown();
     teardown = null;
     clear(main);
-    document.title = route.path === '/' ? t('meta.home') : `ProfeGPT · ${t(`nav.${NAV_KEYS[route.nav]}`)}`;
+    // The site is called Interpres on every page of it. A title that renames
+    // itself per section tells the reader which tab is theirs and nothing else.
+    document.title = 'Interpres';
     teardown = (await route.render(main)) || null;
     currentKey = key;
     if (!hash) window.scrollTo({ top: 0 });
@@ -122,19 +128,49 @@ function onClick(event) {
   event.preventDefault();
   links.classList.remove('is-open');
   toggle.setAttribute('aria-expanded', 'false');
+  closeMore();
 
-  const samePage = url.pathname === window.location.pathname;
+  /**
+   * The query is part of the destination, not decoration on it.
+   *
+   * Every page keeps what you are looking at in the query — `?v=rego`,
+   * `?n=rex, regis`, `?q=canem` — and this used to push only the path, so a
+   * link that carried a word arrived without it. That is what the chat's
+   * "full table" and "full entry" links are: the answer names a word and offers
+   * to open the page on it, and the page opened on nothing instead.
+   *
+   * "Same page" has to mean the query as well, for the same reason. Two links
+   * to /conjugacion with different verbs are two different destinations, and
+   * treating them as one scrolled to the top of the verb already on screen.
+   */
+  const samePage = url.pathname === window.location.pathname
+    && url.search === window.location.search;
+
   if (samePage && url.hash) {
-    history.replaceState({}, '', url.pathname + url.hash);
+    history.replaceState({}, '', url.pathname + url.search + url.hash);
+    // The hash is part of where you are, so the nav has to follow it: on the
+    // home page the translator link lights at its anchor and nowhere else.
+    markActive(match(url.pathname).nav, url.hash);
     scrollToHash(url.hash);
     return;
   }
-  if (samePage && !url.hash && !window.location.hash) {
+  /**
+   * Same page, no anchor asked for: go to the top of it.
+   *
+   * The old condition also required the *current* URL to have no hash, so
+   * clicking the wordmark from /#interpres did nothing at all: it pushed "/"
+   * with no hash, the router saw the same path and query and re-rendered
+   * nothing, and no scroll happened. Only the second click worked, by which
+   * time the hash was gone. The hash is cleared here instead.
+   */
+  if (samePage && !url.hash) {
+    if (window.location.hash) history.replaceState({}, '', url.pathname + url.search);
+    markActive(match(url.pathname).nav, '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
 
-  history.pushState({}, '', url.pathname + url.hash);
+  history.pushState({}, '', url.pathname + url.search + url.hash);
   navigate();
 }
 
@@ -150,6 +186,20 @@ toggle.addEventListener('click', () => {
   toggle.setAttribute('aria-expanded', String(open));
 });
 
+moreButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  const open = moreList.hidden;
+  moreList.hidden = !open;
+  moreButton.setAttribute('aria-expanded', String(open));
+});
+
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.navmore')) closeMore();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeMore();
+});
+
 document.addEventListener('click', onClick);
 window.addEventListener('popstate', () => navigate({ replace: true }));
 
@@ -157,28 +207,6 @@ window.addEventListener('popstate', () => navigate({ replace: true }));
 // at render time rather than bound.
 window.addEventListener('langchange', () => {
   paintChrome();
-  currentKey = null;
-  navigate({ replace: true });
-});
-
-// So does a change of *study* language — the site swapping from Spanish to
-// French replaces the strings, the tables and the dictionary behind the page,
-// which is every bit as much of a rebuild. The chrome language follows first,
-// since ES is no longer one of the options once the site is about French.
-window.addEventListener('studychange', () => {
-  // Order matters: the interface language has to settle before the switch is
-  // rebuilt, or it paints LA and EN against a language that is still ES and
-  // marks neither of them as the one you are reading.
-  followStudyLanguage();
-  refreshLanguageSwitch();
-  paintChrome();
-
-  // Drop the query as well. Every page keeps what you looked at in the URL —
-  // ?v=parler, ?q=sobremesa — and rebuilding the view would otherwise reload a
-  // French verb into the Latin conjugator. The subject changed; the search
-  // should start empty.
-  history.replaceState({}, '', window.location.pathname);
-
   currentKey = null;
   navigate({ replace: true });
 });

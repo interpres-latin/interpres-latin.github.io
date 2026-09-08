@@ -1,19 +1,15 @@
 import { el, icon, ICONS, clear, debounce, postJson } from '../lib/dom.js';
 import { startNetwork } from '../lib/network.js';
 import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
-import { pick, t } from '../lib/i18n.js';
-import { modeCommand, setStudyLang, studyLang } from '../lib/study.js';
-import { subjectAllowed } from '../lib/restriction.js';
-import { fireConfetti } from '../lib/confetti.js';
-import { toast } from '../lib/toast.js';
+import { t } from '../lib/i18n.js';
 
 /**
- * The two sides of the translator: the language the site is about, and English.
- * `--es` is the study language's marker colour whichever language that is —
- * the palette has one accent per side of the pane, not one per language.
+ * The two sides of the translator. `--es` is the study language's marker
+ * colour, kept under that name because the palette has one accent per side of
+ * the pane rather than one per language.
  */
 const LANGUAGES = () => ({
-  [studyLang()]: {
+  la: {
     label: t('translator.studyName'),
     colour: 'var(--es)',
     placeholder: 'translator.placeholderStudy',
@@ -29,9 +25,6 @@ const LANGUAGES = () => ({
 
 const MAX_CHARS = 500;
 
-/** Any capitalisation, any spacing. */
-const GRADUATION = /^\s*graduation\s*2028\s*$/i;
-
 export function renderHome(main) {
   const canvas = el('canvas', { class: 'hero__canvas', 'aria-hidden': 'true' });
   // Behind the hero and the translator both, then gone by the dictionary search.
@@ -40,22 +33,21 @@ export function renderHome(main) {
   const hero = el('section', { class: 'hero' },
     canvas,
     el('div', { class: 'hero__inner' },
-      el('p', { class: 'hero__badge' }, t('hero.badge')),
-      el('h1', { class: 'hero__title' }, 'ProfeGPT'),
+      el('h1', { class: 'hero__title' }, 'Interpres'),
       el('p', { class: 'hero__sub' }, t('hero.sub')),
       el('div', { class: 'hero__cta' },
-        el('a', { class: 'btn btn--primary', href: '/#traductor', 'data-link': '' }, t('hero.ctaTranslate')),
+        el('a', { class: 'btn btn--primary', href: '/#interpres', 'data-link': '' }, t('hero.ctaTranslate')),
         el('a', { class: 'btn', href: '/chat', 'data-link': '' }, t('hero.ctaChat')))));
 
-  const translator = el('section', { class: 'translator shell', id: 'traductor' });
+  const translator = el('section', { class: 'translator shell', id: 'interpres' });
   buildTranslator(translator);
 
   const finder = buildFinder();
 
   const features = el('section', { class: 'features shell' },
     feature('01', '/conjugacion', t('features.conjugation'), t('features.conjugationBody')),
-    feature('02', '/diccionario', t('features.dictionary'), t('features.dictionaryBody')),
-    feature('03', '/chat', t('features.chat'), t('features.chatBody')));
+    feature('02', '/declinationes', t('features.declension'), t('features.declensionBody')),
+    feature('03', '/diccionario', t('features.dictionary'), t('features.dictionaryBody')));
 
   main.append(wallpaper, hero, translator, finder, features);
 
@@ -119,49 +111,52 @@ function buildFinder() {
 
 // ---------------------------------------------------------------------------
 
-/** The one thing on this site that is not about grammar. */
-function celebrate() {
-  if (document.querySelector('.ole')) return;
-
-  const canvas = el('canvas', { class: 'ole__confetti', 'aria-hidden': 'true' });
-  const overlay = el('div', { class: 'ole', role: 'dialog', 'aria-label': '¡Olé!' },
-    canvas,
-    el('div', { class: 'ole__inner' },
-      el('p', { class: 'ole__word' }, '¡Olé!'),
-      el('p', { class: 'ole__sub' }, 'Graduación 2028')));
-
-  const close = () => { stop(); overlay.remove(); document.removeEventListener('keydown', onKey); };
+/**
+ * A dialog over the page, closed by Escape, the backdrop or its own button.
+ *
+ * Both of the translator's extra panels use it, so the focus handling and the
+ * three ways out are written once. It is a plain element rather than a
+ * <dialog>, because the page has its own scrim and card styling already and a
+ * modal dialog's backdrop cannot be themed alongside them.
+ */
+function openModal(title, body) {
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey);
+    document.documentElement.classList.remove('is-modal');
+  };
   const onKey = (event) => { if (event.key === 'Escape') close(); };
 
-  overlay.addEventListener('click', close);
-  document.addEventListener('keydown', onKey);
+  const closeButton = el('button', {
+    class: 'modal__close',
+    type: 'button',
+    'aria-label': t('translator.detailsClose'),
+    onclick: close,
+  }, icon(ICONS.close, { size: 16 }));
+
+  const card = el('div', {
+    class: 'modal__card',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-label': title,
+    onclick: (event) => event.stopPropagation(),
+  }, el('div', { class: 'modal__head' }, el('h2', {}, title), closeButton), body);
+
+  const overlay = el('div', { class: 'modal', onclick: close }, card);
+
   document.body.appendChild(overlay);
-
-  const stop = fireConfetti(canvas);
+  document.documentElement.classList.add('is-modal');
+  document.addEventListener('keydown', onKey);
   requestAnimationFrame(() => overlay.classList.add('is-open'));
-  setTimeout(close, 6000);
+  closeButton.focus();
+
+  return close;
 }
 
-/**
- * The way into the French side of the site, and back out again.
- *
- * It is typed into the translator rather than clicked in the navigation, which
- * is the whole point: the French ProfeGPT sits behind the Spanish one and is
- * found by knowing the phrase. Handled before anything is sent anywhere — this
- * is a command, not text to translate.
- */
-function switchMode(next, state, output, status) {
-  state.pending?.abort();
-  output.textContent = '';
-  status.textContent = '';
-  // setStudyLang fires studychange, which the router answers by tearing this
-  // view down and rebuilding it in the new language — which is announcement
-  // enough. The whole page changing does not need a notice on top of it.
-  setStudyLang(next);
-}
+// ---------------------------------------------------------------------------
 
 function buildTranslator(root) {
-  const state = { from: 'en', to: studyLang(), pending: null };
+  const state = { from: 'en', to: 'la', pending: null, last: null };
 
   const input = el('textarea', { spellcheck: false, maxLength: MAX_CHARS, 'aria-label': t('translator.sourceLabel') });
 
@@ -201,6 +196,40 @@ function buildTranslator(root) {
     'aria-label': t('translator.swap'),
   }, icon(ICONS.swap, { size: 18 }));
 
+  /**
+   * The grammar is behind a button.
+   *
+   * Every Latin word of the translation, with its case, used to be printed
+   * under the pane. It is the most interesting thing the site does and it was
+   * in the way of the most common thing anyone wants, which is the sentence.
+   * So it moved in here: out of sight for a reader who wants a translation, one
+   * click away for a reader who wants to know why.
+   */
+  const details = el('button', { class: 'btn btn--sm pane__detail', type: 'button', hidden: true },
+    icon(ICONS.info, { size: 13 }), t('translator.details'));
+
+  /**
+   * Shown only when a word came back that is not Latin.
+   *
+   * This used to be a strike-through over the sentence, which tells a student
+   * their translation is wrong and offers them nothing to do about it. A word
+   * the lexicon does not have is a gap, and the reader who hit it is the one
+   * who can report it. See server/routes/report.js.
+   */
+  const report = el('button', { class: 'btn btn--sm pane__report', type: 'button', hidden: true },
+    icon(ICONS.flag, { size: 13 }), t('translator.report'));
+
+  /**
+   * Ask a model, on purpose.
+   *
+   * Latin into English is parsed, and the parser is the whole answer: there is
+   * no model underneath it and no word list either. This is how a reader gets a
+   * second opinion, and it is a button rather than a fallback so that a parse
+   * failure stays visible instead of being quietly answered by something else.
+   */
+  const retranslate = el('button', { class: 'btn btn--sm pane__model', type: 'button', hidden: true },
+    icon(ICONS.swap, { size: 13 }), t('translator.retranslate'));
+
   const sourcePane = el('div', { class: 'pane pane--source' },
     el('div', { class: 'pane__bar' },
       el('span', { class: 'pane__lang' }, sourceDot, sourceLang),
@@ -208,38 +237,32 @@ function buildTranslator(root) {
     el('div', { class: 'pane__body' }, input),
     el('div', { class: 'pane__foot' }, counter, status));
 
-  const notes = el('div', { class: 'idioms' });
-  // Latin only: every word of the translation, with its case. See the comment
-  // on paintParses.
-  const parses = el('div', { class: 'parses-pane' });
-
   const targetPane = el('div', { class: 'pane' },
     el('div', { class: 'pane__bar' },
       el('span', { class: 'pane__lang' }, targetDot, targetLang),
       copy),
     el('div', { class: 'pane__body' }, output),
-    notes,
-    parses,
+    el('div', { class: 'pane__actions' }, details, retranslate, report),
     el('div', { class: 'pane__foot' }, engine, el('span', {})));
 
   /**
-   * Every Latin word of the translation, with the case it is in.
+   * A word the translator left in brackets.
    *
-   * No free engine produces reliably correct Latin — Google renders "the dog of
-   * the girl" as *canem puellae*, with the dog in the accusative — so the
-   * server parses what comes back through Whitaker's Words and corrects the
-   * head noun where the English leaves no doubt. This shows the reader the
-   * result rather than asking them to take it on trust, and flags any word that
-   * is not Latin at all.
+   * When there is no Latin for something, the sentence keeps the English word
+   * in brackets rather than dropping it out of the middle — see the glossary in
+   * server/latin-translate.js. That is the plainest "not Latin" signal there
+   * is, and it is the one that carries no flag alongside it: the parser is
+   * never asked about a bracketed token, so it reports nothing unknown.
    */
+  const BRACKETED = /\[([^\]]+)\]/g;
+
   /**
    * Write the translation out, marking the words the engine gave up on.
    *
-   * Apertium flags a word it has no entry for; those used to be silently
-   * unmarked, so a French sentence containing the English "chaîne" looked
-   * exactly as translated as the rest of it. They are the one part of the
-   * sentence the engine is telling you not to trust, so they are the one part
-   * that is coloured.
+   * The marking is a colour and a dotted rule, not a strike: it says "this word
+   * came through untouched", which is what tells the reader which words the
+   * report button is about. Striking the sentence out said "this is wrong" and
+   * left it there.
    *
    * textContent still reads back the whole sentence, so copying and the swap
    * button are unaffected.
@@ -249,10 +272,11 @@ function buildTranslator(root) {
     if (!text) return;
 
     const words = (unsure ?? []).filter(Boolean);
-    if (!words.length) { output.textContent = text; return; }
-
     const escaped = words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const pattern = new RegExp(`\\b(${escaped.join('|')})\\b`, 'giu');
+    // Bracketed words are marked too, and by the same rule: they are the words
+    // the sentence is telling you it could not translate.
+    const parts = [...escaped.map((word) => `\\b${word}\\b`), '\\[[^\\]]+\\]'];
+    const pattern = new RegExp(`(${parts.join('|')})`, 'giu');
 
     // split() with a capture group alternates plain text and matches.
     for (const [index, piece] of text.split(pattern).entries()) {
@@ -263,52 +287,266 @@ function buildTranslator(root) {
     }
   }
 
-  function paintParses(latin) {
-    clear(parses);
-    output.classList.remove('output--unreliable');
-    if (!latin?.parses?.length) return;
+  /** The words the site could not turn into Latin, or English: a report is about these. */
+  function troubleWords(data) {
+    const words = new Set((data.unsure ?? []).filter(Boolean));
+    for (const word of data.latin?.parses ?? []) {
+      if (!word.readings?.length) words.add(word.word);
+    }
+    // Coming out of Latin: a word no dictionary had a meaning for. This is the
+    // *itio* case — a real noun neither Whitaker's nor the course list holds.
+    for (const word of data.words ?? []) {
+      if (!word.known) words.add(word.word);
+    }
+    for (const [, word] of String(data.translation ?? '').matchAll(BRACKETED)) {
+      words.add(word);
+    }
+    return [...words];
+  }
 
-    // An engine that left English words behind did not translate the sentence,
-    // so the sentence stops looking like an answer.
-    output.classList.toggle('output--unreliable', latin.reliable === false);
+  /**
+   * The word-by-word breakdown, coming out of Latin.
+   *
+   * This used to *be* the translation — the pane showed "non — not · itio — ? ·
+   * magnus — big (nom. sg.) · …" and left the reader to do the assembling. Every
+   * piece of it was true and it was nearly useless to read. It is still true and
+   * still here; it is simply no longer in the way of the sentence.
+   */
+  function wordRows(words) {
+    const rows = el('div', {});
+    for (const word of words) {
+      rows.appendChild(el('div', { class: 'parses__row' },
+        el('b', {}, word.word),
+        el('span', {},
+          el('i', { class: word.known ? '' : 'unsure' }, word.known ? word.gloss : t('translator.parseUnknown')),
+          word.grammar ? el('span', { class: 'parses__grammar' }, word.grammar) : null)));
+    }
+    return rows;
+  }
 
-    for (const note of latin.notes || []) {
-      parses.appendChild(el('p', {
+  /**
+   * What the check found — and only that.
+   *
+   * The second reading is deliberately not shown. It exists to disagree: it is
+   * the one that is more often wrong, and printing a wrong sentence next to the
+   * right one invites the reader to weigh two things they have no way to weigh.
+   * What they can use is the verdict.
+   */
+  function readingRows(reading) {
+    const verdict = {
+      agreed: 'translator.readingAgreed',
+      partial: 'translator.readingPartly',
+      differs: 'translator.readingDiffers',
+      single: 'translator.readingSingle',
+    }[reading.confidence] ?? 'translator.readingDiffers';
+
+    return el('p', { class: 'detail__label' },
+      `${t('translator.readingCheck')}, ${t(verdict)}`);
+  }
+
+  /** Everything the translator knows about the sentence it just produced. */
+  function detailBody(data) {
+    const body = el('div', { class: 'detail' });
+
+    body.append(
+      el('p', { class: 'detail__label' }, t('translator.detailsSource')),
+      el('p', { class: 'detail__text' }, data.source),
+      el('p', { class: 'detail__label' }, t('translator.detailsResult')),
+      el('p', { class: 'detail__text' }, data.translation || ''),
+    );
+
+    if (data.engine) {
+      body.appendChild(el('p', { class: 'detail__engine' }, t('translator.engine', { engine: data.engine })));
+    }
+
+    // The caveat about the sentence as a whole, in the loud style: it is a
+    // remark about the translation, not about one word in it.
+    if (data.uncertain) {
+      const why = {
+        wordByWord: 'translator.wordByWord',
+        latin: 'translator.uncertainLatin',
+        readingsDiffer: 'translator.readingsDiffer',
+        readingsPartial: 'translator.readingsPartial',
+      }[data.uncertainWhy] ?? 'translator.uncertain';
+      body.appendChild(el('p', { class: 'parses__alarm' }, t(why)));
+    }
+
+    for (const note of data.latin?.notes ?? []) {
+      body.appendChild(el('p', {
         class: { case: 'parses__fixed', untranslated: 'parses__alarm' }[note.kind] || 'parses__warn',
       }, note.kind === 'case' ? `${t('translator.caseFixed')}: ${note.from} → ${note.to}. ${note.why}` : note.why));
     }
 
-    parses.appendChild(el('p', { class: 'parses__head' }, t('translator.parseTitle')));
+    /**
+     * Coming out of Latin: how the sentence was arrived at, and then the words
+     * it was arrived at from. The check goes first because it is the thing that
+     * qualifies the sentence above it.
+     */
+    if (data.reading) body.appendChild(readingRows(data.reading));
 
-    for (const word of latin.parses) {
-      const best = word.readings?.[0];
-      // Every reading of the form, not just the first. A Latin ending is
-      // routinely ambiguous — *agricolae* is genitive, dative and nominative
-      // plural at once — and showing one of the three would be telling the
-      // reader something the word does not actually say.
-      const grammar = (best?.parses ?? []).slice(0, 4).join(' · ');
-      parses.appendChild(el('div', { class: 'parses__row' },
-        el('b', {}, word.word),
-        best
-          ? el('span', {},
-            el('i', {}, best.headword),
-            grammar ? el('span', { class: 'parses__grammar' }, grammar) : null)
-          : el('span', { class: 'parses__warn' }, t('translator.parseUnknown'))));
+    if (data.words?.length) {
+      body.appendChild(el('p', { class: 'parses__head' }, t('translator.wordList')));
+      body.appendChild(wordRows(data.words));
     }
+
+    if (data.latin?.parses?.length) {
+      body.appendChild(el('p', { class: 'parses__head' }, t('translator.parseTitle')));
+      body.appendChild(el('p', { class: 'parses__lead' }, t('translator.parseLead')));
+
+      for (const word of data.latin.parses) {
+        const best = word.readings?.[0];
+        // Every reading of the form, not just the first. A Latin ending is
+        // routinely ambiguous — *agricolae* is genitive, dative and nominative
+        // plural at once — and showing one of the three would be telling the
+        // reader something the word does not actually say.
+        const grammar = (best?.parses ?? []).slice(0, 4).join(' · ');
+        body.appendChild(el('div', { class: 'parses__row' },
+          el('b', {}, word.word),
+          best
+            ? el('span', {},
+              el('i', {}, best.headword),
+              grammar ? el('span', { class: 'parses__grammar' }, grammar) : null)
+            : el('span', { class: 'parses__warn' }, t('translator.parseUnknown'))));
+      }
+    }
+
+    return body;
   }
 
-  /** Idioms are worth pointing at: the pairing is the thing being taught. */
-  function paintNotes(list) {
-    clear(notes);
-    for (const note of list || []) {
-      notes.appendChild(el('div', { class: 'idioms__item' },
-        el('p', { class: 'idioms__pair' },
-          el('span', {}, note.source),
-          el('span', { class: 'idioms__arrow' }, ' = '),
-          el('b', {}, note.target)),
-        el('p', { class: 'idioms__meaning' }, pick(note.meaning))));
-    }
+  /**
+   * The five things that can be wrong with a translation.
+   *
+   * A note box on its own gives a log nobody can sort, and it also asks the
+   * reader to write a sentence before they can complain — which most will not
+   * do. Picking one of these is a click.
+   */
+  const REASONS = [
+    ['untranslated', 'translator.reasonUntranslated'],
+    ['wrong-word', 'translator.reasonWrongWord'],
+    ['wrong-grammar', 'translator.reasonWrongGrammar'],
+    ['formatting', 'translator.reasonFormatting'],
+    ['other', 'translator.reasonOther'],
+  ];
+
+  /** The report form: what went wrong, which words, and room to say more. */
+  function reportBody(data, words) {
+    const note = el('textarea', {
+      class: 'detail__note',
+      rows: 3,
+      maxLength: 1000,
+      spellcheck: false,
+      'aria-label': t('translator.reportNote'),
+    });
+
+    const result = el('p', { class: 'detail__result' });
+    const send = el('button', { class: 'btn btn--primary btn--sm', type: 'button' }, t('translator.reportSend'));
+
+    // The first reason is pre-selected, so a reader who just wants to say "this
+    // is wrong" can press send without choosing anything.
+    let reason = words.length ? 'untranslated' : 'wrong-word';
+    const reasons = el('div', { class: 'reasons', role: 'radiogroup', 'aria-label': t('translator.reportReason') },
+      ...REASONS.map(([value, label]) => {
+        const option = el('button', {
+          class: `reasons__option${value === reason ? ' is-picked' : ''}`,
+          type: 'button',
+          role: 'radio',
+          'aria-checked': String(value === reason),
+          onclick: () => {
+            reason = value;
+            for (const other of reasons.children) {
+              const picked = other === option;
+              other.classList.toggle('is-picked', picked);
+              other.setAttribute('aria-checked', String(picked));
+            }
+          },
+        }, t(label));
+        return option;
+      }));
+
+    send.addEventListener('click', async () => {
+      send.disabled = true;
+      try {
+        await postJson('/api/report', {
+          reason,
+          source: data.source,
+          translation: data.translation,
+          from: data.from,
+          words,
+          note: note.value,
+          /**
+           * The working, not just the two sentences.
+           *
+           * "Wrong grammar" is rarely diagnosable from the input and the output
+           * alone — what went wrong is usually one word the parser misread, and
+           * that is in the breakdown. Sending it means a line in the log stands
+           * on its own instead of having to be reproduced.
+           */
+          breakdown: (data.words ?? []).map(({ word, gloss, grammar }) => (
+            `${word}, ${gloss}${grammar ? ` [${grammar}]` : ''}`
+          )),
+          check: data.reading
+            ? `${data.reading.confidence}${data.reading.verdict ? ` (${data.reading.verdict})` : ''}`
+              + `${data.reading.repaired ? ', repaired' : ''}`
+            : '',
+        });
+        result.textContent = t('translator.reportSent');
+        result.className = 'detail__result is-good';
+      } catch {
+        result.textContent = t('translator.reportFailed');
+        result.className = 'detail__result is-bad';
+        send.disabled = false;
+      }
+    });
+
+    return el('div', { class: 'detail' },
+      el('p', { class: 'detail__lead' }, t('translator.reportLead')),
+      el('p', { class: 'detail__label' }, t('translator.reportReason')),
+      reasons,
+      // Only when there are any: a sentence can be wrong with every word of it
+      // in perfectly good Latin.
+      words.length ? el('p', { class: 'detail__label' }, t('translator.notLatin', { words: words.length })) : null,
+      words.length ? el('p', { class: 'detail__words' }, ...words.map((word) => el('span', { class: 'unsure' }, word))) : null,
+      el('p', { class: 'detail__label' }, t('translator.detailsSource')),
+      el('p', { class: 'detail__text' }, data.source),
+      el('p', { class: 'detail__label' }, t('translator.detailsResult')),
+      el('p', { class: 'detail__text' }, data.translation || ''),
+      el('p', { class: 'detail__label' }, t('translator.reportNote')),
+      note,
+      el('div', { class: 'detail__send' }, send, result));
   }
+
+  retranslate.addEventListener('click', async () => {
+    if (!state.last || retranslate.disabled) return;
+    retranslate.disabled = true;
+    const label = retranslate.lastChild;
+    label.textContent = t('translator.retranslating');
+    try {
+      const data = await postJson('/api/translate', {
+        text: state.last.source, from: state.last.from, model: true,
+      });
+      paintOutput(data.translation || '', data.unsure);
+      engine.textContent = t('translator.retranslated');
+      state.last = { ...data, source: state.last.source, from: state.last.from };
+      details.hidden = !(data.words?.length || data.reading);
+      report.hidden = !data.translation;
+    } catch (error) {
+      clear(status);
+      status.append(el('span', { class: 'error' }, error.message || t('translator.retranslateFailed')));
+    } finally {
+      label.textContent = t('translator.retranslate');
+      retranslate.disabled = false;
+    }
+  });
+
+  details.addEventListener('click', () => {
+    if (!state.last) return;
+    openModal(t('translator.detailsTitle'), detailBody(state.last));
+  });
+
+  report.addEventListener('click', () => {
+    if (!state.last) return;
+    openModal(t('translator.reportTitle'), reportBody(state.last, troubleWords(state.last)));
+  });
 
   root.append(
     el('div', { class: 'translator__head' },
@@ -334,12 +572,19 @@ function buildTranslator(root) {
     output.dataset.placeholder = t(target.out);
   }
 
+  /** Nothing to explain and nothing to report until something comes back. */
+  function resetActions() {
+    state.last = null;
+    details.hidden = true;
+    report.hidden = true;
+    retranslate.hidden = true;
+  }
+
   function sync() {
     counter.textContent = `${input.value.length} / ${MAX_CHARS}`;
     if (!input.value.trim()) {
       clear(output);
-      clear(notes);
-      clear(parses);
+      resetActions();
       engine.textContent = '';
       status.textContent = t('translator.ready');
       return;
@@ -351,26 +596,6 @@ function buildTranslator(root) {
     const text = input.value.trim();
     if (!text) return;
 
-    const mode = modeCommand(text);
-    if (mode) {
-      output.textContent = '';
-      status.textContent = t('translator.ready');
-      if (mode === studyLang()) return;
-      // A teacher may have narrowed the site to one subject, and the typed
-      // command is not a way round that.
-      if (!subjectAllowed(mode)) { toast(t('mode.restricted')); return; }
-      switchMode(mode, state, output, status);
-      return;
-    }
-
-    if (GRADUATION.test(text)) {
-      celebrate();
-      output.textContent = '¡Olé!';
-      engine.textContent = '';
-      status.textContent = t('translator.done');
-      return;
-    }
-
     state.pending?.abort();
     const controller = new AbortController();
     state.pending = controller;
@@ -381,30 +606,43 @@ function buildTranslator(root) {
     try {
       const data = await postJson(
         '/api/translate',
-        { text, from: state.from, study: studyLang() },
+        { text, from: state.from },
         { signal: controller.signal },
       );
       if (controller.signal.aborted) return;
+
       paintOutput(data.translation || '', data.unsure);
-      paintNotes(data.notes);
-      paintParses(data.latin);
       engine.textContent = data.engine ? t('translator.engine', { engine: data.engine }) : '';
 
-      // A last-resort translation says so, first among the notes and in the
-      // loud style — it is a caveat about the sentence itself, not a remark
-      // about one word in it.
-      if (data.uncertain) {
-        // Latin's caveat is a different one: not "the memory disagrees with
-        // itself" but "nothing translates Latin, so read every word".
-        const why = {
-          wordByWord: 'translator.wordByWord',
-          latin: 'translator.uncertainLatin',
-        }[data.uncertainWhy] ?? 'translator.uncertain';
-        notes.prepend(el('p', { class: 'parses__alarm' }, t(why)));
-      }
+      state.last = { ...data, source: text, from: state.from };
+      details.hidden = !(data.latin?.parses?.length || data.latin?.notes?.length
+        || data.words?.length || data.reading || data.uncertain);
+      /**
+       * Offered on every translation, not only on one with a word left in
+       * brackets. Now that the sentence routes reach for a synonym rather than
+       * giving up on a word, an untranslated word is the rarest of the things
+       * that can be wrong with a translation, and it was the only one that put
+       * this button on screen.
+       */
+      report.hidden = !data.translation;
+      // Only out of Latin: into Latin there is no second engine to ask.
+      retranslate.hidden = state.from !== 'la';
+
       status.textContent = force ? t('translator.done') : t('translator.ready');
     } catch (error) {
       if (controller.signal.aborted || error.name === 'AbortError') return;
+      resetActions();
+      /**
+       * A refused parse is a failure, and the model is the way past it.
+       *
+       * Latin into English has one engine and nothing under it, so this is the
+       * only thing on screen when the parser cannot read a sentence. Hiding the
+       * button here would leave the reader with an error and no next step.
+       */
+      if (state.from === 'la') {
+        state.last = { source: text, from: state.from };
+        retranslate.hidden = false;
+      }
       clear(status);
       status.append(el('span', { class: 'error' }, error.message));
     } finally {
@@ -415,14 +653,10 @@ function buildTranslator(root) {
   /**
    * One pass, once typing pauses.
    *
-   * There were two for a while: a quick one answered by the free engines and a
-   * later one a model was allowed to answer. No model translates now, so there
-   * is nothing to defer to and the second pass was pure waste.
-   *
    * The wait is longer than it looks, and deliberately. Every pause is a
-   * different prefix and so a different cache miss, and DeepL bills by the
-   * character against a monthly allowance the whole class shares — so a beat
-   * more patience here is a lesson's worth of headroom there.
+   * different prefix and so a different cache miss, and the morphology behind
+   * the rules translator is fetched over the network — so a beat more patience
+   * here is a lesson's worth of headroom there.
    */
   const scheduleTranslate = debounce(() => translate(), 900);
 
@@ -436,6 +670,7 @@ function buildTranslator(root) {
     [state.from, state.to] = [state.to, state.from];
     input.value = previousOutput;
     output.textContent = previousOutput ? previousInput : '';
+    resetActions();
 
     paintLanguages();
     counter.textContent = `${input.value.length} / ${MAX_CHARS}`;
@@ -444,7 +679,7 @@ function buildTranslator(root) {
     input.focus();
 
     if (input.value.trim()) translate();
-    else { clear(output); clear(notes); clear(parses); engine.textContent = ''; status.textContent = t('translator.ready'); }
+    else { clear(output); engine.textContent = ''; status.textContent = t('translator.ready'); }
   });
 
   input.addEventListener('input', sync);
