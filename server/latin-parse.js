@@ -422,7 +422,30 @@ async function readAll(rawWords) {
   return words.map((word, i) => {
     const key = fold(word);
     if (PREPOSITIONS[key]) return { word, role: 'preposition', governs: PREPOSITIONS[key], english: PREPOSITION_ENGLISH[key] };
-    if (PRONOUNS[key]) return { word, role: 'pronoun', ...PRONOUNS[key], kind: 'noun', gloss: PRONOUNS[key].english };
+    /**
+     * A pronoun is a noun as far as the rest of the parse is concerned.
+     *
+     * It used to be its own kind of token with the case hanging off the token
+     * rather than sitting in a `nouns` list, and every step that assigns a role
+     * reads that list. So only the subject step ever saw a pronoun, and every
+     * pronoun object in the language was dropped: "te amo" came out as "I
+     * love". The `role` is kept because the renderer needs it (a pronoun takes
+     * no article and is never pluralised), but the reading now lives where
+     * everything else looks for it.
+     */
+    if (PRONOUNS[key]) {
+      const pronoun = PRONOUNS[key];
+      return {
+        word,
+        role: 'pronoun',
+        verbs: [],
+        adjectives: [],
+        nouns: [{
+          kind: 'noun', lemma: key, gloss: pronoun.english,
+          case: pronoun.case, number: pronoun.number, gender: '',
+        }],
+      };
+    }
     if (PARTICLES[key]) return { word, role: 'particle', english: PARTICLES[key] };
 
     const found = analyses[i];
@@ -593,13 +616,25 @@ function resolveClause(tokens) {
     }
   }
 
-  // 3. The verb has already said what number the subject is.
+  /**
+   * 3. The verb has already said who the subject is.
+   *
+   * A first or second person verb carries its own subject, and Latin writes it
+   * out only for emphasis: *sum* is "I am" and the subject is I. A noun
+   * standing in the nominative beside it is therefore not the subject but what
+   * the subject is said to be. Letting a noun take the slot read "mortuus sum"
+   * as "The dead am", with the adjective as subject and nobody doing the being.
+   *
+   * So for the first and second persons only an explicit pronoun can be the
+   * subject, and for the third the nominative noun is looked for as before.
+   */
   if (verb && !verb.reading.passive) {
     const wanted = verb.reading.number;
+    const third = verb.reading.person === '3rd';
     for (const [index, token] of tokens.entries()) {
       if (settled.has(index) || index === verb.index) continue;
-      if (token.role === 'pronoun' && token.case === 'nominative') { set(index, token, 'the subject'); break; }
-      if (token.role !== 'word') continue;
+      if (token.role !== 'word' && token.role !== 'pronoun') continue;
+      if (!third && token.role !== 'pronoun') continue;
       const reading = (token.nouns ?? []).find((r) => r.case === 'nominative' && r.number === wanted);
       if (reading) { set(index, reading, 'the subject'); break; }
     }
@@ -641,9 +676,28 @@ function resolveClause(tokens) {
     for (const [index, token] of tokens.entries()) {
       if (settled.has(index) || token.role !== 'word') continue;
       const reading = (token.adjectives ?? [])
-        .find((r) => r.case === 'nominative' && r.number === number);
+        .find((r) => r.case === 'nominative' && r.number === number)
+        // "puella sum" is "I am a girl": with *sum* and no noun subject, a
+        // nominative noun is what the subject is, not who is doing it.
+        ?? (token.nouns ?? []).find((r) => r.case === 'nominative' && r.number === number);
       if (reading) { set(index, { ...reading, complement: true }, 'what the subject is said to be'); break; }
     }
+  }
+
+  /**
+   * 3c. An adjective with no noun to agree with.
+   *
+   * "Me sanus periclitor iuvo" has *sanus*, nominative, and nothing beside it
+   * to agree with: the subject is carried by the verb. English says it as an
+   * apposition, "healthy, I help". Without this the word was simply dropped.
+   */
+  for (const [index, token] of tokens.entries()) {
+    if (settled.has(index) || token.role !== 'word' || agreed.has(index)) continue;
+    const reading = (token.adjectives ?? []).find((r) => r.case === 'nominative');
+    // An apposition, not a complement: *sum* is what takes a complement, and
+    // this clause's verb is something else. English puts it at the front,
+    // "healthy, I help you", rather than after the verb it does not belong to.
+    if (reading) set(index, { ...reading, apposition: true }, 'said of the subject');
   }
 
   /**
@@ -656,15 +710,17 @@ function resolveClause(tokens) {
    * nothing to give and the same word is a genitive: "villa agricolae" is the
    * farmer's villa.
    */
+  const nouny = (token) => token.role === 'word' || token.role === 'pronoun';
+
   const hasObject = tokens.some((token, index) => (
-    !settled.has(index) && token.role === 'word'
+    !settled.has(index) && nouny(token)
     && (token.nouns ?? []).some((r) => r.case === 'accusative')
   ));
   const dativeVerb = Boolean(verb && takesDative(verb.reading.lemma));
 
   let objectTaken = false;
   for (const [index, token] of tokens.entries()) {
-    if (settled.has(index) || token.role !== 'word') continue;
+    if (settled.has(index) || !nouny(token)) continue;
     const readings = token.nouns ?? [];
 
     const accusative = readings.find((r) => r.case === 'accusative');
@@ -692,7 +748,7 @@ function resolveClause(tokens) {
 
   // 5. A genitive follows the noun it belongs to.
   for (const [index, token] of tokens.entries()) {
-    if (settled.has(index) || token.role !== 'word') continue;
+    if (settled.has(index) || !nouny(token)) continue;
     const previous = tokens[index - 1];
     const previousIsNoun = previous
       && (settled.get(index - 1)?.kind === 'noun' || previous.role === 'pronoun'
@@ -729,7 +785,27 @@ function resolveClause(tokens) {
     if (nominative) set(index, { ...nominative[0], complement: true }, 'what the subject is said to be');
   }
 
-  return { verb, imperative, head, settled, prepositional };
+  /**
+   * Words the parse could not place.
+   *
+   * They are shown, not dropped and not refused over. Dropping them hid the
+   * failure: "me sanus periclitor iuvo" came back as "I help", three words
+   * lighter, with nothing to say anything was missing. Refusing hid it just as
+   * well, and a parser that declines whenever it is not certain declines almost
+   * everything. So the sentence is rendered as far as it goes and the leftovers
+   * are put at the end in brackets, where they are a visible bug rather than an
+   * invisible one.
+   */
+  const leftOver = tokens
+    .map((token, index) => ({ token, index }))
+    .filter(({ token, index }) => (
+      !settled.has(index) && index !== head?.index && index !== infinitiveAt
+      && token.role !== 'preposition' && token.role !== 'particle'
+      && ((token.nouns?.length ?? 0) || (token.adjectives?.length ?? 0) || (token.verbs?.length ?? 0))
+    ))
+    .map(({ token }) => token.word);
+
+  return { verb, imperative, head, settled, prepositional, leftOver };
 }
 
 /* ------------------------------------------------------------- the English */
@@ -775,15 +851,44 @@ function nounPhrase(index, tokens, settled, { article = 'the' } = {}) {
  * phrases: the order English uses, which is the order Latin does not.
  */
 function renderClause(tokens, parsed) {
-  const { verb, imperative, settled, prepositional } = parsed;
+  const { verb, imperative, settled, prepositional, leftOver } = parsed;
   const head = verb ?? imperative;
-  if (!head) return null;
+
+  /**
+   * No verb at all.
+   *
+   * A phrase rather than a sentence, or a sentence the parser could not find
+   * the verb of. Either way it says what it does know: the words in order, with
+   * what each one is. Returning nothing meant the reader saw an error where
+   * half an answer was available.
+   */
+  if (!head) {
+    const known = tokens
+      .map((token, index) => {
+        if (token.role === 'preposition' || token.role === 'particle') return token.english;
+        const reading = settled.get(index);
+        if (!reading) return null;
+        // An adjective is already inside the phrase of the noun it describes,
+        // and a genitive inside the phrase of what it belongs to. Printing them
+        // again gave "In the big house the big".
+        if (reading.describes !== undefined || reading.of !== undefined) return null;
+        return nounPhrase(index, tokens, settled);
+      })
+      .filter(Boolean);
+    const words = known.length ? known.join(' ') : tokens.map((t) => t.word).join(' ');
+    return leftOver.length ? `${words} [${leftOver.join(' ')}]` : words;
+  }
 
   const roleOf = (name) => [...settled.entries()]
     .find(([, r]) => r.why === name && r.kind !== 'adjective');
 
   const inPhrase = new Set(prepositional.map((p) => p.at));
   const pieces = [];
+
+  // An apposition stands in front of the whole clause, set off by a comma.
+  const appositions = [...settled.entries()]
+    .filter(([, r]) => r.apposition)
+    .map(([index, r]) => r.gloss || tokens[index].word);
 
   // Adverbs go between the subject and the verb, where English puts them:
   // "I very much want", not "Very much I want".
@@ -839,9 +944,15 @@ function renderClause(tokens, parsed) {
   if (infinitive) pieces.push(`to ${verbStem(infinitive.reading.gloss || tokens[infinitive.index].word)}`);
 
   // What the subject is said to be, which belongs immediately after "is".
+  // A noun there takes an article and an adjective does not: "I am a girl",
+  // "I am dead".
   for (const [index, reading] of settled.entries()) {
-    if (reading.complement) pieces.push(reading.gloss || tokens[index].word);
+    if (!reading.complement) continue;
+    pieces.push(reading.kind === 'noun'
+      ? nounPhrase(index, tokens, settled, { article: 'a' })
+      : (reading.gloss || tokens[index].word));
   }
+
 
   // Object, then the one it is done for.
   const spare = (index, reading) => !inPhrase.has(index)
@@ -882,6 +993,10 @@ function renderClause(tokens, parsed) {
     .map((t) => t.english);
 
   let sentence = pieces.filter(Boolean).join(' ').replace(/\s+,/g, ',');
+  if (appositions.length) sentence = `${appositions.join(' and ')}, ${sentence}`;
+  // Whatever could not be placed, in brackets, so it is visible rather than
+  // quietly gone.
+  if (leftOver.length) sentence += ` [${leftOver.join(' ')}]`;
   if (extras.length) sentence = `${extras.join(' ')} ${sentence}`;
   return sentence.replace(/\s{2,}/g, ' ').trim();
 }
@@ -906,15 +1021,13 @@ export async function parseLatin(text) {
     // eslint-disable-next-line no-await-in-loop
     const tokens = await readAll(words);
     const parsed = resolveClause(tokens);
-    if (!parsed.head) return null;
-
     const english = renderClause(tokens, parsed);
-    if (!english) return null;
     rendered.push(english);
 
     detail.push({
       clause,
-      verb: parsed.head.token.word,
+      verb: parsed.head?.token.word ?? '',
+      leftOver: parsed.leftOver,
       roles: [...parsed.settled.entries()].map(([index, reading]) => ({
         word: tokens[index].word,
         case: reading.case ?? '',

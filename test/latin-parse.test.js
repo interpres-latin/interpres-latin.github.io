@@ -69,9 +69,21 @@ for (const [latin, want, got] of results) {
   ok(`"${latin}"`, got.toLowerCase() === want.toLowerCase(), `want: ${want}\n    got:  ${got}`);
 }
 
-// It refuses rather than inventing: no verb, no parse.
-const noVerb = await parseLatin('in villa magna').catch(() => null);
-ok('a clause with no verb is refused', noVerb === null, JSON.stringify(noVerb));
+/**
+ * It answers rather than declining, and shows what it could not place.
+ *
+ * Refusing hid the failure as surely as dropping the words did, and a parser
+ * that declines whenever it is not certain declines nearly everything. A phrase
+ * with no verb still says what it does know.
+ */
+const noVerb = await parseLatin('in villa magna');
+ok('a phrase with no verb still answers', noVerb !== null, JSON.stringify(noVerb));
+ok('and says what it knows', /in the big house/i.test(noVerb?.text ?? ''), noVerb?.text);
+ok('without repeating the adjective', !/the big\.?$/i.test(noVerb?.text ?? ''), noVerb?.text);
+
+// Words it cannot place are shown in brackets, never dropped in silence.
+const partial = await parseLatin('me sanus periclitor iuvo');
+ok('an unplaceable word is shown, not dropped', /\[[^\]]+\]/.test(partial?.text ?? ''), partial?.text);
 
 if (failures.length) {
   console.error(`\n✗ ${failures.length} of ${checked} parser checks failed:\n`);
