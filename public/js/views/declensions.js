@@ -10,7 +10,6 @@
  */
 
 import { el, icon, ICONS, clear, debounce, getJson } from '../lib/dom.js';
-import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import {
   CASE_ORDER, declineAdjective, declineNoun, parseParts,
 } from '../lib/decliner-la.js';
@@ -65,7 +64,6 @@ export function renderDeclensions(main) {
   const state = { request: 0 };
 
   const results = el('div', {});
-  const wallpaper = wallpaperLayer({ band: true });
 
   const input = el('input', {
     type: 'search',
@@ -147,7 +145,7 @@ export function renderDeclensions(main) {
   };
   document.addEventListener('click', onOutsideTab);
 
-  main.append(wallpaper, el('div', { class: 'page shell' },
+  main.append(el('div', { class: 'page shell' },
     el('div', { class: 'page__head' },
       el('p', { class: 'eyebrow' }, t('declension.eyebrow')),
       el('h1', {}, t('declension.title')),
@@ -228,10 +226,8 @@ export function renderDeclensions(main) {
   const requested = new URLSearchParams(window.location.search).get('n');
   show(requested || MODELS[0].parts, requested ? '' : MODELS[0].gender);
 
-  const stopWallpaper = startWallpaper(wallpaper, results);
   return () => {
     document.removeEventListener('click', onOutsideTab);
-    stopWallpaper();
   };
 }
 

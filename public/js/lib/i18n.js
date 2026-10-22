@@ -35,7 +35,12 @@ function settle(value) {
   return value === 'en' || value === 'la' ? value : 'la';
 }
 
-let current = settle(read(LANG_KEY));
+/**
+ * The interface is English. The LA | EN switch was taken out with the redesign;
+ * the Latin pack is still here, so putting `settle(read(LANG_KEY))` back on
+ * this line and a switch in the header restores the choice.
+ */
+let current = 'en';
 
 export function lang() {
   return current;
@@ -91,7 +96,6 @@ const LATIN = {
     declension: latine('Declinatio', 'Declension'),
     stages: latine('Stadia', 'Stages'),
     dictionary: latine('Lexicon', 'Dictionary'),
-    chat: latine('Colloquium', 'Chat'),
     theme: latine('Mutare speciem', 'Switch theme'),
     menu: latine('Aperire indicem', 'Open menu'),
     langLabel: latine('Lingua paginae', 'Site language'),
@@ -111,10 +115,11 @@ const LATIN = {
   hero: {
     sub: latine(
       'Verte Latine et Anglice, coniuga verba, declina nomina, quaere verba in lexico, roga quaestiones.',
-      'Translate between Latin and English, conjugate verbs, decline nouns, look up words, and ask questions.',
+      'Translate between Latin and English, conjugate verbs, decline nouns and look up any word.',
     ),
-    ctaTranslate: latine('Interpretem probare', 'Try the translator'),
-    ctaChat: latine('Cum Interprete loqui', 'Talk to Interpres'),
+    title: latine('interpres|lingua latina|sine lacrimis', 'interpres|latin without|the tears'),
+    ctaTranslate: latine('Interpretem probare', 'Start translating'),
+    ctaDictionary: latine('Lexicon aperire', 'Open the dictionary'),
   },
 
   translator: {
@@ -232,6 +237,7 @@ const LATIN = {
   },
 
   features: {
+    title: latine('instrumenta', 'tools'),
     conjugation: latine('Coniugatio', 'Conjugation'),
     conjugationBody: latine(
       'Tabulae verborum: omnia tempora, modi, voces, quinque coniugationes.',
@@ -353,11 +359,16 @@ const LATIN = {
     englishWord: latine('Anglice', 'English'),
     allStages: latine('Omnia stadia', 'All stages'),
     fromStage: latine('Unde', 'From'),
+    lookUp: latine('In lexico quaerere', 'Look it up in the dictionary'),
   },
 
   dictionary: {
     eyebrow: latine('Lexicon', 'Dictionary'),
-    title: latine('Lexicon Latinum', 'Latin word dictionary'),
+    title: latine('Lexicon et stadia', 'dictionary'),
+    pageLead: latine(
+      'Ad sinistram vocabula cursus per stadia; ad dextram lexicon. Preme verbum ut id quaeras.',
+      'Course vocabulary stage by stage, with the dictionary beside it. Click any word in a stage to look it up.',
+    ),
     lead: latine(
       'Scribe formam quam in textu invenisti. Lexicon verbum principale, partes principales, et omnem lectionem formae dat.',
       'Type the form you found in the text. The dictionary gives its dictionary form, its principal parts, and every way the form can be read.',
@@ -389,36 +400,6 @@ const LATIN = {
     templateNote: latine('', ''),
     parses: latine('Formae lectiones', 'How this form reads'),
     principalParts: latine('Partes principales', 'Principal parts'),
-  },
-
-  chat: {
-    title: latine('Roga Interpretem', 'Ask Interpres'),
-    lead: latine(
-      'Roga de coniugationibus, declinationibus, verbis, translationibus, grammatica. Anglice respondet.',
-      'Ask about conjugations, declensions, words, translations and grammar. It answers in English.',
-    ),
-    placeholder: latine('Roga quod vis…', 'Ask whatever you like…'),
-    messageLabel: latine('Nuntius', 'Message'),
-    send: latine('Mittere', 'Send'),
-    you: latine('TU', 'YOU'),
-    enterHint: latine('Enter ut mittas · Shift + Enter ad novam lineam', 'Enter to send · Shift + Enter for a new line'),
-    groundedOnly: latine(
-      'Responsa ex tabulis et lexico huius paginae. Sine ulla IA.',
-      'Answers from this site’s own tables and dictionary. No AI involved.',
-    ),
-    withModel: latine(
-      'Responsa ex hac pagina; quod ipsa solvere non potest, modelo committitur.',
-      'Answered from this site; what it cannot work out itself goes to a model.',
-    ),
-    failed: latine('Respondere non potui: {error}', "I couldn't answer: {error}"),
-    starters: latine(
-      'decline rex, regis|conjugate capio|parse canem|stage 5|the ablative absolute',
-      'decline rex, regis|conjugate capio|parse canem|stage 5|the ablative absolute',
-    ),
-    needsKey: latine(
-      'Quaestiones quas ipsa pagina solvere non potest modelo egent. Adde clavem gratuitam Groq ut `GROQ_API_KEY` in .env et servitorem restitue.',
-      'Questions the site cannot answer from its own data need a model. Add a free Groq key as `GROQ_API_KEY` to your `.env` and restart the server.',
-    ),
   },
 
 };

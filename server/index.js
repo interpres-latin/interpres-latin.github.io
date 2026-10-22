@@ -4,7 +4,6 @@ import { loadEnv, ROOT } from './env.js';
 import { chainInfo, hasProvider, providerInfo } from './llm.js';
 import { router as translate } from './routes/translate.js';
 import { router as dictionary } from './routes/dictionary.js';
-import { router as chat } from './routes/chat.js';
 import { router as report } from './routes/report.js';
 import { router as speak } from './routes/speak.js';
 
@@ -19,7 +18,6 @@ app.use(express.json({ limit: '256kb' }));
 
 app.use('/api/translate', translate);
 app.use('/api/dictionary', dictionary);
-app.use('/api/chat', chat);
 app.use('/api/report', report);
 app.use('/api/speak', speak);
 
@@ -30,13 +28,13 @@ app.get('/api/health', (_req, res) => {
 /**
  * The app is a single page, so a stale module can survive in an open tab for a
  * long time — navigating between pages never re-fetches it. Code and markup
- * therefore revalidate on every load (cheap: a 304 when nothing changed), while
- * the photographs, which only change when their file does, cache hard.
+ * therefore revalidate on every load (cheap: a 304 when nothing changed), and so
+ * do the SVG illustrations, which get redrawn. Anything else in assets/ caches hard.
  */
 app.use(express.static(PUBLIC_DIR, {
   extensions: ['html'],
   setHeaders(res, filePath) {
-    if (/\.(?:html|js|css)$/.test(filePath)) {
+    if (/\.(?:html|js|css|svg)$/.test(filePath)) {
       res.setHeader('Cache-Control', 'no-cache');
     } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');

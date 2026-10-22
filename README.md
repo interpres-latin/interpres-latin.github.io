@@ -1,7 +1,7 @@
 # Interpres
 
 A Latin site: a two-way translator, complete conjugation and declension tables,
-Whitaker's Words, and a tutor that answers from the site's own data.
+and Whitaker's Words beside the Cambridge course vocabulary.
 
 ```bash
 npm install
@@ -15,20 +15,22 @@ Spanish side and a French one behind the same pages; they are gone, along with
 everything that existed only to serve them — the RAE, the Wiktionnaire, and the
 four free translation engines that could not do Latin anyway.
 
-## The five pages
+## The four pages
 
 | Route | What it does |
 | ----- | ------------ |
-| `/` | Hero with an animated node network; the **translator**, which builds its Latin from the site's own grammar rather than asking an engine; and a **dictionary search** that opens the dictionary page with your query already applied. |
+| `/` | A hero with the Colosseum; the **translator**, which builds its Latin from the site's own grammar rather than asking an engine; the three tools; and a **dictionary search** that opens the dictionary page with your query already applied. |
 | `/conjugacion` | Every tense of the indicative, subjunctive and imperative, active and passive, across the five conjugations. Tabs for the model verbs, plus a search that conjugates anything you give principal parts for. Irregular forms are highlighted. |
 | `/declinationes` | The five noun declensions and the adjectives, in every case and number. Takes a noun the way a dictionary quotes it — nominative and genitive — because the genitive is what says which declension it is. |
-| `/diccionario` | Whitaker's Words: the headword with its principal parts, and every way the form you looked up can be read. Real example sentences where a corpus has them, and a spoken pronunciation. |
-| `/chat` | The tutor. Answers about Latin from the conjugator, the decliner, Whitaker's and a set of grammar notes; anything else is turned away rather than invented. |
+| `/diccionario` | Two columns. On the left, the Cambridge Latin Course vocabulary by stage; on the right, Whitaker's Words: the headword with its principal parts, every way the form can be read, example sentences where a corpus has them, and a spoken pronunciation. Clicking a word in a stage looks it up on the right. |
 
-**Stadia** — the Cambridge Latin Course vocabulary by stage — lives in the
-**More** menu in the header rather than in the top row. More tools are coming
-and the header is the wrong place to grow one at a time; the menu is the shelf
-they go on.
+The three inner pages live in the menu behind the three-line button at the top
+right. The home page is the logo. `/stadia` (the old stages page) redirects to
+`/diccionario` with its `?s=` intact, and `/chat` to the home page.
+
+The interface is English. The Latin string pack is still in
+`public/js/lib/i18n.js`; the LA | EN switch that chose between them was removed
+with the redesign, along with the dark/light toggle and the chat.
 
 ## The translator
 
@@ -478,78 +480,12 @@ It is hand-written and unapologetically so. An idiom is by definition the thing
 a general rule gets wrong, which makes this the one place where a list is the
 right shape rather than a gap waiting to be filled.
 
-## The chat page
+## The model
 
-The tutor answers from data the site already holds — the conjugation engine, the
-decliner, Whitaker's Words, the course vocabulary, and a set of hand-written
-grammar notes. Nothing it says about the language is generated, so nothing about
-the language can be invented. The cost is that its scope is finite, and it says
-so rather than bluffing.
-
-### Two answers, not three
-
-What happens to a question depends on whether the site can ground it, and
-nothing else.
-
-**A question the site can ground** is answered immediately, from the site's own
-data, and costs nothing. Conjugations, declensions, parses, stage vocabulary,
-dictionary entries, translations, the grammar notes. This is most of what
-anybody asks a Latin site.
-
-**Anything else** goes to the model, whatever it is about.
-
-There was a third case for a while, and it is worth recording why it went. Any
-question that did not look like it was about Latin used to be turned away
-unanswered, on the reasoning that a classroom should not be handed a general
-chatbot on the school's key. This is not a classroom — it is one person's site —
-so the gate came off both ends: the browser no longer classifies the subject,
-and the system prompt no longer instructs the model to refuse.
-
-### One incidental word is not a topic
-
-Taking the gate off exposed something the gate had been hiding. Asked *"what is
-a good way to cook risotto"*, the tutor answered with a note on **the dative** —
-confidently, and without consulting the model, because it believed it had
-grounded the question.
-
-The dative's keyword list contains **"to"**, which is right: it *is* "the *to*
-or *for* case", and that is how somebody would look it up. But a single keyword
-match scored 3 and the bar for answering was 3, so one of the commonest words in
-English was carrying a topic on its own.
-
-Raising the bar is the obvious fix and the wrong one — it breaks *"what is the
-genitive"*, which is also a single keyword and is also a real question. The
-weight is what was wrong, not the threshold. Four keywords across the whole
-grammar are ordinary English — *of*, *to*, *for*, *when* — and they now score 1
-instead of 3: enough to break a tie between two topics that otherwise match
-equally, never enough to decide alone. An exact match still short-circuits to
-100, so *"the dative"* is unaffected.
-
-Measured across two dozen questions, that changed the answer to exactly five —
-risotto, the airport, dinner, the train to London, a good book to read — and to
-no grammar question at all.
-
-### No allowance
-
-There was one: five questions per browser per half hour, metered by a signed
-cookie, with tape that rolled across the chat panel when they ran out.
-
-It was there because a class of twenty-five asking a chatbot whatever they liked
-would empty a free tier by lunch, and because the school's key was paying. There
-is no class. Both reasons went with it, so the allowance did too — along with
-`server/quota.js`, the per-browser identity that fed it, `SESSION_SECRET`, and
-the tape and toast components that had nothing else to say.
-
-The trade is worth stating plainly, since nothing now caps anything. With a free
-Groq key there is nothing to spend either way. With `ANTHROPIC_API_KEY` set
-instead, the only limit is the spend limit on the account — which is where a
-limit of that kind belongs.
-
-### The model
 
 Two providers, tried in order: **Groq** (free) and then **Anthropic** (paid).
-Whichever is configured. Without any key the tutor still answers everything it
-could ground anyway, which is most of the page.
+Whichever is configured. Without any key the site still works: the translator's
+own grammar, the tables and the dictionary's definitions use no model.
 
 Gemini and OpenRouter were in this chain and are not any more.
 
@@ -706,11 +642,12 @@ shares the nominative. Read as a two-termination adjective it produces
 
 `npm test` checks 121 reference forms against the standard paradigms.
 
-### The stages page
+### The stages column
 
 The Cambridge Latin Course teaches in numbered stages and students revise by
-stage, so the page takes a number and gives you the list. Typing a word instead
-tells you which stage it came from.
+stage, so the left column of the dictionary page takes a number and gives you
+the list. Typing a word instead tells you which stage it came from, and clicking
+any word in a list looks it up in the dictionary column beside it.
 
 A stage answers to whatever you type at it: `21`, `stage 21`, the numeral `xxi`,
 or its title. The numerals are derived rather than listed, which is the fix for
@@ -739,91 +676,34 @@ it. Adding a stage is adding a key to `public/js/data/stages-la.js`; one entry i
 `['latin', 'english']`.
 ## Design
 
-**Dark and light.** The choice is stamped onto `<html data-theme>` by an inline
-script in the page head, before the first paint, so the site never flashes the
-wrong palette. It follows the system setting until you press the toggle, then
-remembers. Colours that get painted to canvas — the hero network, the wallpaper
-strength — are CSS custom properties the JS reads back, so the palette has a
-single home.
+Modelled on [investors.duolingo.com](https://investors.duolingo.com/): a white
+page, huge chunky rounded headings in one accent colour, grey body text, cards
+and buttons with a thick bottom edge that presses down when clicked. The accent
+is **Roman red** (`#d42a32`, with `#a11d24` for the pressed edge) rather than
+Duolingo green; gold and blue are the supporting colours. One theme, light.
 
-Icons are drawn sprites in `public/js/lib/dom.js`, not emoji or text glyphs:
-those render differently on every platform and the hairline ☀/☾ characters
-disappeared against the header. Solid bodies with stroked details, because an
-all-outline speaker turns to mush at the 16px they run at. Each was rendered at
-real size in both palettes before being wired in.
+**Fonts.** Duolingo's own faces, Feather Bold and DIN Round, are not free.
+**Fredoka** stands in for Feather on the big headings and **Nunito** for DIN
+Round everywhere else, both from Google Fonts.
 
-**The favicon is a temple and a translation mark in one drawing.** The pediment
-is doubled: a second temple front of the same size sits behind and up to the
-right, offset the way the two panels of a translation logo overlap. Two bare
-triangles read as a mountain range, which is what the first attempt looked like
-— the bar under the back one is what makes the pair read as two of the same
-thing, one behind the other. There is no background plate, so the silhouette is
-the icon rather than a square badge with a picture on it, and it sits on a light
-tab and a dark one alike. Three columns rather than four, and nothing narrower
-than five units in a 64 box: at 16px a column is one pixel and a gap is one
-pixel, and a fourth turns the colonnade into a grey smear. It was checked by
-rendering it at 16 and 32 and looking at the pixels, not by trusting the vector.
+**The illustrations are drawn SVGs in `public/assets/art/`**: the Colosseum in
+the hero, a legionary helmet (conjugations), a column (declensions), a sealed
+scroll (dictionary), a laurel wreath (stages), Minerva's owl in a helmet, and
+the small red Colosseum that is the logo and the favicon. They follow the
+Duolingo house style: flat shapes with no outlines, a darker shade down one
+side, a light highlight pill, and confetti around the hero. They are generated
+by `scripts/draw-art.py` rather than drawn by hand, because the Colosseum's
+arches have to follow the curve of the building. Run it again after editing.
 
-**Inter** throughout — headings uppercase at weight 700 with `letter-spacing:
--0.03em`. A system monospace is kept only for literal code inside chat replies.
-Flat colour: no gradients, no rounded corners.
-
-Between the translator and the dictionary search, a photograph fades in behind
-the page and parallaxes against the scroll: **the Colosseum at night in the dark
-palette, Rome by day in the light one.** Two photographs, each a webp with a
-jpeg fallback. Madrid and Paris went with the languages they belonged to.
-
-A theme-coloured scrim keeps the text in front readable. **It is lighter than it
-was** — the photograph was being masked to the point of being a texture rather
-than a picture, so the hero scrim came down from 0.62 to 0.46 and the wallpaper's
-from 0.55 to 0.38 (0.72 to 0.56 in the light palette). The chat keeps the heavy
-one: it is long-form text over the busiest part of the frame, which is a
-different problem.
-
-It runs behind the hero and the translator on the home page, and as a band
-behind the header on the conjugation and dictionary pages, fading out as the
-next section rises into view.
-
-Both sources are about 1024 px wide, which is well short of a modern display, so
-the photo carries a 1.5 px blur: it turns the upscaling softness into something
-that reads as depth of field instead of as a low-resolution image. **For
-genuinely higher resolution, drop a larger original into `public/assets/` under
-the same names** — nothing in the code assumes the current dimensions. This
-matters more now that the scrim is lighter: less cloth over the photograph means
-more of the photograph to see.
-
-The image is declared as a plain `url()` followed by an `image-set()`, rather
-than through a custom property. A `var()` whose value a browser cannot parse is
-invalid at computed-value time and resets to *initial* — it does not fall back
-to the previous declaration — which is how the photo silently disappeared once.
-
-The hero hands over to the translator with a soft dissolve rather than a hard
-edge: the hero is masked out over its last stretch while the wallpaper is
-already fading up underneath it.
-
-The highlight colour is blue — `#4d8dff` on the dark palette, `#1d5fd0` on the
-light one — with teal marking the English side of the translator so the two
-panes stay distinguishable.
+**The menu has no outline.** It floats on a shadow alone and closes on any press
+outside it, on Escape, or when focus tabs out of it.
 
 **The detail and report panels are one component.** Both open the same overlay,
 so the focus handling and the three ways out — Escape, the backdrop, the close
-button — are written once. It is a plain element rather than a `<dialog>`: the
-page already has its own scrim and card styling, and a modal dialog's backdrop
-cannot be themed alongside them. On a narrow screen it fills the viewport
-instead of floating in it.
+button — are written once.
 
 **A dropdown says it is one.** The second and third declension tabs carry an
-arrow, and open their menu on any click. It used to be a middle dot — a mark,
-not a signal: it said something was there without saying it opened.
-
-**The More button is a button dressed as a link.** Every declaration in its rule
-matches `.nav__links a`, and that is not laziness — it sits in the same row and
-has to read as one of them. `font: inherit` was not enough on its own: it picked
-up the body's 16px and 1.65 line-height, so the word sat a size large and a
-pixel low against its neighbours, and `color: inherit` made it the wrong grey.
-The transparent bottom border is what puts it on the same baseline as a link
-that can be underlined. Its chevron is drawn in CSS rather than iconified, and
-turns to point at the menu it opened.
+arrow, and open their menu on any click.
 
 ## Configuration
 
@@ -872,36 +752,28 @@ server/
   translate-model.js    the guards around a model that no longer translates —
                         kept, and still tested
   providers/            groq, anthropic, and the shared SSE reader
-  routes/               translate, dictionary, chat, speak, report
+  routes/               translate, dictionary, speak, report
 
 public/
-  index.html            the shell, and the pre-paint theme script
+  index.html            the shell: logo, the menu, the footer
   styles.css            every style, one file
-  js/app.js             the router, the header, the More menu
+  assets/art/           the illustrations, all SVG
+  js/app.js             the router and the menu
   js/lib/
     dom.js              el(), icon(), the sprite table, fetch helpers
-    i18n.js             the interface language: Latin or English
-    language-switch.js  LA | EN
-    theme.js            dark and light
-    wallpaper.js        the photograph, and its parallax
-    network.js          the hero's node animation
-    markdown.js         chat replies, built as nodes — never innerHTML
+    i18n.js             the interface strings (English; the Latin pack is kept)
     conjugator-la.js    the conjugation engine
     decliner-la.js      the declension engine
     latin-lookup.js     fills in a missing genitive, refuses a wrong one
-    tutor.js            the grounded tutor's routing, and the scope test
-    tutor-la.js         everything the routing needs to know about Latin
-    chat-session.js     the conversation, held outside the view
   js/data/
     verbs-la.js         model verbs and their principal parts
-    grammar-la.js       the hand-written grammar notes
     stages-la.js        the course vocabulary, by stage
-  js/views/             home, conjugator, declensions, stages, dictionary, chat
+  js/views/             home, conjugator, declensions, dictionary (with stages)
 
 test/                   offline, no network, a couple of seconds
 ```
 
-`npm test` runs all 802 checks.
+`npm test` runs all 756 checks.
 
 ```
 latin.test.js             299 on the declension and conjugation engines, the
@@ -910,14 +782,11 @@ latin-translate.test.js   105 on the two-way lexicon, the English word shapes,
                               clause splitting and the idiom table
 conjugator-view.test.js   230 that every tense the page names exists in the
                               table the engine builds
-tutor-la.test.js           49 on intent routing, the form index, and which
-                              questions are in scope and which are not
 translators.test.js        21 on engine order, the name lookup and its guards
 report.test.js             16 on what reaches the log, in what shape, and what
                               is refused before it gets there
 translate-model.test.js    27 on the guards around a model that no longer
                               translates
-markdown.test.js           20 on the renderer that never touches innerHTML
 identity.test.js            7 on the address, and on when a forwarded header
                               may be believed
 corpus.test.js             11 on how a corpus sentence is chosen
@@ -930,8 +799,8 @@ speech.test.js             17 on what may be spoken, and what is refused before
 ### Render
 
 `render.yaml` is a blueprint: point Render at the repository and it reads it.
-The service is a **web service**, not a static site — the chat, the dictionary
-and the translator's morphology lookups all need a server.
+The service is a **web service**, not a static site — the dictionary and the
+translator's morphology lookups need a server.
 
 Two things in it are not defaults and matter. **`numInstances: 1`**, because the
 dictionary caches and the report log's rate limit are held in memory and a
@@ -947,8 +816,9 @@ Nothing secret belongs in a file that is in a repository, private or not.
 
 - **The site is one page.** Every route falls through to `index.html`, so a
   refresh on `/declinationes` works, but any new route needs adding to `ROUTES`
-  in `public/js/app.js` as well as to the header.
-- **Code and markup revalidate on every load; photographs cache for a year.** A
+  in `public/js/app.js` as well as to the menu in `index.html`.
+- **Code, markup and the SVG art revalidate on every load; anything else in
+  `assets/` caches for a year.** A
   single-page app can otherwise keep a stale module alive in an open tab for
   days, because navigating between pages never re-fetches it.
 - **The morphology is a network call.** Whitaker's is reached through Alpheios,
@@ -958,7 +828,5 @@ Nothing secret belongs in a file that is in a repository, private or not.
 ## Notes
 
 The Latin is real Latin where Latin has a word for the thing, and a respectable
-coinage where it does not — *colloquium* for the chat, *stadia* for the course's
-stages. Reading the interface in Latin is a curiosity to opt into rather than
-the default behaviour of anything important, which is why the site works exactly
-the same in English.
+coinage where it does not — *stadia* for the course's stages. The interface is
+English now; the Latin pack is kept for if a switch comes back.

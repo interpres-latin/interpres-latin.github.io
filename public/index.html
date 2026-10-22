@@ -1,71 +1,60 @@
 <!doctype html>
-<html lang="la">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Interpres</title>
-  <meta name="description" content="Latin ↔ English translator, full conjugation and declension tables, Whitaker's Words and a Latin tutor." />
+  <meta name="description" content="Latin ↔ English translator, full conjugation and declension tables, and a Latin dictionary with the Cambridge course stages." />
+  <meta name="theme-color" content="#ffffff" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!--
+    Duolingo uses two in-house faces: Feather Bold for headings and DIN Round
+    for everything else. Neither is free. Fredoka is the closest open match to
+    Feather's chunky rounded letters and Nunito to DIN Round.
+  -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
-  <script>
-    // Runs before the first paint so the page never flashes the wrong palette.
-    (function () {
-      // The chrome is either Latin or English; the subject is always Latin.
-      try {
-        var l = localStorage.getItem('interpres:lang');
-        document.documentElement.lang = l === 'en' ? 'en' : 'la';
-      } catch (e) { document.documentElement.lang = 'la'; }
-      var stored = null;
-      try { stored = localStorage.getItem('interpres:theme'); } catch (e) {}
-      var system = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-      document.documentElement.dataset.theme = stored === 'light' || stored === 'dark' ? stored : system;
-    })();
-  </script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Ad contenta</a>
+  <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="nav" id="nav">
-    <a class="nav__brand" href="/" data-link>
-      <span class="nav__wordmark">Interpres</span>
-    </a>
-    <nav class="nav__links" aria-label="Index">
-      <!--
-        Hidden from the menu, not removed. The translator is still on the home
-        page at #interpres and still works; only its way in from the header is
-        off. Drop the hidden attribute to put it back.
-      -->
-      <a href="/#interpres" data-link data-nav="traductor" hidden>Interpres</a>
-      <a href="/conjugacion" data-link data-nav="conjugacion">Coniugatio</a>
-      <a href="/declinationes" data-link data-nav="declinationes">Declinatio</a>
-      <a href="/diccionario" data-link data-nav="diccionario">Lexicon</a>
-      <a href="/chat" data-link data-nav="chat">Colloquium</a>
-      <!--
-        More tools are coming, and the header is the wrong place to grow one at
-        a time. The menu is the shelf they go on; Stadia is what is on it now.
-      -->
-      <div class="navmore">
-        <button class="navmore__button" type="button" aria-expanded="false" aria-haspopup="true"></button>
-        <div class="navmore__list" role="menu" hidden>
-          <a href="/stadia" data-link data-nav="stadia" role="menuitem">Stadia</a>
-        </div>
+    <div class="nav__inner shell">
+      <a class="nav__brand" href="/" data-link aria-label="Interpres, home">
+        <img src="/assets/art/logo.svg" alt="" width="44" height="40" />
+        <span class="nav__wordmark">interpres</span>
+      </a>
+
+      <div class="menu">
+        <button class="menu__button" type="button" aria-expanded="false" aria-controls="menu-list" aria-label="Open menu">
+          <span></span><span></span><span></span>
+        </button>
+        <nav class="menu__list" id="menu-list" aria-label="Pages" hidden>
+          <a href="/conjugacion" data-link data-nav="conjugacion">
+            <img src="/assets/art/helmet.svg" alt="" width="36" height="36" /><span>Conjugations</span>
+          </a>
+          <a href="/declinationes" data-link data-nav="declinationes">
+            <img src="/assets/art/column.svg" alt="" width="36" height="36" /><span>Declensions</span>
+          </a>
+          <a href="/diccionario" data-link data-nav="diccionario">
+            <img src="/assets/art/scroll.svg" alt="" width="36" height="36" /><span>Dictionary</span>
+          </a>
+        </nav>
       </div>
-    </nav>
-    <div class="langswitch" role="group"></div>
-    <button class="nav__theme" type="button" aria-label="Mutare speciem"></button>
-    <button class="nav__toggle" type="button" aria-label="Aperire indicem" aria-expanded="false">
-      <span></span><span></span>
-    </button>
+    </div>
   </header>
 
   <main id="main"></main>
 
   <footer class="footer">
-    <p>Interpres · significationes ex <a href="https://mk270.github.io/whitakers-words/" target="_blank" rel="noopener">Whitaker’s Words</a></p>
+    <div class="shell footer__inner">
+      <span class="footer__brand">interpres</span>
+      <p>Definitions from <a href="https://mk270.github.io/whitakers-words/" target="_blank" rel="noopener">Whitaker’s Words</a> (public domain)</p>
+      <p class="footer__legal">© Yuzhe (Julian) Chen 2026</p>
+    </div>
   </footer>
 
   <script type="module" src="/js/app.js"></script>

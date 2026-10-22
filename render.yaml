@@ -1,7 +1,7 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
 #
-# Interpres is a Node server, not a static site: the chat, the dictionary and
-# the translator's morphology lookups all need one. GitHub Pages and Netlify's
+# Interpres is a Node server, not a static site: the dictionary and the
+# translator's morphology lookups need one. GitHub Pages and Netlify's
 # static hosting cannot run it.
 #
 # Two things here are not defaults and matter:

@@ -1,60 +1,28 @@
 import { renderHome } from './views/home.js';
 import { renderConjugator } from './views/conjugator.js';
 import { renderDictionary } from './views/dictionary.js';
-import { renderChat } from './views/chat.js';
 import { renderDeclensions } from './views/declensions.js';
-import { renderStages } from './views/stages.js';
 import { clear } from './lib/dom.js';
-import { mountThemeToggle } from './lib/theme.js';
-import { mountLanguageSwitch } from './lib/language-switch.js';
-import { t } from './lib/i18n.js';
 
 const ROUTES = [
   { path: '/', nav: 'traductor', render: renderHome },
   { path: '/conjugacion', nav: 'conjugacion', render: renderConjugator },
   { path: '/declinationes', nav: 'declinationes', render: renderDeclensions },
-  { path: '/stadia', nav: 'stadia', render: renderStages },
   { path: '/diccionario', nav: 'diccionario', render: renderDictionary },
-  { path: '/chat', nav: 'chat', render: renderChat },
 ];
 
+/**
+ * Old addresses that still have to land somewhere.
+ *
+ * The stages page is now the left column of the dictionary, and its query
+ * (?s=12) means the same thing there. The chat is gone; its links go home.
+ */
+const MOVED = { '/stadia': '/diccionario', '/chat': '/' };
+
 const main = document.getElementById('main');
-const links = document.querySelector('.nav__links');
-const toggle = document.querySelector('.nav__toggle');
-const more = document.querySelector('.navmore');
-const moreButton = more.querySelector('.navmore__button');
-const moreList = more.querySelector('.navmore__list');
-
-mountThemeToggle(document.querySelector('.nav__theme'));
-mountLanguageSwitch(document.querySelector('.langswitch'));
-
-const NAV_KEYS = {
-  traductor: 'translator',
-  conjugacion: 'conjugation',
-  declinationes: 'declension',
-  stadia: 'stages',
-  diccionario: 'dictionary',
-  chat: 'chat',
-};
-
-function paintChrome() {
-  for (const link of document.querySelectorAll('[data-nav]')) {
-    link.textContent = t(`nav.${NAV_KEYS[link.dataset.nav]}`);
-  }
-  moreButton.textContent = t('nav.more');
-  document.querySelector('.skip-link').textContent = t('meta.skip');
-  const footer = document.querySelector('.footer p');
-  clear(footer);
-  footer.append('Interpres · ', t('meta.footer'), ' ');
-  footer.appendChild(Object.assign(document.createElement('a'), {
-    href: t('meta.footerHref'), target: '_blank', rel: 'noopener', textContent: t('meta.footerDict'),
-  }));
-  footer.append(t('meta.footerCredit'));
-  footer.appendChild(Object.assign(document.createElement('span'), {
-    className: 'footer__legal',
-    textContent: t('meta.copyright'),
-  }));
-}
+const menu = document.querySelector('.menu');
+const menuButton = menu.querySelector('.menu__button');
+const menuList = menu.querySelector('.menu__list');
 
 let teardown = null;
 // Includes the query, so /conjugacion?v=rego re-renders when arriving from
@@ -65,28 +33,54 @@ function match(pathname) {
   return ROUTES.find((route) => route.path === pathname) || ROUTES[0];
 }
 
-/**
- * Which nav item is lit.
- *
- * The home page holds two things — the hero and the translator — so being on
- * "/" is not the same as being at the translator. At the top of the page
- * nothing is lit; the translator lights up when its anchor is the one you are
- * at. Every other page is a page, and lights its own link.
- */
-function markActive(nav, hash = window.location.hash) {
-  const lit = nav === 'traductor' && !hash ? '' : nav;
-  for (const link of document.querySelectorAll('[data-nav]')) {
-    link.classList.toggle('is-active', link.dataset.nav === lit);
+function markActive(nav) {
+  for (const link of menuList.querySelectorAll('[data-nav]')) {
+    const lit = link.dataset.nav === nav;
+    link.classList.toggle('is-active', lit);
+    if (lit) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
   }
-  // A page reached from the menu still has to look reached, so the button
-  // carries the active mark on behalf of whatever is open inside it.
-  more.classList.toggle('is-active', Boolean(moreList.querySelector(`[data-nav="${lit}"]`)));
 }
 
-function closeMore() {
-  moreList.hidden = true;
-  moreButton.setAttribute('aria-expanded', 'false');
+// --- the menu ---------------------------------------------------------------
+
+function openMenu() {
+  menuList.hidden = false;
+  menuButton.setAttribute('aria-expanded', 'true');
+  menuButton.setAttribute('aria-label', 'Close menu');
+  menu.classList.add('is-open');
 }
+
+function closeMenu() {
+  if (menuList.hidden) return;
+  menuList.hidden = true;
+  menuButton.setAttribute('aria-expanded', 'false');
+  menuButton.setAttribute('aria-label', 'Open menu');
+  menu.classList.remove('is-open');
+}
+
+menuButton.addEventListener('click', () => {
+  if (menuList.hidden) openMenu();
+  else closeMenu();
+});
+
+// Anywhere outside the menu closes it. pointerdown rather than click, so a
+// press that starts a text selection or a scroll on a phone counts too.
+document.addEventListener('pointerdown', (event) => {
+  if (!menu.contains(event.target)) closeMenu();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !menuList.hidden) {
+    closeMenu();
+    menuButton.focus();
+  }
+});
+// Tabbing out of the open menu closes it as well.
+menu.addEventListener('focusout', (event) => {
+  if (event.relatedTarget && !menu.contains(event.relatedTarget)) closeMenu();
+});
+
+// --- routing ----------------------------------------------------------------
 
 function scrollToHash(hash) {
   if (!hash) return false;
@@ -96,7 +90,12 @@ function scrollToHash(hash) {
   return true;
 }
 
-async function navigate({ replace = false } = {}) {
+async function navigate() {
+  const moved = MOVED[window.location.pathname];
+  if (moved) {
+    history.replaceState({}, '', moved + window.location.search + window.location.hash);
+  }
+
   const route = match(window.location.pathname);
   const { hash } = window.location;
 
@@ -105,8 +104,8 @@ async function navigate({ replace = false } = {}) {
     if (typeof teardown === 'function') teardown();
     teardown = null;
     clear(main);
-    // The site is called Interpres on every page of it. A title that renames
-    // itself per section tells the reader which tab is theirs and nothing else.
+    // The stylesheet hangs each page's picture off this.
+    main.dataset.page = route.nav;
     document.title = 'Interpres';
     teardown = (await route.render(main)) || null;
     currentKey = key;
@@ -126,46 +125,26 @@ function onClick(event) {
   if (url.origin !== window.location.origin) return;
 
   event.preventDefault();
-  links.classList.remove('is-open');
-  toggle.setAttribute('aria-expanded', 'false');
-  closeMore();
+  closeMenu();
 
   /**
-   * The query is part of the destination, not decoration on it.
-   *
-   * Every page keeps what you are looking at in the query — `?v=rego`,
-   * `?n=rex, regis`, `?q=canem` — and this used to push only the path, so a
-   * link that carried a word arrived without it. That is what the chat's
-   * "full table" and "full entry" links are: the answer names a word and offers
-   * to open the page on it, and the page opened on nothing instead.
-   *
-   * "Same page" has to mean the query as well, for the same reason. Two links
-   * to /conjugacion with different verbs are two different destinations, and
-   * treating them as one scrolled to the top of the verb already on screen.
+   * The query is part of the destination, not decoration on it: every page
+   * keeps what you are looking at in the query (`?v=rego`, `?n=rex, regis`,
+   * `?q=canem`), so two links to one path with different queries are two
+   * different places.
    */
   const samePage = url.pathname === window.location.pathname
     && url.search === window.location.search;
 
   if (samePage && url.hash) {
     history.replaceState({}, '', url.pathname + url.search + url.hash);
-    // The hash is part of where you are, so the nav has to follow it: on the
-    // home page the translator link lights at its anchor and nowhere else.
-    markActive(match(url.pathname).nav, url.hash);
     scrollToHash(url.hash);
     return;
   }
-  /**
-   * Same page, no anchor asked for: go to the top of it.
-   *
-   * The old condition also required the *current* URL to have no hash, so
-   * clicking the wordmark from /#interpres did nothing at all: it pushed "/"
-   * with no hash, the router saw the same path and query and re-rendered
-   * nothing, and no scroll happened. Only the second click worked, by which
-   * time the hash was gone. The hash is cleared here instead.
-   */
-  if (samePage && !url.hash) {
+  // Same page, no anchor asked for: go to the top of it, and drop any hash so
+  // the next click on the logo is not mistaken for "already there".
+  if (samePage) {
     if (window.location.hash) history.replaceState({}, '', url.pathname + url.search);
-    markActive(match(url.pathname).nav, '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
@@ -181,36 +160,7 @@ export function go(to) {
   navigate();
 }
 
-toggle.addEventListener('click', () => {
-  const open = links.classList.toggle('is-open');
-  toggle.setAttribute('aria-expanded', String(open));
-});
-
-moreButton.addEventListener('click', (event) => {
-  event.stopPropagation();
-  const open = moreList.hidden;
-  moreList.hidden = !open;
-  moreButton.setAttribute('aria-expanded', String(open));
-});
-
-document.addEventListener('click', (event) => {
-  if (!event.target.closest('.navmore')) closeMore();
-});
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') closeMore();
-});
-
 document.addEventListener('click', onClick);
-window.addEventListener('popstate', () => navigate({ replace: true }));
+window.addEventListener('popstate', () => navigate());
 
-// A language change rebuilds the current view, since every string is baked in
-// at render time rather than bound.
-window.addEventListener('langchange', () => {
-  paintChrome();
-  currentKey = null;
-  navigate({ replace: true });
-});
-
-paintChrome();
-
-navigate({ replace: true });
+navigate();

@@ -1,6 +1,4 @@
 import { el, icon, ICONS, clear, debounce, postJson } from '../lib/dom.js';
-import { startNetwork } from '../lib/network.js';
-import { startWallpaper, wallpaperLayer } from '../lib/wallpaper.js';
 import { t } from '../lib/i18n.js';
 
 /**
@@ -26,18 +24,20 @@ const LANGUAGES = () => ({
 const MAX_CHARS = 500;
 
 export function renderHome(main) {
-  const canvas = el('canvas', { class: 'hero__canvas', 'aria-hidden': 'true' });
-  // Behind the hero and the translator both, then gone by the dictionary search.
-  const wallpaper = wallpaperLayer();
+  // Three lines, each its own colour step, the way the Duolingo hero stacks.
+  const titleLines = t('hero.title').split('|');
 
-  const hero = el('section', { class: 'hero' },
-    canvas,
-    el('div', { class: 'hero__inner' },
-      el('h1', { class: 'hero__title' }, 'Interpres'),
+  const hero = el('section', { class: 'hero shell' },
+    el('div', { class: 'hero__text' },
+      el('h1', { class: 'hero__title' }, ...titleLines.map((line) => el('span', {}, line))),
       el('p', { class: 'hero__sub' }, t('hero.sub')),
       el('div', { class: 'hero__cta' },
-        el('a', { class: 'btn btn--primary', href: '/#interpres', 'data-link': '' }, t('hero.ctaTranslate')),
-        el('a', { class: 'btn', href: '/chat', 'data-link': '' }, t('hero.ctaChat')))));
+        el('a', { class: 'btn btn--primary btn--lg', href: '/#interpres', 'data-link': '' }, t('hero.ctaTranslate')),
+        el('a', { class: 'btn btn--lg', href: '/diccionario', 'data-link': '' }, t('hero.ctaDictionary')))),
+    el('div', { class: 'hero__art' },
+      el('img', {
+        src: '/assets/art/colosseum.svg', alt: '', width: 520, height: 440, decoding: 'async',
+      })));
 
   const translator = el('section', { class: 'translator shell', id: 'interpres' });
   buildTranslator(translator);
@@ -45,23 +45,21 @@ export function renderHome(main) {
   const finder = buildFinder();
 
   const features = el('section', { class: 'features shell' },
-    feature('01', '/conjugacion', t('features.conjugation'), t('features.conjugationBody')),
-    feature('02', '/declinationes', t('features.declension'), t('features.declensionBody')),
-    feature('03', '/diccionario', t('features.dictionary'), t('features.dictionaryBody')));
+    el('h2', { class: 'section__title' }, t('features.title')),
+    el('div', { class: 'features__grid' },
+      feature('/assets/art/helmet.svg', '/conjugacion', t('features.conjugation'), t('features.conjugationBody')),
+      feature('/assets/art/column.svg', '/declinationes', t('features.declension'), t('features.declensionBody')),
+      feature('/assets/art/scroll.svg', '/diccionario', t('features.dictionary'), t('features.dictionaryBody'))));
 
-  main.append(wallpaper, hero, translator, finder, features);
-
-  const stopNetwork = startNetwork(canvas);
-  const stopWallpaper = startWallpaper(wallpaper, finder);
-
-  return () => { stopNetwork(); stopWallpaper(); };
+  main.append(hero, el('hr', { class: 'rule shell' }), translator, features, finder);
 }
 
-function feature(number, href, title, body) {
+function feature(art, href, title, body) {
   return el('a', { class: 'feature', href, 'data-link': '' },
-    el('span', { class: 'feature__num' }, number),
-    el('h3', {}, title),
-    el('p', {}, body));
+    el('img', { class: 'feature__art', src: art, alt: '', width: 72, height: 72 }),
+    el('div', {},
+      el('h3', {}, title),
+      el('p', {}, body)));
 }
 
 /** Send the visitor to the dictionary page with the query already applied. */
@@ -86,7 +84,7 @@ function buildFinder() {
 
   const form = el('form', { class: 'finder__form' },
     input,
-    el('button', { type: 'submit' }, t('finder.button')));
+    el('button', { class: 'btn btn--primary', type: 'submit' }, t('finder.button')));
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -96,7 +94,8 @@ function buildFinder() {
   return el('section', { class: 'finder', id: 'buscador' },
     el('div', { class: 'shell' },
       el('div', { class: 'finder__grid' },
-        el('div', {},
+        el('div', { class: 'finder__intro' },
+          el('img', { class: 'finder__art', src: '/assets/art/owl.svg', alt: '', width: 96, height: 96 }),
           el('p', { class: 'eyebrow' }, t('finder.eyebrow')),
           el('h2', {}, t('finder.title')),
           el('p', { class: 'finder__lead' }, t('finder.lead'))),
