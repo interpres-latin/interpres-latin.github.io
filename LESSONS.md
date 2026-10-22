@@ -227,3 +227,21 @@ separate script so `npm test` keeps its guarantee.
 **A test that asserts a refusal will lock in the refusal.** When "no verb, no
 parse" was written into a test, the wrong behaviour became the specification.
 Assert what the reader should get, not what the code currently does.
+
+---
+
+## 10. Publishing
+
+**Scan the whole history before a repository goes public.** Commit 46494e9 put
+the DeepL and ElevenLabs keys into `render.yaml` in full; 2e90c49 took them out
+the same day. Taking them out of the file did not take them out of the history,
+and the history went to the public `profegpt` repository with them in it. The
+old teacher passcodes are in there too.
+
+- A key that has been committed is spent. Rotate it; deleting the line is not
+  enough.
+- Before flipping a repository to public, run
+  `git log --all -p | grep -E 'sk_|sk-|gsk_|AIza|ghp_|PASSCODE'` and read
+  every hit.
+- Keys go in the host's settings (`sync: false` in the blueprint), never in a
+  tracked file, even "just for now".
