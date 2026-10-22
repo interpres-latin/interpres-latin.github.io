@@ -1,8 +1,11 @@
 # Interpres
 
-A Latin site: a two-way translator, conjugation and declension tables, a
-dictionary, and a tutor. Plain ES modules served from `public/`, a small Node
+A Latin site: conjugation and declension tables, and a dictionary beside the
+Cambridge course stages. Plain ES modules served from `public/`, a small Node
 server in `server/`. No build step.
+
+The translator was removed to be redesigned from the ground up; the old one is
+at the tag `last-translator`.
 
 ## Before you start
 
@@ -25,5 +28,3 @@ The ones that have cost the most, in short:
 ## Testing
 
 - `npm test` is the offline suite and must stay offline.
-- `npm run test:parse` exercises the Latin parser, which needs the network
-  because it asks the dictionary what each word can be.

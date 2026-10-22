@@ -91,7 +91,6 @@ const latine = (la, en) => ({ la, en });
  */
 const LATIN = {
   nav: {
-    translator: latine('Interpres', 'Translator'),
     conjugation: latine('Coniugatio', 'Conjugation'),
     declension: latine('Declinatio', 'Declension'),
     stages: latine('Stadia', 'Stages'),
@@ -115,111 +114,11 @@ const LATIN = {
   hero: {
     sub: latine(
       'Verte Latine et Anglice, coniuga verba, declina nomina, quaere verba in lexico, roga quaestiones.',
-      'Translate between Latin and English, conjugate verbs, decline nouns and look up any word.',
+      'Conjugate any verb, decline any noun, and look up any word, with the Cambridge course vocabulary stage by stage.',
     ),
     title: latine('interpres|lingua latina|sine lacrimis', 'interpres|latin without|the tears'),
-    ctaTranslate: latine('Interpretem probare', 'Start translating'),
+    ctaConjugate: latine('Verba coniugare', 'Conjugate a verb'),
     ctaDictionary: latine('Lexicon aperire', 'Open the dictionary'),
-  },
-
-  translator: {
-    eyebrow: latine('Interpres', 'Translator'),
-    title: latine('Interpres Latinus', 'Latin translation'),
-    lead: latine(
-      'Scribe Latine aut Anglice. Nodus medius partes permutat et textum secum fert.',
-      'Type in either language. The centre button swaps the direction and carries the text across.',
-    ),
-    button: latine('Vertere', 'Translate'),
-    clear: latine('Delere', 'Clear'),
-    copy: latine('Exscribere', 'Copy'),
-    copied: latine('Exscriptum!', 'Copied'),
-    copyFailed: latine('Non potuit', 'Could not copy'),
-    ready: latine('Paratus', 'Ready'),
-    working: latine('vertens…', 'translating…'),
-    done: latine('Versum', 'Translated'),
-    sourceLabel: latine('Textus originalis', 'Source text'),
-    swap: latine('Permutare Latinum et Anglicum', 'Swap Latin and English'),
-    swapTitle: latine('Mutare linguam', 'Swap languages'),
-    studyName: latine('Latine', 'Latin'),
-    englishName: latine('English', 'English'),
-    placeholderStudy: latine('Scribe aliquid Latine…', 'Write something in Latin…'),
-    placeholderEn: latine('Type something in English…', 'Type something in English…'),
-    outStudy: latine('Translatio hic apparebit.', 'The translation will appear here.'),
-    outEn: latine('The translation will appear here.', 'The translation will appear here.'),
-    engine: latine('versum per {engine}', 'translated with {engine}'),
-    uncertain: latine(
-      'Interpres dubitat: versiones servatae inter se discrepant. Cave.',
-      'The translator is unsure of this one: its stored versions disagree. Check it.'),
-    unsureWord: latine(
-      'Interpres hoc verbum non novit et intactum reliquit.',
-      'The translator did not know this word and left it as it was.'),
-    wordByWord: latine(
-      'Haec sententia non est. Verbum de verbo, cum munere cuiusque. Tu compone.',
-      'This is not a sentence. It is the text word by word, with what each one is doing. You assemble it.'),
-    uncertainLatin: latine(
-      'Hoc ex memoria versionum venit, non ex grammatica huius paginae. Verbum de verbo cave.',
-      'This came from a translation memory rather than from the site’s own grammar. Check it word by word.'),
-
-    // The two-route check. See server/latin-sentence.js.
-    readingsDiffer: latine(
-      'Haec sententia bis versa est, semel ex ipso Latino, semel ex verbis singulis. Versiones inter se discrepant. Cave.',
-      'This sentence was read twice, once from the Latin and once from the words one by one. The two readings disagree. Treat it with care.'),
-    readingsPartial: latine(
-      'Duae versiones fere consentiunt, non omnino.',
-      'The two readings mostly agree, but not entirely.'),
-    readingCheck: latine('Duae versiones', 'The two readings'),
-    readingDirect: latine('Ex ipso Latino', 'Read from the Latin'),
-    readingGrounded: latine('Ex verbis singulis', 'Assembled from the words'),
-    readingAgreed: latine('consentiunt', 'they agree'),
-    readingPartly: latine('fere consentiunt', 'they mostly agree'),
-    readingDiffers: latine('discrepant', 'they disagree'),
-    readingSingle: latine('una tantum versio', 'only one reading was available'),
-    wordList: latine('Verbum ac verbum', 'Word by word'),
-    parseTitle: latine('Verbum ac verbum', 'Word by word'),
-    parseLead: latine(
-      'Omne verbum Latinum, cum significatione et forma.',
-      'Every Latin word, with its meaning and its form.',
-    ),
-    parseUnknown: latine('non agnitum', 'not recognised'),
-    caseFixed: latine('casus correctus', 'case corrected'),
-
-    // Latin into English is parsed, not modelled. This is the way to ask a
-    // model anyway, and it is never the automatic answer.
-    retranslate: latine('Iterum vertere per machinam', 'Re-translate with a model'),
-    retranslating: latine('vertens…', 'translating…'),
-    retranslated: latine('Versio machinae', 'The model’s translation'),
-    retranslateFailed: latine('Machina respondere non potuit.', 'The model could not answer.'),
-    parseFailed: latine(
-      'Hanc sententiam legere non possum. Verbum principale non inveni.',
-      'This sentence could not be read. No verb was found in it.',
-    ),
-
-    // The word-by-word breakdown is behind a button now. Most readers want the
-    // sentence and nothing else; the ones who want the grammar ask for it.
-    details: latine('Plura videre', 'See more information'),
-    detailsTitle: latine('Quomodo haec versio facta est', 'How this translation was made'),
-    detailsClose: latine('Claudere', 'Close'),
-    detailsSource: latine('Textus originalis', 'Source'),
-    detailsResult: latine('Translatio', 'Translation'),
-
-    // Shown only when a word came back that is not Latin at all.
-    notLatin: latine('Verba non Latina ({words})', 'Not Latin ({words})'),
-    report: latine('Errorem nuntiare', 'Report a problem'),
-    reportReason: latine('Quid falsum est?', 'What went wrong?'),
-    reasonUntranslated: latine('Verbum omnino non versum est', 'A word was not translated at all'),
-    reasonFormatting: latine('Forma corrupta', 'Formatting is wrong'),
-    reasonWrongWord: latine('Verbum Latinum falsum', 'Wrong Latin word'),
-    reasonWrongGrammar: latine('Grammatica falsa', 'Wrong grammar'),
-    reasonOther: latine('Aliud', 'Something else'),
-    reportTitle: latine('Errorem nuntiare', 'Report a problem'),
-    reportLead: latine(
-      'Dic quid falsum sit. Nuntius in tabulas refertur.',
-      'Say what went wrong. The report goes into the log for someone to work through.',
-    ),
-    reportNote: latine('Quid falsum est? (non necessarium)', 'What went wrong? (optional)'),
-    reportSend: latine('Mittere', 'Send report'),
-    reportSent: latine('Nuntiatum. Gratias.', 'Reported. Thank you.'),
-    reportFailed: latine('Nuntius mitti non potuit.', 'The report could not be sent.'),
   },
 
   finder: {

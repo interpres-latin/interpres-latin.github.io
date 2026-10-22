@@ -208,28 +208,6 @@ ok('and says why', conjugate('canis').error === 'needs-principal-parts', conjuga
 ok('a non-verb is refused', !conjugate('puella, puellae').ok);
 ok('empty input is refused', !conjugate('').ok);
 
-// === THE TRANSLATOR'S NUMBER TEST =========================================
-// A verbless phrase has a nominative head — but in the number the English is
-// in. Without this "boy" comes back as *pueri*: nominative, and plural.
-const { expectedNumber } = await import('../server/latin-check.js');
-for (const [source, expected] of [
-  ['boy', 'singular'],
-  ['the boy', 'singular'],
-  ['boys', 'plural'],
-  ['the boys', 'plural'],
-  ['the dog of the girl', 'singular'],
-  ['the dogs of the girl', 'plural'],
-  ['the dog of the girls', 'singular'],
-  ['the king', 'singular'],
-  ['the kings', 'plural'],
-  ['the children', 'plural'],
-  ['the men', 'plural'],
-  ['the glass', 'singular'],
-  ['the city', 'singular'],
-]) {
-  ok(`"${source}" is ${expected}`, expectedNumber(source) === expected, expectedNumber(source));
-}
-
 // === THE COURSE VOCABULARY ================================================
 const { STAGES, STAGE_NUMBERS, allWords, findStage, BOOKS, bookOf } = await import('../public/js/data/stages-la.js');
 ok('three books are seeded', STAGE_NUMBERS.length === 28, `${STAGE_NUMBERS.length} stages`);
@@ -279,22 +257,6 @@ ok('a title is not case-sensitive', findStage('VESUVIUS')?.number === 12);
 ok('nothing is not a stage', findStage('') === null);
 ok('past the end is not a stage', findStage('99') === null);
 ok('nor is a word that is not a title', findStage('nonsense') === null);
-
-// --- English plurals, which a bare -s rule gets wrong -----------------------
-const { pluralise } = await import('../server/latin-translate.js');
-for (const [one, many] of [
-  ['woman', 'women'], ['man', 'men'], ['child', 'children'], ['person', 'people'],
-  ['foot', 'feet'], ['tooth', 'teeth'], ['mouse', 'mice'], ['wife', 'wives'],
-  ['leaf', 'leaves'], ['city', 'cities'], ['box', 'boxes'],
-  // Unchanged in the plural, and uncountable, both of which took an -s before.
-  ['sheep', 'sheep'], ['fish', 'fish'], ['furniture', 'furniture'], ['water', 'water'],
-  // Already plural: *arma* is glossed "arms" and became "armses".
-  ['arms', 'arms'],
-  // The ordinary ones still work.
-  ['girl', 'girls'], ['rose', 'roses'], ['book', 'books'],
-]) {
-  ok(`${one} -> ${many}`, pluralise(one) === many, pluralise(one));
-}
 
 // --- report ----------------------------------------------------------------
 if (failures.length) {

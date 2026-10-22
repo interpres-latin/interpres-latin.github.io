@@ -1,13 +1,11 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
 #
-# Interpres is a Node server, not a static site: the dictionary and the
-# translator's morphology lookups need one. GitHub Pages and Netlify's
-# static hosting cannot run it.
+# Interpres is a Node server, not a static site: the dictionary's lookups need
+# one. GitHub Pages and Netlify's static hosting cannot run it.
 #
 # Two things here are not defaults and matter:
 #
-#   numInstances: 1 — the dictionary caches and the report log's rate limit are
-#   held in memory, and the log itself is one file on one mounted disk.
+#   numInstances: 1 — the dictionary caches are held in memory.
 #
 #   Every key is `sync: false`, which means Render holds the value and this file
 #   only names it. Nothing secret belongs in a file that is in a repository,
@@ -23,25 +21,9 @@ services:
     startCommand: npm start
     healthCheckPath: /api/health
 
-    # The reports the translator collects are a file on disk, and a deploy
-    # replaces the checkout. Without a mounted disk every report is lost at the
-    # next push, which defeats the point of collecting them.
-    disk:
-      name: reports
-      mountPath: /var/data
-      sizeGB: 1
-
     envVars:
       - key: NODE_VERSION
         value: "20"
-
-      - key: REPORT_LOG_DIR
-        value: /var/data
-
-      # Behind Render's load balancer, so X-Forwarded-For can be believed.
-      # The report log's rate limit is the only thing that reads it.
-      - key: TRUST_PROXY
-        value: "1"
 
       # Pronunciation on the dictionary page. Free tier is 10,000 characters a
       # month for the whole site, so clips are cached and only single words are
@@ -53,10 +35,9 @@ services:
       - key: ELEVENLABS_VOICE_ID
         sync: false
 
-      # A Latin question the site cannot answer from its own data, and the
-      # dictionary's example sentences. Nothing else reaches a model: the
-      # translator, the conjugator, the decliner and the definitions all work
-      # with no key at all.
+      # The dictionary's example sentences when no corpus has one. Nothing else
+      # reaches a model: the conjugator, the decliner and the definitions all
+      # work with no key at all.
       - key: GROQ_API_KEY
         sync: false
       - key: ANTHROPIC_API_KEY

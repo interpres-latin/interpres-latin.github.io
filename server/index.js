@@ -2,9 +2,7 @@ import path from 'node:path';
 import express from 'express';
 import { loadEnv, ROOT } from './env.js';
 import { chainInfo, hasProvider, providerInfo } from './llm.js';
-import { router as translate } from './routes/translate.js';
 import { router as dictionary } from './routes/dictionary.js';
-import { router as report } from './routes/report.js';
 import { router as speak } from './routes/speak.js';
 
 loadEnv();
@@ -16,9 +14,7 @@ const PUBLIC_DIR = path.join(ROOT, 'public');
 app.disable('x-powered-by');
 app.use(express.json({ limit: '256kb' }));
 
-app.use('/api/translate', translate);
 app.use('/api/dictionary', dictionary);
-app.use('/api/report', report);
 app.use('/api/speak', speak);
 
 app.get('/api/health', (_req, res) => {
@@ -57,10 +53,9 @@ const server = app.listen(PORT, () => {
   console.log(`Interpres → http://localhost:${PORT}`);
   const chain = chainInfo();
   if (!chain.length) {
-    console.log('  Models: none configured — translation, the conjugator, the decliner and');
-    console.log('          the dictionary all still work, since none of them uses one. Only a');
-    console.log('          Latin question the site cannot answer itself needs a model:');
-    console.log('          set GROQ_API_KEY for a free one.');
+    console.log('  Models: none configured — the conjugator, the decliner and the');
+    console.log('          dictionary all still work. Only the dictionary\'s example');
+    console.log('          sentences need one: set GROQ_API_KEY for a free one.');
   } else {
     chain.forEach((provider, index) => {
       const role = index === 0 ? 'Model' : ' ↳ then';
