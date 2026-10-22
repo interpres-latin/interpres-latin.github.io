@@ -232,11 +232,14 @@ Assert what the reader should get, not what the code currently does.
 
 ## 10. Publishing
 
-**Scan the whole history before a repository goes public.** Commit 46494e9 put
-the DeepL and ElevenLabs keys into `render.yaml` in full; 2e90c49 took them out
+**Scan the whole history before a repository goes public.** Commit 0de3dd3 put
+the DeepL and ElevenLabs keys into `render.yaml` in full; b423ddb took them out
 the same day. Taking them out of the file did not take them out of the history,
 and the history went to the public `profegpt` repository with them in it. The
-old teacher passcodes are in there too.
+keys were rotated, and this repository's history was rewritten with
+`git filter-repo --replace-text` so the values read `REDACTED` in every commit.
+That rewrite changed every commit ID. The old teacher passcodes are still in
+the history; they guarded features that no longer exist.
 
 - A key that has been committed is spent. Rotate it; deleting the line is not
   enough.
