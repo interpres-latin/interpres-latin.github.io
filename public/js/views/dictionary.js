@@ -104,7 +104,11 @@ export function renderDictionary(main) {
     el('div', { class: 'page__head' },
       el('h1', {}, t('dictionary.title')),
       el('p', {}, t('dictionary.pageLead'))),
-    el('div', { class: 'columns' }, stages.panel, dictionaryPanel)));
+    el('div', { class: 'columns' }, stages.panel, dictionaryPanel),
+    el('p', { class: 'footnote' },
+      'Definitions from ',
+      el('a', { href: 'https://mk270.github.io/whitakers-words/', target: '_blank', rel: 'noopener' }, 'Whitaker’s Words'),
+      ' (public domain), looked up through the Alpheios morphology service.')));
 
   async function search(rawWord) {
     const word = String(rawWord || '').trim();

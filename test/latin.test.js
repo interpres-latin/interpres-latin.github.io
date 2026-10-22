@@ -109,6 +109,21 @@ ok('ingens has one termination', ingens.terminations === 1);
 ok('ingens n. nom. sg. is ingens', ingens.table.neuter.singular.nominative === 'ingens', ingens.table.neuter.singular.nominative);
 ok('ingens n. nom. pl. is ingentia', ingens.table.neuter.plural.nominative === 'ingentia');
 
+// The -er kind, both ways: miser keeps its e and pulcher drops it. These are
+// the models behind the 1st/2nd adjectives tab.
+const miser = declineAdjective('miser, misera, miserum');
+ok('miser m. gen. sg. is miseri', miser.table.masculine.singular.genitive === 'miseri');
+ok('miser f. nom. sg. is misera', miser.table.feminine.singular.nominative === 'misera');
+ok('miser m. voc. sg. is miser', miser.table.masculine.singular.vocative === 'miser');
+const pulcher = declineAdjective('pulcher, pulchra, pulchrum');
+ok('pulcher m. gen. sg. is pulchri', pulcher.table.masculine.singular.genitive === 'pulchri');
+ok('pulcher m. acc. sg. is pulchrum', pulcher.table.masculine.singular.accusative === 'pulchrum');
+ok('pulcher n. nom. pl. is pulchra', pulcher.table.neuter.plural.nominative === 'pulchra');
+ok('acer n. nom. pl. is acria', acer.table.neuter.plural.nominative === 'acria');
+ok('acer gen. pl. is acrium', acer.table.masculine.plural.genitive === 'acrium');
+ok('ingens m. acc. sg. is ingentem', ingens.table.masculine.singular.accusative === 'ingentem');
+ok('ingens n. acc. sg. is ingens', ingens.table.neuter.singular.accusative === 'ingens');
+
 // --- building one form, which is what the translator needs -----------------
 ok('formOf gives the nominative of canis', formOf('canis', 'canis', 'common', 'nominative') === 'canis');
 ok('formOf gives the genitive of puella', formOf('puella', 'puellae', 'feminine', 'genitive') === 'puellae');

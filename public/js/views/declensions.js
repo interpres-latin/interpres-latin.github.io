@@ -38,8 +38,8 @@ const MODELS = [
     gender: 'masculine',
     gloss: 'master',
     variants: [
-      { label: 'gendered', parts: 'dominus, domini', gender: 'masculine' },
-      { label: 'neuter', parts: 'bellum, belli', gender: 'neuter' },
+      { label: 'declension.gendered', parts: 'dominus, domini', gender: 'masculine' },
+      { label: 'declension.neuter', parts: 'bellum, belli', gender: 'neuter' },
     ],
   },
   {
@@ -48,15 +48,46 @@ const MODELS = [
     gender: 'masculine',
     gloss: 'king',
     variants: [
-      { label: 'gendered', parts: 'rex, regis', gender: 'masculine' },
-      { label: 'neuter', parts: 'nomen, nominis', gender: 'neuter' },
+      { label: 'declension.gendered', parts: 'rex, regis', gender: 'masculine' },
+      { label: 'declension.neuter', parts: 'nomen, nominis', gender: 'neuter' },
     ],
   },
   { key: '4th', parts: 'manus, manus', gender: 'feminine', gloss: 'hand' },
   { key: '5th', parts: 'dies, diei', gender: 'masculine', gloss: 'day' },
 ];
 
-const ADJECTIVE_MODEL = { key: 'adj', parts: 'bonus, bona, bonum', gloss: 'good' };
+/**
+ * The adjectives, in their two families.
+ *
+ * 1st/2nd declension adjectives decline like *dominus*, *puella* and *bellum*;
+ * the -er kind splits on whether the e stays (*miser, misera*) or goes
+ * (*pulcher, pulchra*). 3rd declension adjectives are quoted with one, two or
+ * three endings, and the dictionary form says which.
+ */
+const ADJECTIVE_MODELS = [
+  {
+    key: 'adj12',
+    label: 'declension.adjectives12',
+    parts: 'bonus, bona, bonum',
+    menuTitle: 'declension.pickKind',
+    variants: [
+      { label: 'declension.kindUs', parts: 'bonus, bona, bonum' },
+      { label: 'declension.kindErKeeps', parts: 'miser, misera, miserum' },
+      { label: 'declension.kindErDrops', parts: 'pulcher, pulchra, pulchrum' },
+    ],
+  },
+  {
+    key: 'adj3',
+    label: 'declension.adjectives3',
+    parts: 'fortis, forte',
+    menuTitle: 'declension.pickEndings',
+    variants: [
+      { label: 'declension.endings3', parts: 'acer, acris, acre' },
+      { label: 'declension.endings2', parts: 'fortis, forte' },
+      { label: 'declension.endings1', parts: 'ingens, ingentis' },
+    ],
+  },
+];
 
 const SAMPLES = ['puella, puellae', 'bellum, belli', 'urbs, urbis', 'mare, maris', 'bonus, bona, bonum', 'fortis, forte'];
 
@@ -87,9 +118,9 @@ export function renderDeclensions(main) {
   const tabs = el('div', { class: 'tabs', role: 'tablist' });
   const tabButtons = [];
 
-  for (const model of [...MODELS, ADJECTIVE_MODEL]) {
-    const label = model.key === 'adj'
-      ? t('declension.adjectives')
+  for (const model of [...MODELS, ...ADJECTIVE_MODELS]) {
+    const label = model.label
+      ? t(model.label)
       : t('declension.tab', { n: model.key });
 
     const holder = el('div', { class: 'tabmenu' });
@@ -125,7 +156,7 @@ export function renderDeclensions(main) {
     closeMenus();
 
     const list = el('div', { class: 'tabmenu__list', role: 'menu' },
-      el('p', { class: 'tabmenu__title' }, t('declension.pickGender')),
+      el('p', { class: 'tabmenu__title' }, t(model.menuTitle ?? 'declension.pickGender')),
       ...model.variants.map((variant) => el('button', {
         type: 'button',
         role: 'menuitem',
@@ -134,7 +165,7 @@ export function renderDeclensions(main) {
           input.value = variant.parts;
           show(variant.parts, variant.gender);
         },
-      }, variant.label === 'neuter' ? t('declension.neuter') : t('declension.gendered'),
+      }, t(variant.label),
       el('em', {}, variant.parts))));
 
     holder.appendChild(list);

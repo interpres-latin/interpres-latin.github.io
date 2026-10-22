@@ -38,7 +38,7 @@
   --radius: 16px;
   --radius-sm: 12px;
   --edge: 0 4px 0 var(--line);
-  --shell: 1040px;
+  --shell: 1360px;
 
   color-scheme: light;
 }
@@ -46,10 +46,11 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 
-html { -webkit-text-size-adjust: 100%; scroll-padding-top: 90px; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 90px; overscroll-behavior: none; }
 
 body {
   margin: 0;
+  overscroll-behavior: none;
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
@@ -70,7 +71,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
 
-.shell { width: 100%; max-width: var(--shell); margin: 0 auto; padding: 0 24px; }
+.shell { width: 100%; max-width: var(--shell); margin: 0 auto; padding: 0 clamp(24px, 4vw, 56px); }
 
 .skip-link {
   position: absolute; left: 12px; top: -60px; z-index: 100;
@@ -111,70 +112,23 @@ button, input, textarea, select { font: inherit; color: inherit; }
 }
 .nav__brand:hover .nav__wordmark { color: var(--red-dark); }
 
-/* The three-line menu button, top right. */
-.menu { position: relative; }
-
-.menu__button {
-  display: grid;
-  place-content: center;
-  gap: 5px;
-  width: 48px;
-  height: 48px;
-  padding: 0;
-  border: 0;
-  border-radius: 14px;
-  background: transparent;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.menu__button:hover { background: var(--panel-soft); }
-.menu__button span {
-  display: block;
-  width: 26px;
-  height: 4px;
-  border-radius: 4px;
-  background: var(--text);
-  transition: transform 0.2s, opacity 0.2s;
-}
-.menu.is-open .menu__button span { background: var(--red); }
-.menu.is-open .menu__button span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
-.menu.is-open .menu__button span:nth-child(2) { opacity: 0; }
-.menu.is-open .menu__button span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
-
-/* No outline: the panel floats on a soft shadow alone. */
-.menu__list {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  z-index: 60;
-  width: 260px;
-  padding: 10px;
-  border: 0;
-  border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  animation: menu-in 0.16s ease-out;
-}
-@keyframes menu-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
-
-.menu__list a {
+/* Duolingo's header links: uppercase, letter-spaced, light grey, and a shade
+   darker on hover and for the page you are on. */
+.nav__links { display: flex; align-items: center; gap: 36px; height: 100%; }
+.nav__links a {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  color: var(--text);
-  font-weight: 800;
+  height: 100%;
+  color: var(--text-faint);
   font-size: 15px;
-  letter-spacing: 0.06em;
+  font-weight: 800;
+  letter-spacing: 1px;
   text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 0.15s;
 }
-.menu__list a img { width: 36px; height: 36px; flex: none; }
-.menu__list a:hover { background: var(--panel-soft); color: var(--text); }
-.menu__list a.is-active { background: var(--red-wash); color: var(--red); }
+.nav__links a:hover,
+.nav__links a.is-active { color: var(--text-dim); }
 
 /* --- buttons ---------------------------------------------------------------- */
 
@@ -253,7 +207,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 @keyframes float { 50% { transform: translateY(-8px); } }
 @media (prefers-reduced-motion: reduce) { .hero__art img { animation: none; } }
 
-.rule { border: 0; height: 2px; background: var(--line); margin: 0 auto; max-width: calc(var(--shell) - 48px); padding: 0; }
+.rule { border: 0; height: 2px; background: var(--line); margin: 0 clamp(24px, 4vw, 56px); padding: 0; }
+@media (min-width: 1360px) { .rule { margin: 0 auto; max-width: calc(var(--shell) - 112px); } }
 
 .section__title {
   font-family: var(--display);
@@ -303,16 +258,18 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .finder__grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center;
   padding: 44px;
-  border-radius: 28px;
-  background: var(--gold-wash);
+  border: 2px solid var(--line);
+  border-bottom-width: 5px;
+  border-radius: 24px;
+  background: #fff;
 }
-.finder__art { width: 96px; height: 96px; margin-bottom: 14px; }
 .finder h2 {
   font-family: var(--display); font-weight: 700; font-size: clamp(34px, 4.5vw, 46px);
   letter-spacing: -0.03em; line-height: 1; color: var(--red); text-transform: lowercase;
 }
-.finder .eyebrow { color: var(--gold-dark); }
 .finder__lead { margin-top: 14px; color: var(--text-dim); }
+.finder__form input { background: var(--panel-soft); }
+.finder__form input:focus { background: #fff; }
 .finder__form { display: flex; gap: 10px; }
 .finder__form input {
   flex: 1; min-width: 0; height: 54px; padding: 0 18px;
@@ -430,8 +387,33 @@ main[data-page="diccionario"] .page::before { background-image: url(/assets/art/
   border-color: #84d8ff; background: var(--blue-wash); color: var(--blue);
 }
 
-.switch { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; color: var(--text-dim); cursor: pointer; }
-.switch input { accent-color: var(--red); width: 18px; height: 18px; }
+.switch { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: var(--text-dim); cursor: pointer; user-select: none; }
+
+/* Every checkbox on the site, drawn the Duolingo way rather than the
+   browser's: a rounded box with a thick bottom edge that fills red with a
+   white tick, and presses down when clicked. */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  border: 2px solid var(--line);
+  border-bottom-width: 4px;
+  border-radius: 8px;
+  background: #fff no-repeat center / 16px 16px;
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, transform 0.06s;
+}
+input[type="checkbox"]:hover { border-color: var(--line-hi); }
+input[type="checkbox"]:checked {
+  border-color: var(--red-dark);
+  background-color: var(--red);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+input[type="checkbox"]:active { transform: translateY(2px); border-bottom-width: 2px; }
+input[type="checkbox"]:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 
 .tabmenu { position: relative; display: inline-flex; }
 .tabmenu__caret { display: inline-flex; align-items: center; margin-left: 6px; opacity: 0.6; }
@@ -535,7 +517,6 @@ table.conj--words td { white-space: normal; color: var(--text-dim); font-weight:
   border-radius: 24px;
   background: #fff;
 }
-.panel--stages { background: var(--gold-wash); border-color: #f5e3a3; }
 .panel--dictionary { position: sticky; top: 92px; max-height: calc(100vh - 110px); overflow-y: auto; }
 
 .panel__head { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px; }
@@ -546,21 +527,23 @@ table.conj--words td { white-space: normal; color: var(--text-dim); font-weight:
 }
 .panel__head p { margin-top: 6px; font-size: 15px; color: var(--text-dim); }
 .panel .search { max-width: none; }
-.panel--stages .search__field { background: #fff; }
 .panel__results { margin-top: 22px; }
+.footnote { margin-top: 28px; font-size: 13px; color: var(--text-faint); }
+.footnote a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.footnote a:hover { color: var(--text-dim); }
 .panel .mood__title { font-size: 24px; margin: 22px 0 10px; }
 .panel .entry__head h2 { font-size: 40px; }
 
 .stageindex { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
 .stageindex__book { display: flex; flex-direction: column; gap: 8px; }
-.stageindex__label { font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-dark); }
+.stageindex__label { font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
 .stageindex__chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .stageindex__chips button {
   min-width: 42px; height: 40px; padding: 0 10px;
-  border: 2px solid #f0dc96; border-bottom-width: 4px; border-radius: 12px;
+  border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 12px;
   background: #fff; color: var(--text); font-weight: 800; font-size: 15px; cursor: pointer;
 }
-.stageindex__chips button:hover { border-color: var(--gold); }
+.stageindex__chips button:hover { background: var(--panel-soft); }
 .stageindex__chips button:active { transform: translateY(2px); border-bottom-width: 2px; }
 .stageindex__chips button.is-active { background: var(--red); border-color: var(--red-dark); color: #fff; }
 
@@ -649,9 +632,11 @@ table.conj--words td { white-space: normal; color: var(--text-dim); font-weight:
   .finder { padding: 56px 0 72px; }
   .page { padding-top: 40px; }
   .panel { padding: 20px; }
-  .nav__inner { height: 64px; }
+  .nav__inner { height: auto; flex-direction: column; align-items: flex-start; gap: 4px; padding-top: 12px; }
   .nav__wordmark { font-size: 26px; }
-  .menu__list { width: min(260px, calc(100vw - 32px)); }
+  .nav__links { width: 100%; height: 44px; gap: 24px; overflow-x: auto; scrollbar-width: none; }
+  .nav__links::-webkit-scrollbar { display: none; }
+  .nav__links a { font-size: 14px; }
   .finder__form { flex-direction: column; }
   .footer__brand { width: 100%; }
   main[data-page] .page::before { display: none; }

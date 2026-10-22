@@ -5,7 +5,7 @@ import { renderDeclensions } from './views/declensions.js';
 import { clear } from './lib/dom.js';
 
 const ROUTES = [
-  { path: '/', nav: 'traductor', render: renderHome },
+  { path: '/', nav: 'home', render: renderHome },
   { path: '/conjugacion', nav: 'conjugacion', render: renderConjugator },
   { path: '/declinationes', nav: 'declinationes', render: renderDeclensions },
   { path: '/diccionario', nav: 'diccionario', render: renderDictionary },
@@ -20,9 +20,7 @@ const ROUTES = [
 const MOVED = { '/stadia': '/diccionario', '/chat': '/' };
 
 const main = document.getElementById('main');
-const menu = document.querySelector('.menu');
-const menuButton = menu.querySelector('.menu__button');
-const menuList = menu.querySelector('.menu__list');
+const links = document.querySelector('.nav__links');
 
 let teardown = null;
 // Includes the query, so /conjugacion?v=rego re-renders when arriving from
@@ -34,51 +32,13 @@ function match(pathname) {
 }
 
 function markActive(nav) {
-  for (const link of menuList.querySelectorAll('[data-nav]')) {
+  for (const link of links.querySelectorAll('[data-nav]')) {
     const lit = link.dataset.nav === nav;
     link.classList.toggle('is-active', lit);
     if (lit) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
 }
-
-// --- the menu ---------------------------------------------------------------
-
-function openMenu() {
-  menuList.hidden = false;
-  menuButton.setAttribute('aria-expanded', 'true');
-  menuButton.setAttribute('aria-label', 'Close menu');
-  menu.classList.add('is-open');
-}
-
-function closeMenu() {
-  if (menuList.hidden) return;
-  menuList.hidden = true;
-  menuButton.setAttribute('aria-expanded', 'false');
-  menuButton.setAttribute('aria-label', 'Open menu');
-  menu.classList.remove('is-open');
-}
-
-menuButton.addEventListener('click', () => {
-  if (menuList.hidden) openMenu();
-  else closeMenu();
-});
-
-// Anywhere outside the menu closes it. pointerdown rather than click, so a
-// press that starts a text selection or a scroll on a phone counts too.
-document.addEventListener('pointerdown', (event) => {
-  if (!menu.contains(event.target)) closeMenu();
-});
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !menuList.hidden) {
-    closeMenu();
-    menuButton.focus();
-  }
-});
-// Tabbing out of the open menu closes it as well.
-menu.addEventListener('focusout', (event) => {
-  if (event.relatedTarget && !menu.contains(event.relatedTarget)) closeMenu();
-});
 
 // --- routing ----------------------------------------------------------------
 
@@ -125,7 +85,6 @@ function onClick(event) {
   if (url.origin !== window.location.origin) return;
 
   event.preventDefault();
-  closeMenu();
 
   /**
    * The query is part of the destination, not decoration on it: every page

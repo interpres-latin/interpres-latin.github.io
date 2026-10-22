@@ -70,8 +70,6 @@ function buildFinder() {
     el('div', { class: 'shell' },
       el('div', { class: 'finder__grid' },
         el('div', { class: 'finder__intro' },
-          el('img', { class: 'finder__art', src: '/assets/art/owl.svg', alt: '', width: 96, height: 96 }),
-          el('p', { class: 'eyebrow' }, t('finder.eyebrow')),
           el('h2', {}, t('finder.title')),
           el('p', { class: 'finder__lead' }, t('finder.lead'))),
         el('div', {},

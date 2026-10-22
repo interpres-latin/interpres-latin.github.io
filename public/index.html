@@ -24,26 +24,17 @@
   <header class="nav" id="nav">
     <div class="nav__inner shell">
       <a class="nav__brand" href="/" data-link aria-label="Interpres, home">
-        <img src="/assets/art/logo.svg" alt="" width="44" height="40" />
+        <img src="/assets/art/logo.svg" alt="" width="40" height="40" />
         <span class="nav__wordmark">interpres</span>
       </a>
 
-      <div class="menu">
-        <button class="menu__button" type="button" aria-expanded="false" aria-controls="menu-list" aria-label="Open menu">
-          <span></span><span></span><span></span>
-        </button>
-        <nav class="menu__list" id="menu-list" aria-label="Pages" hidden>
-          <a href="/conjugacion" data-link data-nav="conjugacion">
-            <img src="/assets/art/helmet.svg" alt="" width="36" height="36" /><span>Conjugations</span>
-          </a>
-          <a href="/declinationes" data-link data-nav="declinationes">
-            <img src="/assets/art/column.svg" alt="" width="36" height="36" /><span>Declensions</span>
-          </a>
-          <a href="/diccionario" data-link data-nav="diccionario">
-            <img src="/assets/art/scroll.svg" alt="" width="36" height="36" /><span>Dictionary</span>
-          </a>
-        </nav>
-      </div>
+      <!-- Duolingo's header: plain uppercase links on the right, grey, the
+           current page a shade darker. No menu button at any width. -->
+      <nav class="nav__links" aria-label="Pages">
+        <a href="/conjugacion" data-link data-nav="conjugacion">Conjugations</a>
+        <a href="/declinationes" data-link data-nav="declinationes">Declensions</a>
+        <a href="/diccionario" data-link data-nav="diccionario">Dictionary</a>
+      </nav>
     </div>
   </header>
 
@@ -52,7 +43,6 @@
   <footer class="footer">
     <div class="shell footer__inner">
       <span class="footer__brand">interpres</span>
-      <p>Definitions from <a href="https://mk270.github.io/whitakers-words/" target="_blank" rel="noopener">Whitaker’s Words</a> (public domain)</p>
       <p class="footer__legal">© Yuzhe (Julian) Chen 2026</p>
     </div>
   </footer>

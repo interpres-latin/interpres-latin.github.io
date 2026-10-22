@@ -15,7 +15,9 @@ SAND, SAND_D, SAND_L = '#F7C77E', '#E2A257', '#FFE3B0'
 ARCH, ARCH_D = '#B4692F', '#934F1E'
 BLUE, PURPLE, GREEN, GREEN_D, ORANGE = '#1CB0F6', '#CE82FF', '#58CC02', '#46A302', '#FF9600'
 
-def f(x): return f'{x:.1f}'.rstrip('0').rstrip('.')
+def f(x):
+    text = f'{x:.1f}'
+    return text[:-2] if text.endswith('.0') else text
 
 def write(name, w, h, body):
     with open(os.path.join(OUT, name), 'w') as fh:
@@ -42,88 +44,261 @@ def confetti(seed, box, n, avoid=None):
     return ''.join(out)
 
 # ---------------------------------------------------------------- colosseum
+def confetti_at(seed, box, n, avoid):
+    """Confetti in `box`, kept out of every rectangle in `avoid`."""
+    rnd = random.Random(seed)
+    cols = [BLUE, PURPLE, RED, GOLD, GREEN, ORANGE]
+    out, placed, tries = [], 0, 0
+    x0, y0, x1, y1 = box
+    while placed < n and tries < 5000:
+        tries += 1
+        x, y = rnd.uniform(x0, x1), rnd.uniform(y0, y1)
+        if any(ax0 - 10 < x < ax1 + 10 and ay0 - 10 < y < ay1 + 10 for ax0, ay0, ax1, ay1 in avoid):
+            continue
+        if any((x - px) ** 2 + (y - py) ** 2 < 26 ** 2 for px, py in [(p[0], p[1]) for p in out]):
+            continue
+        out.append((x, y, rnd.uniform(0, 180), cols[placed % len(cols)]))
+        placed += 1
+    return ''.join(f'<rect x="{f(x-7)}" y="{f(y-4)}" width="14" height="8" rx="3" fill="{c}" transform="rotate({f(a)} {f(x)} {f(y)})"/>' for x, y, a, c in out)
+
+
 def colosseum():
+    """
+    The Colosseum, front on and seen a little from above. The facade is drawn
+    on a real cylinder of radius RC, and everything is placed in the
+    cylinder's own flat coordinates first (s along the wall, v down it) and
+    then projected with cyl(s, v):
+
+      x = mid + RC sin(s / RC)        the wall turning away at the sides
+      y = v + off(x)                  the near side lower, as seen from above
+
+    So an arch near the edge comes out narrower, its round top squashed into
+    half an ellipse, and its foot tilted to follow the ledge, exactly as a
+    round arch painted on a drum would. Nine bays sit at equal angles, each
+    arch centred in its bay, so the three storeys line up.
+
+    The ruined left side, the shading, the attic windows and the flag poles
+    all sit on bay boundaries, so nothing lands half way across an arch.
+    """
     W, H = 520, 440
     L, R = 70, 450
     mid, span = (L + R) / 2, (R - L) / 2
-    DIP = 26
+    DIP = 24
+    ROUND = 12                      # corners are rounded by stroking this wide
+
+    # The cylinder. The outline's edges are where it turns 75 degrees away.
+    EDGE = math.radians(75)
+    RC = span / math.sin(EDGE)
+
     def off(x):
-        t = (x - L) / (R - L)
-        return 4 * DIP * t * (1 - t)
+        """How far a level line has dropped at x: depth on the cylinder,
+        scaled so it is 0 at the outline's edges and DIP in the middle."""
+        c = math.sqrt(max(0.0, 1 - ((x - mid) / RC) ** 2))
+        return DIP * (c - math.cos(EDGE)) / (1 - math.cos(EDGE))
+
+    def cyl(sx, v):
+        x = mid + RC * math.sin(sx / RC)
+        return x, v + off(x)
+
+    def shape(points):
+        """A closed path through points given in wall coordinates."""
+        pts = [cyl(sx, v) for sx, v in points]
+        return 'M' + ' L'.join(f'{f(x)} {f(y)}' for x, y in pts) + 'Z'
+
+    def arch_points(sc, ws, vt, vb, steps=28):
+        """A round-headed arch in wall coordinates: centre sc, width ws, from
+        vt (top of the head) down to vb (the foot)."""
+        r = ws / 2
+        pts = [(sc - r, vb), (sc - r, vt + r)]
+        for i in range(1, steps):
+            a = math.pi - math.pi * i / steps
+            pts.append((sc + r * math.cos(a), vt + r - r * math.sin(a)))
+        pts += [(sc + r, vt + r), (sc + r, vb)]
+        pts += [(sc + r - ws * i / 12, vb) for i in range(1, 12)]
+        return pts
+
+    def band_points(s0, s1, v0, v1, steps=16):
+        top = [(s0 + (s1 - s0) * i / steps, v0) for i in range(steps + 1)]
+        return top + [(s1 - (s1 - s0) * i / steps, v1) for i in range(steps + 1)]
+
+    # Storeys, top to bottom, before the curve: (top, bottom)
+    ATTIC_TOP = 92
+    LEDGE_A = (144, 153)            # under the attic
+    TIER3 = (153, 217)
+    LEDGE_B = (217, 226)
+    TIER2 = (226, 290)
+    LEDGE_C = (290, 299)
+    TIER1 = (299, 362)
+    PLINTH = (362, 370)
+    BOTTOM = 370
+
+    # Nine bays at equal angles, inside the outline's 75 degrees.
+    N, PHI = 9, math.radians(70)
+    angles = [-PHI + j * 2 * PHI / N for j in range(N + 1)]
+    bay_s = [RC * a for a in angles]                        # bay edges, along the wall
+    centre_s = [(bay_s[k] + bay_s[k + 1]) / 2 for k in range(N)]
+    arch_ws = [0.6 * (bay_s[k + 1] - bay_s[k]) for k in range(N)]
+    edges = [mid + RC * math.sin(a) for a in angles]        # the same, on screen
+    centres = [mid + RC * math.sin(sc / RC) for sc in centre_s]
+
+    # The ruin: bays 0-2 lost the attic and the storey's top ledge; bay 3 steps
+    # up to the full height in two goes. Steps fall on bay boundaries and the
+    # middle of bay 3, never across an arch below, since the attic has none.
     def top_base(x):
-        # The ruined side: the outer wall is lower on the left, as on the real one.
-        if x < 190: return 150
-        if x < 214: return 132
-        if x < 236: return 114
-        return 96
-    BOTTOM = 372
-    xs = [L + i for i in range(0, R - L + 1, 2)]
+        if x < edges[3]: return TIER3[0]
+        if x < centres[3]: return 134
+        if x < edges[4]: return 113
+        return ATTIC_TOP
+
+    xs = [L + i for i in range(0, R - L + 1, 1)]
     top = [(x, top_base(x) + off(x)) for x in xs]
     bot = [(x, BOTTOM + off(x)) for x in reversed(xs)]
-    pts = top + bot
-    body_d = 'M' + ' L'.join(f'{f(x)} {f(y)}' for x, y in pts) + 'Z'
+    # Start the outline half way along the base, not at a corner: some
+    # renderers (WebKit) do not round the join where a path closes, which left
+    # the top-left corner square with a spike.
+    ring = top + bot
+    start = len(top) + len(bot) // 2
+    ring = ring[start:] + ring[:start]
+    body_d = 'M' + ' L'.join(f'{f(x)} {f(y)}' for x, y in ring) + 'Z'
+
+    SHADE_X = edges[N - 2]          # the last two bays are in shadow
+    LIT_X = (L + cyl(centre_s[0] - arch_ws[0] / 2, 0)[0]) / 2   # a lit strip up the left edge
+    LEDGE_SHADE = '#EDB46A'
+
     s = []
-    s.append('<defs><clipPath id="c"><path d="%s"/></clipPath></defs>' % body_d)
-    # sun
-    s.append(f'<circle cx="392" cy="86" r="54" fill="{GOLD}"/><circle cx="392" cy="86" r="54" fill="{GOLD_D}" clip-path="inset(0 0 0 50%)" opacity="0"/>')
-    s.append(f'<path d="M392 32a54 54 0 0 1 0 108z" fill="{GOLD_D}" opacity=".35"/>')
-    s.append(f'<rect x="352" y="52" width="26" height="12" rx="6" fill="{GOLD_L}" transform="rotate(-35 365 58)"/>')
-    # ground
-    s.append(f'<ellipse cx="{mid}" cy="{BOTTOM+DIP+6}" rx="236" ry="26" fill="{GREEN}"/>')
-    s.append(f'<path d="M{mid-236} {BOTTOM+DIP+6}a236 26 0 0 0 472 0z" fill="{GREEN_D}"/>')
-    # cypresses
-    for cx, sc in ((38, 1.0), (488, 0.9), (470, 0.7)):
-        hgt = 150 * sc; wid = 40 * sc
-        base = BOTTOM + DIP - 2
-        s.append(f'<rect x="{f(cx-4)}" y="{f(base-18)}" width="8" height="22" rx="4" fill="{ARCH_D}"/>')
-        d = f'M{f(cx)} {f(base-hgt)}C{f(cx+wid*0.75)} {f(base-hgt*0.55)} {f(cx+wid*0.6)} {f(base-12)} {f(cx)} {f(base-12)}C{f(cx-wid*0.6)} {f(base-12)} {f(cx-wid*0.75)} {f(base-hgt*0.55)} {f(cx)} {f(base-hgt)}Z'
-        s.append(f'<path d="{d}" fill="{GREEN}"/>')
-        d2 = f'M{f(cx)} {f(base-hgt)}C{f(cx+wid*0.75)} {f(base-hgt*0.55)} {f(cx+wid*0.6)} {f(base-12)} {f(cx)} {f(base-12)}Z'
-        s.append(f'<path d="{d2}" fill="{GREEN_D}"/>')
-        s.append(f'<rect x="{f(cx-wid*0.28)}" y="{f(base-hgt*0.62)}" width="{f(wid*0.16)}" height="{f(hgt*0.22)}" rx="{f(wid*0.08)}" fill="#8EE04A"/>')
-    # body, rounded corners by stroking in its own colour
-    s.append(f'<path d="{body_d}" fill="{SAND}" stroke="{SAND}" stroke-width="12" stroke-linejoin="round"/>')
-    g = []
-    g.append(f'<rect x="{R-62}" y="0" width="80" height="{H}" fill="{SAND_D}"/>')
-    g.append(f'<rect x="{L-10}" y="0" width="26" height="{H}" fill="{SAND_L}"/>')
-    # ledges between tiers
-    for y, x_from in ((292, L), (214, L), (150 if False else 0, 0)):
-        if not x_from: continue
-        d = 'M' + ' L'.join(f'{f(x)} {f(y+off(x))}' for x in xs) + ' L' + ' L'.join(f'{f(x)} {f(y+10+off(x))}' for x in reversed(xs)) + 'Z'
-        g.append(f'<path d="{d}" fill="{SAND_L}"/>')
-    ax = [x for x in xs if x >= 236]
-    d = 'M' + ' L'.join(f'{f(x)} {f(150+off(x))}' for x in ax) + ' L' + ' L'.join(f'{f(x)} {f(160+off(x))}' for x in reversed(ax)) + 'Z'
-    g.append(f'<path d="{d}" fill="{SAND_L}"/>')
-    s.append('<g clip-path="url(#c)">' + ''.join(g) + '</g>')
-    # arcades
-    for (yb, h, n, lo) in ((370, 62, 9, L), (290, 58, 9, L), (212, 50, 9, L)):
-        for i in range(n):
-            th = (i + 0.5) * math.pi / n
-            cx = mid - span * 0.84 * math.cos(th)
-            w = 10 + 24 * math.sin(th)
-            y = yb - 4 + off(cx)
-            if yb == 212 and top_base(cx - w / 2) > 150 - 1 and cx < 190 and False: continue
-            right = cx > mid + span * 0.55
-            s.append(arch(cx, y, w, h, ARCH_D if right else ARCH))
-            # a lit sill inside each arch
-            s.append(f'<rect x="{f(cx - w/2)}" y="{f(y-8)}" width="{f(w)}" height="8" fill="{ARCH_D}" opacity=".55"/>')
-    # attic windows
-    for i in range(6):
-        cx = 254 + i * 33
-        y = 128 + off(cx)
-        s.append(f'<rect x="{f(cx-7)}" y="{f(y-12)}" width="14" height="20" rx="5" fill="{ARCH}"/>')
-    # highlight pills on the left face
-    s.append(f'<rect x="{L+4}" y="{f(166)}" width="8" height="22" rx="4" fill="#FFF3DC"/>')
-    # banners
-    for px, top_y, flip in ((262, 100 + off(262), False), (430, 96 + off(430), True)):
-        s.append(f'<rect x="{px-3}" y="{f(top_y-62)}" width="6" height="66" rx="3" fill="{ARCH_D}"/>')
-        s.append(f'<circle cx="{px}" cy="{f(top_y-64)}" r="6" fill="{GOLD}"/>')
-        fy = top_y - 58
-        d = f'M{px+3} {f(fy)}h46l-12 15l12 15h-46z'
-        s.append(f'<path d="{d}" fill="{RED}"/>')
-        s.append(f'<path d="M{px+3} {f(fy+15)}h34l12 15h-46z" fill="{RED_D}"/>')
-        s.append(f'<rect x="{px+10}" y="{f(fy+5)}" width="16" height="5" rx="2.5" fill="{RED_L}"/>')
-    s.append(confetti(7, (10, 10, 510, 330), 16, avoid=(60, 26, 470, 400)))
+    s.append(f'<defs><mask id="body" maskUnits="userSpaceOnUse" x="0" y="0" width="{W}" height="{H}">'
+             f'<path d="{body_d}" fill="#fff" stroke="#fff" stroke-width="{ROUND}" stroke-linejoin="round"/></mask></defs>')
+
+    # sun, low on the ruined side where the wall is lowest
+    SUN = (138, 96, 46)
+    sx, sy, sr = SUN
+    s.append(f'<circle cx="{sx}" cy="{sy}" r="{sr}" fill="{GOLD}"/>')
+    s.append(f'<path d="M{sx} {sy-sr}a{sr} {sr} 0 0 1 0 {2*sr}z" fill="{GOLD_D}" opacity=".35"/>')
+    s.append(f'<rect x="{sx-30}" y="{sy-26}" width="22" height="11" rx="5.5" fill="{GOLD_L}" transform="rotate(-35 {sx-19} {sy-20})"/>')
+
+    # ground: a green disc with a darker front lip, like a pressed button
+    GX, GY, GRX, GRY = mid, 380, 250, 40
+    s.append(f'<ellipse cx="{GX}" cy="{GY+7}" rx="{GRX}" ry="{GRY}" fill="{GREEN_D}"/>')
+    s.append(f'<ellipse cx="{GX}" cy="{GY}" rx="{GRX}" ry="{GRY}" fill="{GREEN}"/>')
+    # (the highlight pill goes in front of the building; see below)
+
+    def ground_top(x):
+        dx = (x - GX) / GRX
+        return GY - GRY * math.sqrt(max(0.0, 1 - dx * dx))
+
+    def ground_bottom(x):
+        dx = (x - GX) / GRX
+        return GY + GRY * math.sqrt(max(0.0, 1 - dx * dx))
+
+    # Cypresses, the far ones first. Each base is checked to sit on the grass.
+    def cypress(cx, base, sc):
+        assert ground_top(cx) + 4 < base < ground_bottom(cx) - 4, ('tree off the grass', cx, base)
+        hgt, wid = 150 * sc, 40 * sc
+        out = [f'<rect x="{f(cx-4*sc)}" y="{f(base-18*sc)}" width="{f(8*sc)}" height="{f(20*sc)}" rx="{f(4*sc)}" fill="{ARCH_D}"/>']
+        full = (f'M{f(cx)} {f(base-hgt)}C{f(cx+wid*0.75)} {f(base-hgt*0.55)} {f(cx+wid*0.6)} {f(base-14*sc)} {f(cx)} {f(base-14*sc)}'
+                f'C{f(cx-wid*0.6)} {f(base-14*sc)} {f(cx-wid*0.75)} {f(base-hgt*0.55)} {f(cx)} {f(base-hgt)}Z')
+        half = (f'M{f(cx)} {f(base-hgt)}C{f(cx+wid*0.75)} {f(base-hgt*0.55)} {f(cx+wid*0.6)} {f(base-14*sc)} {f(cx)} {f(base-14*sc)}Z')
+        out.append(f'<path d="{full}" fill="{GREEN}"/><path d="{half}" fill="{GREEN_D}"/>')
+        out.append(f'<rect x="{f(cx-wid*0.3)}" y="{f(base-hgt*0.64)}" width="{f(wid*0.15)}" height="{f(hgt*0.22)}" rx="{f(wid*0.075)}" fill="#8EE04A"/>')
+        return ''.join(out)
+
+    s.append(cypress(486, 384, 0.85))
+    s.append(cypress(34, 386, 1.0))
+
+    # Contact shadow: a darker band hugging the base, so the building sits in
+    # the grass rather than on top of it.
+    # It starts under the base (the outline reaches ROUND/2 below BOTTOM) and
+    # stops short of the rounded corners, so no square end shows beneath them.
+    sh_xs = [x for x in range(L + 8, R - 7)]
+    s.append('<path d="M' + ' L'.join(f'{x} {f(BOTTOM + off(x))}' for x in sh_xs)
+             + ' L' + ' L'.join(f'{x} {f(BOTTOM + off(x) + ROUND / 2 + 5)}' for x in reversed(sh_xs))
+             + f'Z" fill="{GREEN_D}" stroke="{GREEN_D}" stroke-width="6" stroke-linejoin="round"/>')
+    for x in (L, R):
+        assert ground_top(x) < BOTTOM + off(x) - 6, ('corner floats above the grass', x)
+
+    # The body: lit, then the shaded bays, then the lit strip, each the same
+    # rounded outline cut to its own side, so no rim of the wrong colour shows.
+    s.append(f'<path d="{body_d}" fill="{SAND}" stroke="{SAND}" stroke-width="{ROUND}" stroke-linejoin="round"/>')
+    face = [f'<rect x="{f(SHADE_X)}" y="0" width="{W}" height="{H}" fill="{SAND_D}"/>',
+            f'<rect x="0" y="0" width="{f(LIT_X)}" height="{H}" fill="{SAND_L}"/>']
+
+    # Ledges and the plinth, over the arches' feet. Lighter on the lit side.
+    # A band runs right out to the rounded edge, which is ROUND/2 outside L and
+    # R; beyond L and R it carries on level, as the outline does.
+    edge_xs = [x / 2 for x in range(2 * (L - ROUND), 2 * (R + ROUND) + 1)]
+    def curve(x):
+        # Past L or R the band keeps going at the slope it had there, so it
+        # meets the rounded edge without a kink.
+        c = min(max(x, L), R)
+        h = 0.01 if c == L else -0.01
+        slope = (off(c + h) - off(c)) / h
+        return off(c) + slope * (x - c)
+
+    def band(y0, y1, x_from, x_to, fill):
+        bx = [x for x in edge_xs if x_from <= x <= x_to]
+        return ('<path d="M' + ' L'.join(f'{f(x)} {f(y0+curve(x))}' for x in bx) + ' L'
+                + ' L'.join(f'{f(x)} {f(y1+curve(x))}' for x in reversed(bx)) + f'Z" fill="{fill}"/>')
+
+    # Bands run past both edges and are cut to the rounded outline by the mask,
+    # so they meet the edge exactly, rounded corners included. The plinth runs
+    # down past the base for the same reason. The ledge under the attic starts
+    # at the first step of the ruin, the first place the wall is that high.
+    LEFT, RIGHT = L - ROUND, R + ROUND
+    for (y0, y1), start in ((LEDGE_C, LEFT), (LEDGE_B, LEFT), (LEDGE_A, edges[3] - ROUND / 2),
+                            ((PLINTH[0], BOTTOM + ROUND), LEFT)):
+        is_plinth = y0 == PLINTH[0]
+        lit_fill = SAND_D if is_plinth else SAND_L
+        dark_fill = '#D4914A' if is_plinth else LEDGE_SHADE
+        face.append(band(y0, y1, start, SHADE_X, lit_fill))
+        face.append(band(y0, y1, SHADE_X, RIGHT, dark_fill))
+    s.append('<g mask="url(#body)">' + ''.join(face) + '</g>')
+
+    # Arches, on the cylinder: each centred in its bay, its head just under
+    # the ledge above and its foot on the ledge below, with a darker sill.
+    for (t, b) in (TIER3, TIER2, TIER1):
+        for k in range(N):
+            sc, ws = centre_s[k], arch_ws[k]
+            dark = centres[k] > SHADE_X
+            s.append(f'<path d="{shape(arch_points(sc, ws, t + 9, b))}" fill="{ARCH_D if dark else ARCH}"/>')
+            s.append(f'<path d="{shape(band_points(sc - ws / 2, sc + ws / 2, b - 8, b))}" fill="{ARCH_D}" opacity=".6"/>')
+            left, right = cyl(sc - ws / 2, b)[0], cyl(sc + ws / 2, b)[0]
+            assert edges[k] < left and right < edges[k + 1], 'arch outside its bay'
+
+    # Attic windows, also on the cylinder: one over each arch where the attic
+    # stands, a little round-ended slot.
+    for k in range(N):
+        sc = centre_s[k]
+        if cyl(sc - arch_ws[k] / 2, 0)[0] < edges[4] + 2: continue
+        ws = arch_ws[k] * 0.42
+        v_mid = (ATTIC_TOP + LEDGE_A[0]) / 2
+        r = ws / 2
+        pts = [(sc + r * math.cos(math.pi - math.pi * i / 14), v_mid - 6 - r * math.sin(math.pi - math.pi * i / 14)) for i in range(15)]
+        pts += [(sc + r * math.cos(math.pi * i / 14), v_mid + 6 + r * math.sin(math.pi * i / 14)) for i in range(15)]
+        s.append(f'<path d="{shape(pts)}" fill="{ARCH_D if centres[k] > SHADE_X else ARCH}"/>')
+
+    # A highlight pill on the lit strip, between the ledges.
+    s.append(f'<rect x="{f((L + LIT_X) / 2 - 3)}" y="{f(TIER2[0] + off(L) + 10)}" width="6" height="22" rx="3" fill="#FFF3DC"/>')
+
+    # Flags on the piers between bays, on the full-height attic.
+    flags = []
+    for x in (edges[5], edges[8]):
+        top_y = ATTIC_TOP + off(x) - ROUND / 2
+        s.append(f'<rect x="{f(x-3)}" y="{f(top_y-60)}" width="6" height="62" rx="3" fill="{ARCH_D}"/>')
+        s.append(f'<circle cx="{f(x)}" cy="{f(top_y-62)}" r="6" fill="{GOLD}"/>')
+        fy = top_y - 56
+        s.append(f'<path d="M{f(x+3)} {f(fy)}h44l-11 14l11 14h-44z" fill="{RED}"/>')
+        s.append(f'<path d="M{f(x+3)} {f(fy+14)}h33l11 14h-44z" fill="{RED_D}"/>')
+        s.append(f'<rect x="{f(x+10)}" y="{f(fy+5)}" width="16" height="5" rx="2.5" fill="{RED_L}"/>')
+        flags.append((x - 8, top_y - 70, x + 50, top_y))
+
+    px = 120
+    py = max(BOTTOM + off(x) + ROUND / 2 + 5 + 4 for x in (px, px + 40))
+    assert py + 5 < min(ground_bottom(x) for x in (px, px + 40)) - 3, 'grass highlight off the grass'
+    s.append(f'<rect x="{px}" y="{f(py)}" width="40" height="5" rx="2.5" fill="#8EE04A"/>')
+
+    avoid = [(L - 10, ATTIC_TOP - 10, R + 10, H), (sx - sr, sy - sr, sx + sr, sy + sr), *flags,
+             (0, 225, 70, H), (450, 225, W, H)]
+    s.append(confetti_at(7, (12, 12, W - 12, 330), 14, avoid))
     write('colosseum.svg', W, H, ''.join(s))
 
 # ---------------------------------------------------------------- icons (96)
@@ -200,42 +375,73 @@ def laurel():
     write('laurel.svg', 96, 96, ''.join(s))
 
 def owl():
-    BR, BR_D, BEL = '#C07A3E', '#9C5E2A', '#F6DDB4'
+    """
+    Minerva's owl, in the Duolingo manner: a round body with no outlines, big
+    eyes, a shaded side and highlight pills. It moves: it bobs, flaps its wings
+    and blinks. The animation is CSS inside the SVG, which browsers run even
+    when the file is shown as an <img> or a CSS background, and it stops for
+    anyone who has asked for reduced motion.
+    """
+    BODY, BODY_D, BELLY, BELLY_D = '#C98543', '#A86A2C', '#F6DFB5', '#E8C48C'
     s = []
-    # body
-    s.append(f'<path d="M20 50C20 30 32 22 48 22C64 22 76 30 76 50V70C76 84 64 90 48 90C32 90 20 84 20 70Z" fill="{BR}"/>')
-    s.append(f'<path d="M48 22C64 22 76 30 76 50V70C76 84 64 90 48 90Z" fill="{BR_D}" opacity=".45"/>')
-    s.append(f'<path d="M32 66C32 56 40 52 48 52C56 52 64 56 64 66V74C64 82 56 86 48 86C40 86 32 82 32 74Z" fill="{BEL}"/>')
-    for x, y in ((42, 64), (54, 64), (48, 72), (42, 79), (54, 79)):
-        s.append(f'<path d="M{x-3} {y}q3 4 6 0" fill="none" stroke="#E2BC86" stroke-width="2.4" stroke-linecap="round"/>')
-    # helmet with crest: Minerva's owl
-    s.append(f'<path d="M22 30C24 10 72 10 74 30C66 23 30 23 22 30Z" fill="{RED}"/>')
-    s.append(f'<path d="M24 34C24 22 34 16 48 16C62 16 72 22 72 34Z" fill="{GOLD}"/>')
-    s.append(f'<path d="M48 16C62 16 72 22 72 34H60C60 26 56 19 48 16Z" fill="{GOLD_D}"/>')
-    s.append(f'<rect x="20" y="31" width="56" height="7" rx="3.5" fill="{GOLD_D}"/>')
-    # eyes
-    for cx in (37, 59):
-        s.append(f'<circle cx="{cx}" cy="46" r="11" fill="#fff"/>')
-        s.append(f'<circle cx="{cx+2}" cy="47" r="5.5" fill="#3C3C3C"/>')
-        s.append(f'<circle cx="{cx+4}" cy="45" r="1.8" fill="#fff"/>')
-    s.append(f'<path d="M44 54h8l-4 7z" fill="{ORANGE}"/>')
+    s.append('<style>'
+             '.bob{animation:bob 1.8s ease-in-out infinite;transform-origin:60px 110px}'
+             '.wl{animation:flapL .9s ease-in-out infinite alternate;transform-origin:27px 64px}'
+             '.wr{animation:flapR .9s ease-in-out infinite alternate;transform-origin:93px 64px}'
+             '.eye{animation:blink 4.2s infinite;transform-box:fill-box;transform-origin:center}'
+             '.crest{animation:sway 1.8s ease-in-out infinite;transform-origin:60px 30px}'
+             '@keyframes bob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-5px) rotate(-2deg)}}'
+             '@keyframes flapL{from{transform:rotate(8deg)}to{transform:rotate(-26deg)}}'
+             '@keyframes flapR{from{transform:rotate(-8deg)}to{transform:rotate(26deg)}}'
+             '@keyframes blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.1)}}'
+             '@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(4deg)}}'
+             '@media (prefers-reduced-motion:reduce){.bob,.wl,.wr,.eye,.crest{animation:none}}'
+             '</style>')
+    s.append('<defs><clipPath id="ob"><path d="M60 28C88 28 100 48 100 72C100 98 84 110 60 110C36 110 20 98 20 72C20 48 32 28 60 28Z"/></clipPath></defs>')
+    s.append('<g class="bob">')
     # feet
-    s.append(f'<rect x="36" y="86" width="10" height="6" rx="3" fill="{ORANGE}"/><rect x="50" y="86" width="10" height="6" rx="3" fill="{ORANGE}"/>')
-    write('owl.svg', 96, 96, ''.join(s))
+    s.append(f'<rect x="40" y="104" width="14" height="9" rx="4.5" fill="{ORANGE}"/><rect x="66" y="104" width="14" height="9" rx="4.5" fill="{ORANGE}"/>')
+    # wings, behind the body, hinged at the shoulder
+    s.append(f'<g class="wl"><path d="M30 60C14 66 8 84 14 98C22 94 30 86 32 74Z" fill="{BODY_D}"/></g>')
+    s.append(f'<g class="wr"><path d="M90 60C106 66 112 84 106 98C98 94 90 86 88 74Z" fill="{BODY_D}"/></g>')
+    # body, with its right side in shade
+    body = 'M60 28C88 28 100 48 100 72C100 98 84 110 60 110C36 110 20 98 20 72C20 48 32 28 60 28Z'
+    s.append(f'<path d="{body}" fill="{BODY}"/>')
+    s.append(f'<rect x="78" y="20" width="40" height="100" fill="{BODY_D}" opacity=".45" clip-path="url(#ob)"/>')
+    s.append(f'<rect x="28" y="52" width="7" height="18" rx="3.5" fill="#E7A766"/>')
+    # belly with feather marks
+    s.append(f'<path d="M60 70C76 70 84 82 84 92C84 102 74 108 60 108C46 108 36 102 36 92C36 82 44 70 60 70Z" fill="{BELLY}"/>')
+    for x, y in ((50, 84), (60, 84), (70, 84), (55, 94), (65, 94)):
+        s.append(f'<path d="M{x-4} {y}q4 5 8 0" fill="none" stroke="{BELLY_D}" stroke-width="2.6" stroke-linecap="round"/>')
+    # eyes: pale rings, big whites, pupils looking up and to the right, a glint
+    for cx in (45, 75):
+        s.append(f'<circle cx="{cx}" cy="58" r="17" fill="{BELLY}"/>')
+        s.append(f'<g class="eye"><circle cx="{cx}" cy="58" r="13" fill="#fff"/>'
+                 f'<circle cx="{cx+3}" cy="56" r="7.5" fill="#3C3C3C"/>'
+                 f'<circle cx="{cx+5.5}" cy="53.5" r="2.6" fill="#fff"/></g>')
+    # beak
+    s.append(f'<path d="M54 68Q60 66 66 68L61.5 77Q60 79 58.5 77Z" fill="{GOLD}"/>')
+    s.append(f'<path d="M60 67Q63 67 66 68L61.5 77Q60 79 60 77Z" fill="{GOLD_D}"/>')
+    # Minerva's helmet with its crest
+    s.append(f'<g class="crest"><path d="M30 34C30 12 90 12 90 34C82 26 38 26 30 34Z" fill="{RED}"/>'
+             f'<path d="M60 18C76 18 88 24 90 34C84 28 72 25 60 25Z" fill="{RED_D}"/>'
+             f'<rect x="38" y="18" width="16" height="6" rx="3" fill="{RED_L}" transform="rotate(-12 46 21)"/></g>')
+    s.append(f'<path d="M34 42C34 30 46 24 60 24C74 24 86 30 86 42Z" fill="{GOLD}"/>')
+    s.append(f'<path d="M60 24C74 24 86 30 86 42H72C72 33 67 27 60 24Z" fill="{GOLD_D}"/>')
+    s.append(f'<rect x="40" y="30" width="12" height="6" rx="3" fill="{GOLD_L}" transform="rotate(-20 46 33)"/>')
+    s.append(f'<rect x="30" y="40" width="60" height="7" rx="3.5" fill="{GOLD_D}"/>')
+    s.append('</g>')
+    write('owl.svg', 120, 120, ''.join(s))
+
 
 def logo():
-    # A small red Colosseum: the brand mark and the favicon.
-    s = []
-    s.append(f'<path d="M6 16C6 10 14 6 24 6C34 6 42 10 42 16V36H6Z" fill="{RED}"/>')
-    s.append(f'<path d="M24 6C34 6 42 10 42 16V36H30V7Z" fill="{RED_D}"/>')
-    s.append(f'<rect x="4" y="34" width="40" height="6" rx="3" fill="{RED_D}"/>')
-    for y, hgt in ((22, 12), (12, 7)):
-        for i, x in enumerate((10, 18.5, 27, 35.5)):
-            w = 5
-            s.append(arch(x + 0.5 + w/2 - 2.5 + 2.5, y + hgt, w, hgt, '#fff'))
-    write('logo.svg', 48, 44, ''.join(s))
+    """The logo and the favicon are the dictionary's scroll."""
+    with open(os.path.join(OUT, 'scroll.svg')) as fh:
+        svg = fh.read()
+    with open(os.path.join(OUT, 'logo.svg'), 'w') as fh:
+        fh.write(svg)
     with open(os.path.join(OUT, '..', '..', 'favicon.svg'), 'w') as fh:
-        fh.write('<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -4 52 52" width="48" height="48">' + ''.join(s) + '</svg>\n')
+        fh.write(svg.replace('viewBox="0 0 96 96"', 'viewBox="6 4 84 88"'))
 
 colosseum(); helmet(); column(); scroll(); laurel(); owl(); logo()
 print('ok')

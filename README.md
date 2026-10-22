@@ -24,8 +24,8 @@ them.
 | `/declinationes` | The five noun declensions and the adjectives, in every case and number. Takes a noun the way a dictionary quotes it — nominative and genitive — because the genitive is what says which declension it is. |
 | `/diccionario` | Two columns. On the left, the Cambridge Latin Course vocabulary by stage; on the right, Whitaker's Words: the headword with its principal parts, every way the form can be read, example sentences where a corpus has them, and a spoken pronunciation. Clicking a word in a stage looks it up on the right. |
 
-The three inner pages live in the menu behind the three-line button at the top
-right. The home page is the logo. `/stadia` (the old stages page) redirects to
+The three inner pages are the links at the top right of the header. The home
+page is the logo. `/stadia` (the old stages page) redirects to
 `/diccionario` with its `?s=` intact, and `/chat` to the home page.
 
 The interface is English. The Latin string pack is still in
@@ -252,15 +252,28 @@ Round everywhere else, both from Google Fonts.
 
 **The illustrations are drawn SVGs in `public/assets/art/`**: the Colosseum in
 the hero, a legionary helmet (conjugations), a column (declensions), a sealed
-scroll (dictionary), a laurel wreath (stages), Minerva's owl in a helmet, and
-the small red Colosseum that is the logo and the favicon. They follow the
-Duolingo house style: flat shapes with no outlines, a darker shade down one
-side, a light highlight pill, and confetti around the hero. They are generated
+scroll (the dictionary, and also the logo and the favicon), a laurel wreath
+(stages), and Minerva's owl in a helmet, which bobs, flaps and blinks on the
+dictionary page. They follow the Duolingo house style: flat shapes with no
+outlines, a darker shade down one side, a light highlight pill, and confetti
+around the hero.
+
+The Colosseum's facade is drawn on a real cylinder: every arch, sill and
+window is laid out flat and then projected, so the arches narrow towards the
+sides and their round heads turn into leaning half-ellipses, as they would on
+a drum. The script asserts that each arch stays inside its bay and that the
+building and trees stand on the grass. They are generated
 by `scripts/draw-art.py` rather than drawn by hand, because the Colosseum's
 arches have to follow the curve of the building. Run it again after editing.
 
-**The menu has no outline.** It floats on a shadow alone and closes on any press
-outside it, on Escape, or when focus tabs out of it.
+**The header is Duolingo's**: plain uppercase links at the right, light grey,
+a shade darker on hover and for the page you are on. On a phone they move to a
+row of their own under the logo; there is no menu button at any width.
+
+**Checkboxes are drawn, not the browser's**: a rounded box with a thick bottom
+edge that fills red with a white tick and presses down when clicked.
+
+**No rubber-band bounce** at either end of the page (`overscroll-behavior`).
 
 **The detail and report panels are one component.** Both open the same overlay,
 so the focus handling and the three ways out — Escape, the backdrop, the close
