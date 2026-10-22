@@ -377,33 +377,19 @@ def laurel():
 def owl():
     """
     Minerva's owl, in the Duolingo manner: a round body with no outlines, big
-    eyes, a shaded side and highlight pills. It moves: it bobs, flaps its wings
-    and blinks. The animation is CSS inside the SVG, which browsers run even
-    when the file is shown as an <img> or a CSS background, and it stops for
-    anyone who has asked for reduced motion.
+    eyes, a shaded side and highlight pills, under a large crested helmet.
+    A still picture. Everything is drawn 10 units lower than the body's own
+    coordinates so the enlarged helmet has room above it.
     """
     BODY, BODY_D, BELLY, BELLY_D = '#C98543', '#A86A2C', '#F6DFB5', '#E8C48C'
     s = []
-    s.append('<style>'
-             '.bob{animation:bob 1.8s ease-in-out infinite;transform-origin:60px 110px}'
-             '.wl{animation:flapL .9s ease-in-out infinite alternate;transform-origin:27px 64px}'
-             '.wr{animation:flapR .9s ease-in-out infinite alternate;transform-origin:93px 64px}'
-             '.eye{animation:blink 4.2s infinite;transform-box:fill-box;transform-origin:center}'
-             '.crest{animation:sway 1.8s ease-in-out infinite;transform-origin:60px 30px}'
-             '@keyframes bob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-5px) rotate(-2deg)}}'
-             '@keyframes flapL{from{transform:rotate(8deg)}to{transform:rotate(-26deg)}}'
-             '@keyframes flapR{from{transform:rotate(-8deg)}to{transform:rotate(26deg)}}'
-             '@keyframes blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.1)}}'
-             '@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(4deg)}}'
-             '@media (prefers-reduced-motion:reduce){.bob,.wl,.wr,.eye,.crest{animation:none}}'
-             '</style>')
     s.append('<defs><clipPath id="ob"><path d="M60 28C88 28 100 48 100 72C100 98 84 110 60 110C36 110 20 98 20 72C20 48 32 28 60 28Z"/></clipPath></defs>')
-    s.append('<g class="bob">')
+    s.append('<g transform="translate(0 10)">')
     # feet
     s.append(f'<rect x="40" y="104" width="14" height="9" rx="4.5" fill="{ORANGE}"/><rect x="66" y="104" width="14" height="9" rx="4.5" fill="{ORANGE}"/>')
     # wings, behind the body, hinged at the shoulder
-    s.append(f'<g class="wl"><path d="M30 60C14 66 8 84 14 98C22 94 30 86 32 74Z" fill="{BODY_D}"/></g>')
-    s.append(f'<g class="wr"><path d="M90 60C106 66 112 84 106 98C98 94 90 86 88 74Z" fill="{BODY_D}"/></g>')
+    s.append(f'<path d="M30 60C14 66 8 84 14 98C22 94 30 86 32 74Z" fill="{BODY_D}"/>')
+    s.append(f'<path d="M90 60C106 66 112 84 106 98C98 94 90 86 88 74Z" fill="{BODY_D}"/>')
     # body, with its right side in shade
     body = 'M60 28C88 28 100 48 100 72C100 98 84 110 60 110C36 110 20 98 20 72C20 48 32 28 60 28Z'
     s.append(f'<path d="{body}" fill="{BODY}"/>')
@@ -416,14 +402,16 @@ def owl():
     # eyes: pale rings, big whites, pupils looking up and to the right, a glint
     for cx in (45, 75):
         s.append(f'<circle cx="{cx}" cy="58" r="17" fill="{BELLY}"/>')
-        s.append(f'<g class="eye"><circle cx="{cx}" cy="58" r="13" fill="#fff"/>'
+        s.append(f'<circle cx="{cx}" cy="58" r="13" fill="#fff"/>'
                  f'<circle cx="{cx+3}" cy="56" r="7.5" fill="#3C3C3C"/>'
-                 f'<circle cx="{cx+5.5}" cy="53.5" r="2.6" fill="#fff"/></g>')
+                 f'<circle cx="{cx+5.5}" cy="53.5" r="2.6" fill="#fff"/>')
     # beak
     s.append(f'<path d="M54 68Q60 66 66 68L61.5 77Q60 79 58.5 77Z" fill="{GOLD}"/>')
     s.append(f'<path d="M60 67Q63 67 66 68L61.5 77Q60 79 60 77Z" fill="{GOLD_D}"/>')
-    # Minerva's helmet with its crest
-    s.append(f'<g class="crest"><path d="M30 34C30 12 90 12 90 34C82 26 38 26 30 34Z" fill="{RED}"/>'
+    # Minerva's helmet with its crest, a third bigger than the head would
+    # strictly need, scaled about the brim so it still sits on the head.
+    s.append('<g transform="translate(60 41) scale(1.35) translate(-60 -44)">')
+    s.append(f'<g><path d="M30 34C30 12 90 12 90 34C82 26 38 26 30 34Z" fill="{RED}"/>'
              f'<path d="M60 18C76 18 88 24 90 34C84 28 72 25 60 25Z" fill="{RED_D}"/>'
              f'<rect x="38" y="18" width="16" height="6" rx="3" fill="{RED_L}" transform="rotate(-12 46 21)"/></g>')
     s.append(f'<path d="M34 42C34 30 46 24 60 24C74 24 86 30 86 42Z" fill="{GOLD}"/>')
@@ -431,7 +419,8 @@ def owl():
     s.append(f'<rect x="40" y="30" width="12" height="6" rx="3" fill="{GOLD_L}" transform="rotate(-20 46 33)"/>')
     s.append(f'<rect x="30" y="40" width="60" height="7" rx="3.5" fill="{GOLD_D}"/>')
     s.append('</g>')
-    write('owl.svg', 120, 120, ''.join(s))
+    s.append('</g>')
+    write('owl.svg', 120, 130, ''.join(s))
 
 
 def logo():

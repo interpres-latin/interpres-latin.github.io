@@ -202,10 +202,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   width: 100%;
   max-width: 500px;
   height: auto;
-  animation: float 6s ease-in-out infinite;
 }
-@keyframes float { 50% { transform: translateY(-8px); } }
-@media (prefers-reduced-motion: reduce) { .hero__art img { animation: none; } }
 
 .rule { border: 0; height: 2px; background: var(--line); margin: 0 clamp(24px, 4vw, 56px); padding: 0; }
 @media (min-width: 1360px) { .rule { margin: 0 auto; max-width: calc(var(--shell) - 112px); } }

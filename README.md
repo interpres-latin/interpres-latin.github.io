@@ -253,8 +253,8 @@ Round everywhere else, both from Google Fonts.
 **The illustrations are drawn SVGs in `public/assets/art/`**: the Colosseum in
 the hero, a legionary helmet (conjugations), a column (declensions), a sealed
 scroll (the dictionary, and also the logo and the favicon), a laurel wreath
-(stages), and Minerva's owl in a helmet, which bobs, flaps and blinks on the
-dictionary page. They follow the Duolingo house style: flat shapes with no
+(stages), and Minerva's owl in a big crested helmet on the dictionary page.
+All of them are still pictures. They follow the Duolingo house style: flat shapes with no
 outlines, a darker shade down one side, a light highlight pill, and confetti
 around the hero.
 

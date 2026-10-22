@@ -116,7 +116,7 @@ const LATIN = {
       'Verte Latine et Anglice, coniuga verba, declina nomina, quaere verba in lexico, roga quaestiones.',
       'Conjugate any verb, decline any noun, and look up any word, with the Cambridge course vocabulary stage by stage.',
     ),
-    title: latine('interpres|lingua latina|sine lacrimis', 'interpres|latin without|the tears'),
+    title: latine('interpres|lingua latina|revivit', 'interpres|bring latin|to life'),
     ctaConjugate: latine('Verba coniugare', 'Conjugate a verb'),
     ctaDictionary: latine('Lexicon aperire', 'Open the dictionary'),
   },
