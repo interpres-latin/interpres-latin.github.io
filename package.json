@@ -2,12 +2,15 @@
   "name": "interpres",
   "version": "0.1.0",
   "private": true,
-  "description": "Interpres — a Latin site: a two-way translator built on its own grammar, conjugation and declension tables, Whitaker’s Words and a grounded tutor.",
+  "description": "Interpres — a Latin site: conjugation and declension tables, and Whitaker’s Words beside the Cambridge course stages.",
   "type": "module",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node test/latin.test.js && node test/conjugator-view.test.js && node test/corpus.test.js && node test/speech.test.js"
+    "test": "node test/latin.test.js && node test/conjugator-view.test.js && node test/corpus.test.js && node test/speech.test.js && node test/appscript.test.js",
+    "appscript:build": "node appscript/build.mjs",
+    "appscript:preview": "node appscript/preview.mjs",
+    "appscript:push": "node appscript/build.mjs && cd appscript && npx -y @google/clasp push --force"
   },
   "engines": {
     "node": ">=20"

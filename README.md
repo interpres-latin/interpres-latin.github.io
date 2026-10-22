@@ -317,6 +317,13 @@ server/
   providers/            groq, anthropic, and the shared SSE reader
   routes/               dictionary, speak
 
+appscript/               the Google Apps Script build — see above
+  build.mjs             server/ and public/ → dist/
+  emulator.mjs          Apps Script's services, for the tests and the preview
+  preview.mjs           the build, served locally
+  src/                  what Apps Script lacks: entry points, browser bridge,
+                        shims, and the Express and Anthropic stand-ins
+
 public/
   index.html            the shell: logo, the menu, the footer
   styles.css            every style, one file
@@ -336,17 +343,55 @@ public/
 test/                   offline, no network, a couple of seconds
 ```
 
-`npm test` runs all 544 checks.
+`npm test` runs all 574 checks.
 
 ```
-latin.test.js             286 on the declension and conjugation engines and
+latin.test.js             296 on the declension and conjugation engines and
                               the course data
 conjugator-view.test.js   230 that every tense the page names exists in the
                               table the engine builds
 corpus.test.js             11 on how a corpus sentence is chosen
 speech.test.js             17 on what may be spoken, and what is refused before
                               a character of the month is spent
+appscript.test.js          20 on the Apps Script build: its entry points, the
+                              inlined page, the dictionary, speech and Claude
 ```
+
+## Google Apps Script
+
+The whole site also runs as a Google Apps Script web app, built from the same
+`server/` and `public/` files with nothing edited by hand.
+
+```bash
+npm run appscript:build      # appscript/dist: server.js, Code.js, index.html
+npm run appscript:preview    # the build, served locally at :4100 (PREVIEW_PORT to change)
+npm run appscript:push       # build, then clasp push to your script
+```
+
+**How it maps.** Apps Script has no modules, no static files and no HTTP
+server, so `appscript/build.mjs` makes up the difference:
+
+| On Node | On Apps Script |
+| --- | --- |
+| ES modules | each module a function in a small registry, all inside `interpres_()` so nothing is callable from a browser |
+| `/api/dictionary`, `/api/speak` | `api()` through `google.script.run`; `appscript/src/client.js` makes the page's `fetch('/api/…')` go there, so the views are unchanged |
+| `public/styles.css`, `public/assets/art/*.svg` | inlined into the one `index.html`; the art as data URIs |
+| `fetch`, `Buffer`, `URL`, timers | `appscript/src/shim.js`, on `UrlFetchApp` and `Utilities` |
+| in-memory caches | `CacheService` (six hours at most), so a word is fetched once, not once per visitor |
+| `.env` | Project Settings → Script properties, the same names as `.env.example` |
+| the Anthropic SDK | `appscript/src/modules/anthropic.js`, the same provider as a plain Messages API request |
+| `/conjugacion?v=…` | `…/exec?page=conjugacion&v=…`, kept in the address bar with `google.script.history` |
+
+`npm test` runs the built project in a bare V8 context with every outside host
+stubbed (`appscript/emulator.mjs`), and checks it serves the same dictionary
+entries as the Node server.
+
+**First deployment.** Create a project at [script.google.com](https://script.google.com)
+(or `npx @google/clasp create --type webapp --title Interpres --rootDir dist` inside
+`appscript/`), copy `.clasp.json.example` to `appscript/.clasp.json` with its
+script id, run `npm run appscript:push`, then **Deploy → New deployment → Web
+app**, executing as you and open to anyone. Keys, if any, go in Script
+properties.
 
 ## Deploying
 
