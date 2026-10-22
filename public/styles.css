@@ -234,6 +234,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   transition: color 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
+.nav__links a[hidden] { display: none; }
 .nav__links a:hover { color: var(--text); }
 .nav__links a.is-active { color: var(--text); border-bottom-color: var(--accent); }
 

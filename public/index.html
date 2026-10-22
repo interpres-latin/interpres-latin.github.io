@@ -34,7 +34,12 @@
       <span class="nav__wordmark">Interpres</span>
     </a>
     <nav class="nav__links" aria-label="Index">
-      <a href="/#interpres" data-link data-nav="traductor">Interpres</a>
+      <!--
+        Hidden from the menu, not removed. The translator is still on the home
+        page at #interpres and still works; only its way in from the header is
+        off. Drop the hidden attribute to put it back.
+      -->
+      <a href="/#interpres" data-link data-nav="traductor" hidden>Interpres</a>
       <a href="/conjugacion" data-link data-nav="conjugacion">Coniugatio</a>
       <a href="/declinationes" data-link data-nav="declinationes">Declinatio</a>
       <a href="/diccionario" data-link data-nav="diccionario">Lexicon</a>
