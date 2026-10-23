@@ -51,7 +51,7 @@ function utf8Decode(bytes) {
   return Utilities.newBlob(toSigned(bytes)).getDataAsString('UTF-8');
 }
 
-/** Just enough of Node's Buffer for speech.js and for sending audio back. */
+/** Just enough of Node's Buffer for hashing and for sending bytes back. */
 class Buffer extends Uint8Array {
   static from(value, encoding) {
     if (value instanceof ArrayBuffer) return new Buffer(value.slice(0));

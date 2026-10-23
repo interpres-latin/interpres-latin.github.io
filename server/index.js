@@ -3,7 +3,6 @@ import express from 'express';
 import { loadEnv, ROOT } from './env.js';
 import { chainInfo, hasProvider, providerInfo } from './llm.js';
 import { router as dictionary } from './routes/dictionary.js';
-import { router as speak } from './routes/speak.js';
 
 loadEnv();
 
@@ -15,7 +14,6 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '256kb' }));
 
 app.use('/api/dictionary', dictionary);
-app.use('/api/speak', speak);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, ai: hasProvider(), provider: providerInfo() });

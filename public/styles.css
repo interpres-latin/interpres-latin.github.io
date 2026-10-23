@@ -230,7 +230,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 /* --- home: tools ---------------------------------------------------------------- */
 
 .features { padding-top: 88px; padding-bottom: 40px; }
-.features__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 36px; }
+.features__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 36px; }
 
 .feature {
   display: flex;
@@ -311,6 +311,7 @@ main[data-page] .page::before {
 main[data-page="conjugacion"] .page::before { background-image: url(/assets/art/helmet.svg); }
 main[data-page="declinationes"] .page::before { background-image: url(/assets/art/column.svg); }
 main[data-page="diccionario"] .page::before { background-image: url(/assets/art/owl.svg); transform: rotate(-4deg); }
+main[data-page="grammatica"] .page::before { background-image: url(/assets/art/laurel.svg); }
 .page__head { margin-bottom: 36px; max-width: 720px; }
 .page__head .eyebrow { display: none; }
 .page__head h1 {
@@ -559,18 +560,6 @@ table.conj--words td { white-space: normal; color: var(--text-dim); font-weight:
 .entry__head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
 .entry__head h2 { font-family: var(--display); font-weight: 700; font-size: 44px; letter-spacing: -0.02em; line-height: 1; }
 
-.speak {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 42px; height: 42px; padding: 0;
-  border: 2px solid var(--blue-dark); border-bottom-width: 4px; border-radius: 12px;
-  background: var(--blue); color: #fff; cursor: pointer;
-}
-.speak:hover { filter: brightness(1.07); }
-.speak:active { transform: translateY(2px); border-bottom-width: 2px; }
-.speak.is-loading { opacity: 0.6; cursor: progress; }
-.speak--failed { background: var(--text-faint); border-color: var(--text-dim); }
-
-.entry__sound { font-size: 13px; color: var(--text-faint); margin-bottom: 14px; }
 .entry__gloss { font-size: 19px; font-weight: 700; margin: 10px 0 18px; }
 .entry__origin { margin: 18px 0 8px; font-size: 14px; color: var(--text-dim); }
 
@@ -601,6 +590,55 @@ table.conj--words td { white-space: normal; color: var(--text-dim); font-weight:
 .locution { padding: 10px 0; border-top: 2px solid var(--line); }
 .locution p { color: var(--text-dim); font-size: 15px; }
 
+/* --- grammar -------------------------------------------------------------------- */
+
+.grammar__topics { grid-template-columns: repeat(3, 1fr); margin-top: 0; }
+
+.backlink {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 18px;
+  font-size: 14px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint);
+}
+.backlink::before {
+  content: ''; width: 8px; height: 8px; margin-right: 2px;
+  border-left: 3px solid currentColor; border-bottom: 3px solid currentColor; border-radius: 1px;
+  transform: rotate(45deg);
+}
+.backlink:hover { color: var(--red); }
+
+.grammar__body { display: flex; flex-direction: column; gap: 24px; }
+.grammar__card .mood__title { margin: 0 0 18px; }
+.grammar__sub { margin: 26px 0 10px; font-size: 20px; }
+.grammar__p { margin: 12px 0; color: var(--text); }
+.grammar__list { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; }
+.grammar__list li::marker { color: var(--red); }
+.grammar__card em, .grammar__use em { color: var(--red-dark); font-style: italic; }
+.grammar__table { margin: 14px 0; }
+.grammar__table table.conj { min-width: 0; }
+table.conj--paradigm thead th:first-child { position: sticky; left: 0; z-index: 2; }
+table.conj--paradigm tbody th { min-width: 0; }
+table.conj--prose td, table.conj--prose tbody th { white-space: normal; vertical-align: top; }
+table.conj--prose td { font-weight: 600; }
+table.conj--prose tbody th { position: static; border-right: 0; min-width: 0; }
+
+.grammar__casetags { display: flex; flex-wrap: wrap; gap: 8px; }
+.grammar__casetags .chip { font-size: 14px; padding: 4px 12px; }
+.grammar__case .mood__title { margin-bottom: 12px; }
+
+.grammar__uses { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.grammar__use {
+  padding: 22px 24px;
+  border: 2px solid var(--line); border-bottom-width: 5px; border-radius: 20px; background: #fff;
+}
+.grammar__use h3 { font-size: 20px; color: var(--text); }
+.grammar__what { margin-top: 6px; color: var(--text-dim); font-size: 16px; }
+.grammar__example { margin-top: 12px; }
+.grammar__example p:first-child { font-weight: 800; color: var(--text); }
+.grammar__look { margin-top: 14px; font-size: 15px; color: var(--text-dim); }
+.grammar__look span {
+  display: block; margin-bottom: 2px;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint);
+}
+
 /* --- footer -------------------------------------------------------------------- */
 
 .footer { border-top: 2px solid var(--line); padding: 40px 0 48px; }
@@ -611,7 +649,12 @@ table.conj--words td { white-space: normal; color: var(--text-dim); font-weight:
 
 /* --- narrow screens ----------------------------------------------------------- */
 
+@media (max-width: 1100px) {
+  .features__grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 900px) {
+  .grammar__uses { grid-template-columns: minmax(0, 1fr); }
   .hero { grid-template-columns: 1fr; padding-top: 48px; padding-bottom: 56px; gap: 24px; }
   .hero__art { order: -1; }
   .hero__art img { max-width: 380px; }
@@ -633,11 +676,34 @@ table.conj--words td { white-space: normal; color: var(--text-dim); font-weight:
   .panel { padding: 20px; }
   .nav__inner { height: auto; flex-direction: column; align-items: flex-start; gap: 4px; padding-top: 12px; }
   .nav__wordmark { font-size: 26px; }
-  .nav__links { width: 100%; height: 44px; gap: 24px; overflow-x: auto; scrollbar-width: none; }
+  /* Four links do not fit one row at phone width, so they wrap rather than
+     hiding the last one off the edge. */
+  .nav__links { width: 100%; height: auto; flex-wrap: wrap; gap: 0 22px; padding-bottom: 6px; }
+  .nav__links a { height: 34px; }
   .nav__links::-webkit-scrollbar { display: none; }
   .nav__links a { font-size: 14px; }
   .finder__form { flex-direction: column; }
   .footer__brand { width: 100%; }
   main[data-page] .page::before { display: none; }
   main[data-page] .page__head { padding-right: 0; }
+
+  /* Prose tables stack on a phone: one block per row, each cell under its
+     column's name. Paradigms keep their columns and scroll sideways. */
+  .grammar__table--prose { overflow: visible; border: 0; background: none; }
+  table.conj--prose, table.conj--prose tbody, table.conj--prose tr,
+  table.conj--prose th, table.conj--prose td { display: block; width: 100%; }
+  table.conj--prose thead { display: none; }
+  table.conj--prose tr {
+    margin-bottom: 12px; border: 2px solid var(--line); border-bottom-width: 4px; border-radius: var(--radius);
+    overflow: hidden;
+  }
+  table.conj--prose tbody th { background: var(--panel-soft); border-bottom: 2px solid var(--line); }
+  table.conj--prose td { border-bottom: 0; padding-top: 6px; padding-bottom: 6px; }
+  table.conj--prose td:last-child { padding-bottom: 12px; }
+  table.conj--prose td[data-label]::before {
+    content: attr(data-label); display: block;
+    font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint);
+  }
+  table.conj--prose td:empty { display: none; }
+  .grammar__use { padding: 18px; }
 }

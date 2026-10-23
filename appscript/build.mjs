@@ -52,7 +52,6 @@ const cacheMap = (file, name = 'cache') => [
 const SERVER_PATCHES = {
   'server/corpus.js': [cacheMap('server/corpus.js')],
   'server/latin.js': [cacheMap('server/latin.js')],
-  'server/speech.js': [cacheMap('server/speech.js')],
   'server/routes/dictionary.js': [cacheMap('server/routes/dictionary.js')],
   'server/latin-lexicon.js': [
     cacheMap('server/latin-lexicon.js', 'synonymCache'),
@@ -68,7 +67,6 @@ const SERVER_PATCHES = {
 const SERVER_ENTRIES = [
   'appscript/src/modules/app.js',
   'server/routes/dictionary.js',
-  'server/routes/speak.js',
 ];
 
 // ------------------------------------------------------------- bundler ----

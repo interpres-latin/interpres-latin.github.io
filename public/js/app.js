@@ -2,6 +2,7 @@ import { renderHome } from './views/home.js';
 import { renderConjugator } from './views/conjugator.js';
 import { renderDictionary } from './views/dictionary.js';
 import { renderDeclensions } from './views/declensions.js';
+import { renderGrammar, renderGrammarTopic } from './views/grammar.js';
 import { clear } from './lib/dom.js';
 
 const ROUTES = [
@@ -9,6 +10,10 @@ const ROUTES = [
   { path: '/conjugacion', nav: 'conjugacion', render: renderConjugator },
   { path: '/declinationes', nav: 'declinationes', render: renderDeclensions },
   { path: '/diccionario', nav: 'diccionario', render: renderDictionary },
+  { path: '/grammatica', nav: 'grammatica', render: renderGrammar },
+  { path: '/grammatica/adiectiva', nav: 'grammatica', render: (main) => renderGrammarTopic(main, 'adiectiva') },
+  { path: '/grammatica/participia', nav: 'grammatica', render: (main) => renderGrammarTopic(main, 'participia') },
+  { path: '/grammatica/casus', nav: 'grammatica', render: (main) => renderGrammarTopic(main, 'casus') },
 ];
 
 /**
@@ -28,7 +33,10 @@ let teardown = null;
 let currentKey = null;
 
 function match(pathname) {
-  return ROUTES.find((route) => route.path === pathname) || ROUTES[0];
+  // A trailing slash is the same page: a static host may add one to a path
+  // that is also a folder (/grammatica/ beside /grammatica/casus).
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  return ROUTES.find((route) => route.path === path) || ROUTES[0];
 }
 
 function markActive(nav) {

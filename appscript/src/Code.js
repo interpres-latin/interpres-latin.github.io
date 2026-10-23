@@ -87,7 +87,7 @@ function apiResult(id) {
 }
 
 /** The only API routes the Pages site may call, as on the Node server. */
-const HTTP_ROUTES_ = ['/api/dictionary', '/api/speak', '/api/health'];
+const HTTP_ROUTES_ = ['/api/dictionary', '/api/health'];
 
 function allowedRoute_(url) {
   if (typeof url !== 'string' || url.length > 2048) return false;
@@ -119,7 +119,7 @@ function doPost(e) {
     request = null;
   }
   if (!request || typeof request !== 'object' || !allowedRoute_(request.url)) {
-    return json_({ error: 'Expected { method, url: "/api/dictionary…" or "/api/speak…", headers, body }.' });
+    return json_({ error: 'Expected { method, url: "/api/dictionary…", headers, body }.' });
   }
 
   const id = Utilities.getUuid().replace(/-/g, '');

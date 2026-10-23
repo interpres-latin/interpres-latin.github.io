@@ -38,6 +38,12 @@ test('every route answers with the app, and so does a missing page', () => {
   }
 });
 
+test('a topic page is a file in its folder, and the folder answers too', () => {
+  for (const name of ['grammatica/casus.html', 'grammatica/index.html', 'grammatica.html']) {
+    assert.equal(fs.readFileSync(path.join(out, name), 'utf8'), html, name);
+  }
+});
+
 test('Jekyll is switched off, and the styles, scripts and drawings are shipped', () => {
   assert.ok(fs.existsSync(path.join(out, '.nojekyll')));
   for (const file of ['styles.css', 'favicon.svg', 'js/app.js', 'assets/art/logo.svg', 'assets/art/colosseum.svg']) {

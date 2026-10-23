@@ -16,8 +16,8 @@
  * The request body is JSON sent as text/plain, so the browser makes a
  * "simple" request with no preflight, which Apps Script cannot answer.
  *
- * Responses come back as real Response objects, so the JSON helpers and the
- * speaker button's audio blob work unchanged.
+ * Responses come back as real Response objects, so the JSON helpers work
+ * unchanged.
  */
 
 (function () {

@@ -24,7 +24,8 @@ export function renderHome(main) {
     el('div', { class: 'features__grid' },
       feature('/assets/art/helmet.svg', '/conjugacion', t('features.conjugation'), t('features.conjugationBody')),
       feature('/assets/art/column.svg', '/declinationes', t('features.declension'), t('features.declensionBody')),
-      feature('/assets/art/scroll.svg', '/diccionario', t('features.dictionary'), t('features.dictionaryBody'))));
+      feature('/assets/art/scroll.svg', '/diccionario', t('features.dictionary'), t('features.dictionaryBody')),
+      feature('/assets/art/laurel.svg', '/grammatica', t('features.grammar'), t('features.grammarBody'))));
 
   main.append(hero, el('hr', { class: 'rule shell' }), features, finder);
 }

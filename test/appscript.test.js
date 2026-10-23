@@ -158,31 +158,6 @@ await test('an unreachable dictionary is a 5xx answer, not a crashed execution',
   assert.ok(response.status >= 500, response.body);
 });
 
-// --- pronunciation ---------------------------------------------------------
-
-await test('pronunciation comes back as base64 audio, and is kept', async () => {
-  const audio = Buffer.from([0x49, 0x44, 0x33, 0xff, 0x00, 0x80]);
-  const app = project({
-    properties: { ELEVENLABS_API_KEY: 'k' },
-    respond: () => ({ body: audio, headers: { 'Content-Type': 'audio/mpeg' } }),
-  });
-  const response = await call(app, { url: '/api/speak?word=puella' });
-  assert.equal(response.status, 200, response.body);
-  assert.equal(response.headers['content-type'], 'audio/mpeg');
-  assert.deepEqual(Buffer.from(response.base64, 'base64'), audio);
-
-  // The clip is kept, so the monthly budget is spent once per word.
-  const asked = app.requests.length;
-  const again = await call(app, { url: '/api/speak?word=puella' });
-  assert.deepEqual(Buffer.from(again.base64, 'base64'), audio);
-  assert.equal(app.requests.length, asked);
-});
-
-await test('without a speech key the speaker says so, as on Node', async () => {
-  const response = await call(project(), { url: '/api/speak?word=puella' });
-  assert.equal(response.status, 503);
-});
-
 // --- Claude, over plain HTTP ----------------------------------------------
 
 function claude(app) {

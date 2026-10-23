@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node test/latin.test.js && node test/conjugator-view.test.js && node test/corpus.test.js && node test/speech.test.js && node test/appscript.test.js && node test/pages.test.js",
+    "test": "node test/latin.test.js && node test/conjugator-view.test.js && node test/corpus.test.js && node test/appscript.test.js && node test/pages.test.js",
     "appscript:build": "node appscript/build.mjs",
     "appscript:preview": "node appscript/preview.mjs",
     "appscript:push": "node appscript/build.mjs && cd appscript && npx -y @google/clasp push --force",

@@ -152,6 +152,11 @@ const LATIN = {
       'Partes principales, genus, declinatio, et omnis lectio formae quam scripsisti.',
       'Principal parts, gender, declension, and every reading of the form you typed.',
     ),
+    grammar: latine('Grammatica', 'Grammar'),
+    grammarBody: latine(
+      'Adiectiva, participia, et omnes casus cum usibus suis.',
+      'Adjectives, participles, and all seven cases with every use.',
+    ),
   },
 
   conjugator: {
@@ -297,15 +302,6 @@ const LATIN = {
     antonyms: latine('Contraria', 'Antonyms'),
     locutions: latine('Locutiones', 'Phrases'),
     inUse: latine('In usu', 'In use'),
-    speak: latine('Verbum audire', 'Hear the word'),
-    speakFailed: latine('Non potest pronuntiari.', 'Could not pronounce that.'),
-    speakSpent: latine('Pronuntiationes huius mensis consumptae sunt.', 'This month’s pronunciations are used up.'),
-    // Said next to the button, not buried in a footnote: no speech model has
-    // Latin, so this is an approximation and closer to ecclesiastical than to
-    // the classical pronunciation the course teaches.
-    speakLatin: latine(
-      'Sonus per machinam fictus est. Non est pronuntiatio classica.',
-      'Approximated by a machine. Closer to church Latin than to the classical pronunciation a course teaches.'),
     templateNote: latine('', ''),
     parses: latine('Formae lectiones', 'How this form reads'),
     principalParts: latine('Partes principales', 'Principal parts'),

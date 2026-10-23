@@ -3,8 +3,8 @@
  * response out.
  *
  * The routers are loaded only when a request is for them. An execution serves
- * a single request and then the process is gone, so loading the speech code to
- * answer a dictionary lookup would be work thrown away every time.
+ * a single request and then the process is gone, so loading a router a
+ * request does not need would be work thrown away every time.
  */
 
 /* global __load */
@@ -14,7 +14,6 @@ import { chainInfo, hasProvider, providerInfo } from '../../../server/llm.js';
 
 const MOUNTS = [
   ['/api/dictionary', 'server/routes/dictionary.js'],
-  ['/api/speak', 'server/routes/speak.js'],
 ];
 
 const MAX_BODY = 256 * 1024; // as express.json({ limit: '256kb' })

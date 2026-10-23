@@ -29,7 +29,11 @@ const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
  * The app's addresses other than the home page: ROUTES in public/js/app.js,
  * and the old ones in MOVED, which the app redirects itself.
  */
-export const ROUTES = ['conjugacion', 'declinationes', 'diccionario', 'stadia', 'chat'];
+export const ROUTES = [
+  'conjugacion', 'declinationes', 'diccionario',
+  'grammatica', 'grammatica/adiectiva', 'grammatica/participia', 'grammatica/casus',
+  'stadia', 'chat',
+];
 
 /** Inside an inline <script>, the only sequence that matters is the one that ends it. */
 const inlineSafe = (code) => code.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
@@ -77,7 +81,12 @@ export function build({ out = path.join(ROOT, '_site'), config = JSON.parse(read
   copyDir(path.join(ROOT, 'public'), out);
 
   const html = page(config);
-  for (const name of ['index', '404', ...ROUTES]) fs.writeFileSync(path.join(out, `${name}.html`), html);
+  for (const name of ['index', '404', ...ROUTES]) {
+    fs.mkdirSync(path.dirname(path.join(out, `${name}.html`)), { recursive: true });
+    fs.writeFileSync(path.join(out, `${name}.html`), html);
+  }
+  // /grammatica is also a folder, and a host may answer it with /grammatica/.
+  fs.writeFileSync(path.join(out, 'grammatica', 'index.html'), html);
   // No Jekyll: it would skip files and folders it considers private.
   fs.writeFileSync(path.join(out, '.nojekyll'), '');
 

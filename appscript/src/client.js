@@ -4,8 +4,8 @@
  * expects:
  *
  *   - `fetch('/api/…')` answers, through google.script.run instead of HTTP.
- *     Responses come back as real Response objects, so the JSON helpers and the
- *     speaker button's audio blob work unchanged.
+ *     Responses come back as real Response objects, so the JSON helpers work
+ *     unchanged.
  *
  *   - Routes are paths, as on the Node server. The page lives in an iframe on
  *     another host, so the path is changed in place there and mirrored into

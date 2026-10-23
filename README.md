@@ -1,7 +1,7 @@
 # Interpres
 
-A Latin site: complete conjugation and declension tables, and Whitaker's Words
-beside the Cambridge course vocabulary. The translator is being rebuilt from the
+A Latin site: complete conjugation and declension tables, grammar reference
+pages, and Whitaker's Words beside the Cambridge course vocabulary. The translator is being rebuilt from the
 ground up and is not on the site for now.
 
 ```bash
@@ -54,12 +54,16 @@ npx -y @google/clasp create-deployment \
 
 | Route | What it does |
 | ----- | ------------ |
-| `/` | A hero with the Colosseum, the three tools, and a **dictionary search** that opens the dictionary page with your query already applied. |
+| `/` | A hero with the Colosseum, the four tools, and a **dictionary search** that opens the dictionary page with your query already applied. |
 | `/conjugacion` | Every tense of the indicative, subjunctive and imperative, active and passive, across the five conjugations. Tabs for the model verbs, plus a search that conjugates anything you give principal parts for. Irregular forms are highlighted. |
 | `/declinationes` | The five noun declensions and the adjectives, in every case and number. Takes a noun the way a dictionary quotes it — nominative and genitive — because the genitive is what says which declension it is. |
-| `/diccionario` | Two columns. On the left, the Cambridge Latin Course vocabulary by stage; on the right, Whitaker's Words: the headword with its principal parts, every way the form can be read, example sentences where a corpus has them, and a spoken pronunciation. Clicking a word in a stage looks it up on the right. |
+| `/diccionario` | Two columns. On the left, the Cambridge Latin Course vocabulary by stage; on the right, Whitaker's Words: the headword with its principal parts, every way the form can be read, example sentences where a corpus has them. Clicking a word in a stage looks it up on the right. |
+| `/grammatica` | The grammar topics, as tiles. Each opens its own page. |
+| `/grammatica/adiectiva` | Adjectives: rules, 1st/2nd and 3rd declension, comparison, adverbs. |
+| `/grammatica/participia` | Participles: formation, declension, uses, relative time, the ablative absolute, translation tips. |
+| `/grammatica/casus` | All seven cases, the locative included, and every use of each: what it does, an example with its translation, and what to look for. |
 
-The three inner pages are the links at the top right of the header. The home
+The four inner pages are the links at the top right of the header. The home
 page is the logo. `/stadia` (the old stages page) redirects to
 `/diccionario` with its `?s=` intact, and `/chat` to the home page.
 
@@ -137,31 +141,6 @@ corpus has nothing, and if there is no model either the entry simply carries no
 example. There is deliberately no template frame beneath that — a made-up Latin
 sentence with the wrong case on it is worse than no sentence, and the parses are
 the useful part of a Latin entry anyway.
-
-### Hearing the word
-
-A dictionary that cannot say the word out loud is half a dictionary for anybody
-learning to speak. A speaker button sits beside the headword — filled cone,
-stroked waves, because an all-outline speaker is mush at 16px.
-
-**The budget is the shape of the feature.** The free ElevenLabs tier is 10,000
-characters a month for the whole site, so only single words are spoken, every
-clip is cached by word and by the browser, and a class of twenty-five looking up
-*puella* spends six characters once rather than a hundred and fifty. The
-guard against sentences lives next to the spending rather than only at the
-route, because a length cap alone lets "the quick brown fox jumps over it"
-through at 33 characters.
-
-**The engine is told which language it is speaking.** It used to be left to
-infer it from the text, and one word is not much to infer from — a Latin word
-read as English is not Latin at all.
-
-**And the page says what that is, beside the button.** No speech model has
-Latin, so it is Italian phonology — closer to church Latin than to the classical
-pronunciation a Cambridge course teaches. Better to say so than to let somebody
-learn it wrong.
-
-Without a key the button removes itself rather than standing there failing.
 
 ## The conjugator and the decliner
 
@@ -288,7 +267,7 @@ Round everywhere else, both from Google Fonts.
 **The illustrations are drawn SVGs in `public/assets/art/`**: the Colosseum in
 the hero, a legionary helmet (conjugations), a column (declensions), a sealed
 scroll (the dictionary, and also the logo and the favicon), a laurel wreath
-(stages), and Minerva's owl in a big crested helmet on the dictionary page.
+(stages, and the grammar pages), and Minerva's owl in a big crested helmet on the dictionary page.
 All of them are still pictures. They follow the Duolingo house style: flat shapes with no
 outlines, a darker shade down one side, a light highlight pill, and confetti
 around the hero.
@@ -321,12 +300,11 @@ arrow, and open their menu on any click.
 
 **Everything works with no setup at all.** The conjugator, the decliner and the
 dictionary's definitions use no key and no model. Copy
-`.env.example` to `.env` only to add the two things that do:
+`.env.example` to `.env` only to add the one thing that does:
 
 | | |
 | --- | --- |
 | `GROQ_API_KEY` | free. Writes the dictionary's example sentences when no corpus has one. |
-| `ELEVENLABS_API_KEY` | the spoken word on the dictionary page. Without it the speaker button removes itself rather than standing there failing. |
 
 `ANTHROPIC_API_KEY` is the paid alternative to Groq and `LLM_PROVIDER` forces
 one instead of auto-detecting. **Groq retires models without warning**, and its
@@ -347,10 +325,9 @@ server/
                         list, then Wiktionary
   latin.js              Whitaker's Words, through Alpheios
   corpus.js             Tatoeba sentences and Wiktionary glosses
-  speech.js             pronunciation: one word, cached, told its language
   throttle.js           one queue per upstream host
   providers/            groq, anthropic, and the shared SSE reader
-  routes/               dictionary, speak
+  routes/               dictionary
 
 appscript/               the Google Apps Script build — see above
 pages/                  the GitHub Pages build: the API's address, and the
@@ -376,12 +353,15 @@ public/
   js/data/
     verbs-la.js         model verbs and their principal parts
     stages-la.js        the course vocabulary, by stage
-  js/views/             home, conjugator, declensions, dictionary (with stages)
+    grammar-la.js       the grammar pages: adjectives and participles from the
+                        planner's reference sheets, and the seven cases
+  js/views/             home, conjugator, declensions, dictionary (with stages),
+                        grammar
 
 test/                   offline, no network, a couple of seconds
 ```
 
-`npm test` runs all 580 checks.
+`npm test` runs all 562 checks.
 
 ```
 latin.test.js             296 on the declension and conjugation engines and
@@ -389,12 +369,10 @@ latin.test.js             296 on the declension and conjugation engines and
 conjugator-view.test.js   230 that every tense the page names exists in the
                               table the engine builds
 corpus.test.js             11 on how a corpus sentence is chosen
-speech.test.js             17 on what may be spoken, and what is refused before
-                              a character of the month is spent
-appscript.test.js          22 on the Apps Script build: its entry points, the
-                              inlined page, the dictionary, speech, Claude, and
+appscript.test.js          20 on the Apps Script build: its entry points, the
+                              inlined page, the dictionary, Claude, and
                               the HTTP API the Pages site calls
-pages.test.js               4 on the GitHub Pages build
+pages.test.js               5 on the GitHub Pages build
 ```
 
 ## Google Apps Script
@@ -414,14 +392,14 @@ server, so `appscript/build.mjs` makes up the difference:
 | On Node | On Apps Script |
 | --- | --- |
 | ES modules | each module a function in a small registry, all inside `interpres_()` so nothing is callable from a browser |
-| `/api/dictionary`, `/api/speak` | `api()` through `google.script.run`; `appscript/src/client.js` makes the page's `fetch('/api/…')` go there, so the views are unchanged |
+| `/api/dictionary` | `api()` through `google.script.run`; `appscript/src/client.js` makes the page's `fetch('/api/…')` go there, so the views are unchanged |
 | `public/styles.css`, `public/assets/art/*.svg` | inlined into the one `index.html`; the art as data URIs |
 | `fetch`, `Buffer`, `URL`, timers | `appscript/src/shim.js`, on `UrlFetchApp` and `Utilities` |
 | in-memory caches | `CacheService` (six hours at most), so a word is fetched once, not once per visitor |
 | `.env` | Project Settings → Script properties, the same names as `.env.example` |
 | the Anthropic SDK | `appscript/src/modules/anthropic.js`, the same provider as a plain Messages API request |
 | `/conjugacion?v=…` | `…/exec?page=conjugacion&v=…`, kept in the address bar with `google.script.history` |
-| the API from another site | `doPost`: the GitHub Pages copy posts `{ method, url, headers, body }` as text/plain and collects the answer with `?result=<id>`. Only `/api/dictionary`, `/api/speak` and `/api/health` are accepted |
+| the API from another site | `doPost`: the GitHub Pages copy posts `{ method, url, headers, body }` as text/plain and collects the answer with `?result=<id>`. Only `/api/dictionary` and `/api/health` are accepted |
 
 `npm test` runs the built project in a bare V8 context with every outside host
 stubbed (`appscript/emulator.mjs`), and checks it serves the same dictionary
@@ -452,7 +430,8 @@ Nothing secret belongs in a file that is in a repository, private or not.
 
 - **The site is one page.** Every route falls through to `index.html`, so a
   refresh on `/declinationes` works, but any new route needs adding to `ROUTES`
-  in `public/js/app.js` as well as to the menu in `index.html`.
+  in `public/js/app.js` as well as to the menu in `index.html`, and to
+  `ROUTES` in `scripts/build-pages.mjs` so Pages answers a direct load.
 - **Code, markup and the SVG art revalidate on every load; anything else in
   `assets/` caches for a year.** A
   single-page app can otherwise keep a stale module alive in an open tab for
