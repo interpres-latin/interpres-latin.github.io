@@ -57,8 +57,11 @@
     if (!id) throw new Error(error || 'The server did not accept the request.');
 
     // Usually there on the first try: the handler finishes as the first
-    // request does. The pauses are for a busy server, not the common case.
-    for (let attempt = 0; attempt < 12; attempt += 1) {
+    // request does. A cold Apps Script (first request after it has been idle,
+    // or just after a redeploy) can take much longer, so keep collecting for
+    // up to a minute before giving up.
+    const deadline = Date.now() + 60000;
+    for (let attempt = 0; attempt === 0 || Date.now() < deadline; attempt += 1) {
       const collected = await nativeFetch(`${API}?result=${encodeURIComponent(id)}`, { redirect: 'follow' });
       if (collected.ok) {
         const out = await collected.json();
