@@ -1,7 +1,5 @@
-import { el, icon, ICONS, clear, fold, getJson } from '../lib/dom.js';
-import {
-  allWords, BOOKS, COURSE, findStage, STAGE_NUMBERS, STAGES,
-} from '../data/stages-la.js';
+import { el, icon, ICONS, clear, getJson } from '../lib/dom.js';
+import { findStage } from '../data/stages-la.js';
 import { lang, t } from '../lib/i18n.js';
 
 /**
@@ -50,14 +48,12 @@ const label = (kind, key) => {
 };
 
 /**
- * The dictionary and the course stages, side by side.
+ * The dictionary, and beside it one stage's words when the page is opened
+ * from the Stages page with ?s=N: clicking a word in the stage looks it up
+ * beside the list instead of leaving it.
  *
- * They were two pages, and the stages page sent every word to this one. Now
- * the stage list is the left column and the dictionary the right: clicking a
- * word in a stage looks it up beside the list instead of leaving it.
- *
- * Both columns keep their place in the query (?s= and ?q=), so a link to a
- * stage with a word open on it still works.
+ * Both keep their place in the query (?s= and ?q=), so a link to a stage with
+ * a word open on it still works.
  */
 export function renderDictionary(main) {
   const state = { request: 0 };
@@ -92,7 +88,8 @@ export function renderDictionary(main) {
     form,
     results);
 
-  const stages = buildStages((word) => {
+  const params = new URLSearchParams(window.location.search);
+  const stagePanel = buildStage(params.get('s'), (word) => {
     search(word);
     // Stacked on a phone, the entry is below the list and out of sight.
     if (window.matchMedia('(max-width: 900px)').matches) {
@@ -104,7 +101,9 @@ export function renderDictionary(main) {
     el('div', { class: 'page__head' },
       el('h1', {}, t('dictionary.title')),
       el('p', {}, t('dictionary.pageLead'))),
-    el('div', { class: 'columns' }, stages.panel, dictionaryPanel),
+    stagePanel
+      ? el('div', { class: 'columns' }, stagePanel, dictionaryPanel)
+      : el('div', { class: 'columns columns--single' }, dictionaryPanel),
     el('p', { class: 'footnote' },
       'Definitions from ',
       el('a', { href: 'https://mk270.github.io/whitakers-words/', target: '_blank', rel: 'noopener' }, 'Whitaker’s Words'),
@@ -132,9 +131,6 @@ export function renderDictionary(main) {
     }
   }
 
-  const params = new URLSearchParams(window.location.search);
-  stages.show(params.get('s') || STAGE_NUMBERS[0], { remember: Boolean(params.get('s')) });
-
   const initial = params.get('q');
   if (initial) search(initial);
   else {
@@ -152,109 +148,29 @@ function setQuery(key, value) {
 }
 
 // ---------------------------------------------------------------------------
-// The stages column
+// The stage column
 // ---------------------------------------------------------------------------
 
 /**
- * The Cambridge Latin Course teaches in numbered stages, and a student revises
- * by stage. Type a number and the whole list comes up; type a word and the page
- * says which stage it came from.
+ * One stage's word list, beside the dictionary, when the page was opened with
+ * ?s=N (from the Stages page, /stadia). Without a stage there is no column.
  *
- * The lists are hand-compiled — the course publishes no vocabulary data — and
+ * The lists are hand-compiled (the course publishes no vocabulary data) and
  * every word in them is checked against Whitaker's Words. What that provenance
  * is worth is recorded in data/stages-la.js.
  */
-function buildStages(lookUp) {
-  const results = el('div', { class: 'panel__results' });
-
-  const input = el('input', {
-    type: 'search',
-    placeholder: t('stages.search'),
-    autocomplete: 'off',
-    spellcheck: false,
-    'aria-label': t('stages.searchLabel'),
-  });
-
-  const form = el('form', { class: 'search' },
-    el('div', { class: 'search__field' },
-      icon(ICONS.search, { size: 15 }),
-      input,
-      el('button', { class: 'btn btn--primary btn--sm', type: 'submit' }, t('stages.button'))));
-
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    show(input.value);
-  });
-
-  const chips = new Map();
-
-  /**
-   * Every stage as a chip, grouped by book — a reader thinks in books before
-   * stages, and 28 numbers in one line says nothing about where Book II starts.
-   */
-  const index = el('div', { class: 'stageindex' },
-    ...BOOKS.map((book) => el('div', { class: 'stageindex__book' },
-      el('span', { class: 'stageindex__label' }, book.label),
-      el('div', { class: 'stageindex__chips' },
-        ...STAGE_NUMBERS.filter((number) => number >= book.from && number <= book.to)
-          .map((number) => {
-            const chip = el('button', {
-              type: 'button',
-              title: STAGES[number].title,
-              onclick: () => { input.value = String(number); show(number); },
-            }, String(number));
-            chips.set(number, chip);
-            return chip;
-          })))));
-
-  function show(raw, { remember = true } = {}) {
-    const stage = findStage(raw);
-    clear(results);
-    for (const [number, chip] of chips) chip.classList.toggle('is-active', stage?.number === number);
-
-    if (!stage) {
-      // Not a stage number — try it as a word, since a reader who half
-      // remembers "canis" wants to know which stage it came from.
-      const needle = fold(String(raw ?? '').trim());
-      const matches = needle.length > 1
-        ? allWords().filter((word) => fold(word.latin).startsWith(needle) || fold(word.english).includes(needle))
-        : [];
-
-      if (matches.length) {
-        results.appendChild(wordTable(matches.slice(0, 40), true, lookUp));
-        return;
-      }
-
-      results.appendChild(el('div', { class: 'empty' },
-        el('h3', {}, t('stages.notFound')),
-        el('p', {}, `${STAGE_NUMBERS[0]}–${STAGE_NUMBERS.at(-1)} · ${COURSE.name}, ${COURSE.book}`)));
-      return;
-    }
-
-    if (remember) setQuery('s', String(stage.number));
-
-    results.append(
-      el('div', { class: 'stagecard' },
-        el('h3', {}, `${stage.number}. ${stage.title}`),
-        el('p', { class: 'stagecard__setting' }, stage.setting),
-        el('div', { class: 'verbcard__tags' },
-          stage.book ? el('span', { class: 'chip chip--es' }, stage.book.label) : null,
-          el('span', { class: 'chip' }, t('stages.wordCount', { n: stage.words.length })))),
-      wordTable(stage.words.map(([latin, english]) => ({ latin, english })), false, lookUp),
-    );
-  }
-
-  const panel = el('section', { class: 'panel panel--stages' },
-    el('div', { class: 'panel__head' },
-      el('img', { class: 'panel__art', src: '/assets/art/tablet.svg', alt: '', width: 56, height: 56 }),
-      el('div', {},
-        el('h2', {}, t('stages.eyebrow')),
-        el('p', {}, t('stages.lead')))),
-    form,
-    index,
-    results);
-
-  return { panel, show };
+function buildStage(raw, lookUp) {
+  const stage = raw ? findStage(raw) : null;
+  if (!stage) return null;
+  return el('section', { class: 'panel panel--stages' },
+    el('a', { class: 'backlink', href: '/stadia', 'data-link': '' }, t('stages.eyebrow')),
+    el('div', { class: 'stagecard' },
+      el('h3', {}, `${stage.number}. ${stage.title}`),
+      el('p', { class: 'stagecard__setting' }, stage.setting),
+      el('div', { class: 'verbcard__tags' },
+        stage.book ? el('span', { class: 'chip chip--es' }, stage.book.label) : null,
+        el('span', { class: 'chip' }, t('stages.wordCount', { n: stage.words.length })))),
+    wordTable(stage.words.map(([latin, english]) => ({ latin, english })), false, lookUp));
 }
 
 /** Each Latin word opens in the dictionary column beside the list. */

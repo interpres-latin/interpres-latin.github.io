@@ -353,8 +353,9 @@ def scroll():
 
 def tablet():
     """A wax writing tablet and its stylus: the grammar's picture."""
-    WOOD, WOOD_D, WOOD_L = ARCH, ARCH_D, '#D9894A'
-    WAX, WAX_LINE = '#5A3A1E', '#C98543'
+    # The Colosseum's palette: sand for the frame, its arch brown for the wax.
+    WOOD, WOOD_D, WOOD_L = SAND, SAND_D, SAND_L
+    WAX, WAX_LINE = ARCH, SAND
     s = ['<g transform="translate(-6 -2)">']
     # the wooden frame, its right side in shade
     s.append(f'<rect x="14" y="14" width="60" height="72" rx="9" fill="{WOOD}"/>')
@@ -369,7 +370,7 @@ def tablet():
     s.append(f'<rect x="-4" y="-32" width="8" height="54" rx="4" fill="{GOLD}"/>')
     s.append(f'<path d="M0 -32a4 4 0 0 1 4 4v46a4 4 0 0 1-4 4z" fill="{GOLD_D}"/>')
     s.append(f'<rect x="-2.5" y="-24" width="2.5" height="14" rx="1.25" fill="{GOLD_L}"/>')
-    s.append('<path d="M-4 20h8l-4 12z" fill="#4B4B4B"/>')
+    s.append(f'<path d="M-4 20h8l-4 12z" fill="{ARCH_D}"/>')
     s.append(f'<rect x="-7" y="-38" width="14" height="8" rx="4" fill="{GOLD_D}"/>')
     s.append('</g></g>')
     write('tablet.svg', 96, 96, ''.join(s))

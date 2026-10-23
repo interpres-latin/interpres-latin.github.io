@@ -3,6 +3,7 @@ import { renderConjugator } from './views/conjugator.js';
 import { renderDictionary } from './views/dictionary.js';
 import { renderDeclensions } from './views/declensions.js';
 import { renderGrammar, renderGrammarTopic } from './views/grammar.js';
+import { renderStages } from './views/stages.js';
 import { clear } from './lib/dom.js';
 import { mountMenu } from './lib/menu.js';
 
@@ -11,6 +12,7 @@ const ROUTES = [
   { path: '/conjugacion', nav: 'conjugacion', render: renderConjugator },
   { path: '/declinationes', nav: 'declinationes', render: renderDeclensions },
   { path: '/diccionario', nav: 'diccionario', render: renderDictionary },
+  { path: '/stadia', nav: 'stadia', render: renderStages },
   { path: '/grammatica', nav: 'grammatica', render: renderGrammar },
   { path: '/grammatica/adiectiva', nav: 'grammatica', render: (main) => renderGrammarTopic(main, 'adiectiva') },
   { path: '/grammatica/participia', nav: 'grammatica', render: (main) => renderGrammarTopic(main, 'participia') },
@@ -20,10 +22,9 @@ const ROUTES = [
 /**
  * Old addresses that still have to land somewhere.
  *
- * The stages page is now the left column of the dictionary, and its query
- * (?s=12) means the same thing there. The chat is gone; its links go home.
+ * The chat is gone; its links go home.
  */
-const MOVED = { '/stadia': '/diccionario', '/chat': '/' };
+const MOVED = { '/chat': '/' };
 
 const main = document.getElementById('main');
 const links = document.querySelector('.nav__links');

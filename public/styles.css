@@ -199,25 +199,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 }
 .menu__row:hover { color: var(--text-dim); background: var(--panel-soft); }
 .menu__row.is-active { border-color: #84d8ff; background: var(--blue-wash); color: var(--blue); }
-.menu__row:active, .menu__stage:active { transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
-.menu__book + .menu__book { margin-top: 12px; }
-.menu__label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 800; color: var(--text-dim); }
-.menu__stages { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-.menu__stage {
-  display: grid;
-  place-items: center;
-  height: 40px;
-  border: 2px solid var(--line);
-  border-bottom-width: 4px;
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 800;
-}
-.menu__stage:hover { color: var(--text); background: var(--panel-soft); }
-.menu__stage.is-active { background: var(--red); border-color: var(--red-dark); color: #fff; }
-
+.menu__row:active { transform: translateY(2px); border-bottom-width: 2px; margin-bottom: 2px; }
 /* --- buttons ---------------------------------------------------------------- */
 
 .btn {
@@ -399,6 +381,7 @@ main[data-page] .page::before {
 main[data-page="conjugacion"] .page::before { background-image: url(/assets/art/helmet.svg); }
 main[data-page="declinationes"] .page::before { background-image: url(/assets/art/column.svg); }
 main[data-page="diccionario"] .page::before { background-image: url(/assets/art/amphora.svg); transform: rotate(-4deg); }
+main[data-page="stadia"] .page::before { background-image: url(/assets/art/scroll.svg); }
 main[data-page="grammatica"] .page::before { background-image: url(/assets/art/tablet.svg); }
 .page__head { margin-bottom: 36px; max-width: 720px; }
 .page__head .eyebrow { display: none; }
@@ -616,20 +599,39 @@ table.conj--words td { white-space: normal; color: var(--text-dim); font-weight:
 .panel .mood__title { font-size: 24px; margin: 22px 0 10px; }
 .panel .entry__head h2 { font-size: 40px; }
 
-.stageindex { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
-.stageindex__book { display: flex; flex-direction: column; gap: 8px; }
-.stageindex__label { font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
-.stageindex__chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.stageindex__chips button {
-  min-width: 42px; height: 40px; padding: 0 10px;
-  border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 12px;
-  background: #fff; color: var(--text); font-weight: 800; font-size: 15px; cursor: pointer;
-}
-.stageindex__chips button:hover { background: var(--panel-soft); }
-.stageindex__chips button:active { transform: translateY(2px); border-bottom-width: 2px; }
-.stageindex__chips button.is-active { background: var(--red); border-color: var(--red-dark); color: #fff; }
+.columns--single { grid-template-columns: minmax(0, 1fr); }
+.columns--single .panel--dictionary { position: static; max-height: none; overflow: visible; }
+.panel--stages .backlink { margin-bottom: 14px; }
 
 .stagecard { margin-bottom: 16px; }
+
+/* --- the Stages page ------------------------------------------------------------ */
+
+.stagebook + .stagebook { margin-top: 44px; }
+.stagegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.stagetile {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 20px;
+  border: 2px solid var(--line);
+  border-bottom-width: 5px;
+  border-radius: 20px;
+  background: #fff;
+  color: var(--text);
+}
+.stagetile:hover { color: var(--text); background: var(--panel-soft); }
+.stagetile:active { transform: translateY(2px); border-bottom-width: 3px; margin-bottom: 2px; }
+.stagetile__num {
+  display: grid; place-items: center; flex: none;
+  width: 48px; height: 48px;
+  border: 2px solid var(--red-dark); border-bottom-width: 4px; border-radius: var(--radius-sm);
+  background: var(--red); color: #fff;
+  font-family: var(--display); font-weight: 700; font-size: 22px;
+}
+.stagetile h3 { font-size: 19px; }
+.stagetile p { margin-top: 2px; color: var(--text-dim); font-size: 15px; }
+.stagetile__count { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 800; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
 .stagecard h3 { font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: -0.01em; }
 .stagecard__setting { margin-top: 4px; color: var(--text-dim); font-size: 15px; }
 

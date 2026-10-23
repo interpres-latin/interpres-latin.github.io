@@ -57,7 +57,8 @@ npx -y @google/clasp create-deployment \
 | `/` | A hero with the Colosseum, the four tools, and a **dictionary search** that opens the dictionary page with your query already applied. |
 | `/conjugacion` | Every tense of the indicative, subjunctive and imperative, active and passive, across the five conjugations. Tabs for the model verbs, plus a search that conjugates anything you give principal parts for. Irregular forms are highlighted. |
 | `/declinationes` | The five noun declensions and the adjectives, in every case and number. Takes a noun the way a dictionary quotes it — nominative and genitive — because the genitive is what says which declension it is. |
-| `/diccionario` | Two columns. On the left, the Cambridge Latin Course vocabulary by stage; on the right, Whitaker's Words: the headword with its principal parts, every way the form can be read, example sentences where a corpus has them. Clicking a word in a stage looks it up on the right. |
+| `/diccionario` | Whitaker's Words: the headword with its principal parts, every way the form can be read, example sentences where a corpus has them. Opened with `?s=N`, the stage's word list sits on the left, and clicking a word looks it up on the right. |
+| `/stadia` | The Cambridge Latin Course stages as cards, grouped by book. Each opens `/diccionario?s=N`. |
 | `/grammatica` | The grammar topics, as tiles. Each opens its own page. |
 | `/grammatica/adiectiva` | Adjectives: rules, 1st/2nd and 3rd declension, comparison, adverbs. |
 | `/grammatica/participia` | Participles: formation, declension, uses, relative time, the ablative absolute, translation tips. |
@@ -65,9 +66,8 @@ npx -y @google/clasp create-deployment \
 
 The four inner pages are the links at the top right of the header, followed
 by the menu (three lines, `public/js/lib/menu.js`). Links that do not fit the
-header's width fold into the menu, last first; the menu also lists the course
-stages (each opens `/diccionario?s=N`). The home page is the logo. `/stadia` (the old stages page) redirects to
-`/diccionario` with its `?s=` intact, and `/chat` to the home page.
+header's width fold into the menu, last first; the menu also links the Stages
+page (`/stadia`). The home page is the logo. `/chat` redirects to the home page.
 
 The interface is English. The Latin string pack is still in
 `public/js/lib/i18n.js`; the LA | EN switch that chose between them was removed
@@ -222,15 +222,14 @@ shares the nominative. Read as a two-termination adjective it produces
 
 `npm test` checks 121 reference forms against the standard paradigms.
 
-### The stages column
+### The stages
 
 The Cambridge Latin Course teaches in numbered stages and students revise by
-stage, so the left column of the dictionary page takes a number and gives you
-the list. Typing a word instead tells you which stage it came from, and clicking
-any word in a list looks it up in the dictionary column beside it.
+stage, so the Stages page (`/stadia`) lists every stage, and each opens the
+dictionary page with that stage's words in a column beside the dictionary;
+clicking any word looks it up there.
 
-A stage answers to whatever you type at it: `21`, `stage 21`, the numeral `xxi`,
-or its title. The numerals are derived rather than listed, which is the fix for
+`?s=` answers to `21`, `stage 21`, the numeral `xxi`, or a stage's title. The numerals are derived rather than listed, which is the fix for
 a quiet one — they were a hand-written table that stopped at `xii`, so adding
 Books II and III left the second half of the course reachable by digits only
 while the page went on inviting a numeral.
@@ -242,7 +241,7 @@ distinct words are verified against Whitaker's, the four exceptions being
 pronouns it does not analyse — but *which stage a word first appears in* is
 knowledge of the course rather than a copy of the book.
 
-The index groups the stages **by book**, and a stage says which book it belongs
+The Stages page groups the stages **by book**, and a stage says which book it belongs
 to, because a reader thinks in books before stages — twenty-eight numbers in one
 line says nothing about where Book II starts.
 
@@ -268,8 +267,8 @@ Round everywhere else, both from Google Fonts.
 
 **The illustrations are drawn SVGs in `public/assets/art/`**: the Colosseum in
 the hero, a legionary helmet (conjugations), a column (declensions), a sealed
-scroll (the dictionary, and also the logo and the favicon), a laurel wreath
-(stages, and the grammar pages), and Minerva's owl in a big crested helmet on the dictionary page.
+scroll (the dictionary and the Stages page, and also the logo and the favicon), a wax
+tablet with its stylus (the grammar pages), and an amphora on the dictionary page.
 All of them are still pictures. They follow the Duolingo house style: flat shapes with no
 outlines, a darker shade down one side, a light highlight pill, and confetti
 around the hero.
@@ -357,7 +356,7 @@ public/
     stages-la.js        the course vocabulary, by stage
     grammar-la.js       the grammar pages: adjectives and participles from the
                         planner's reference sheets, and the seven cases
-  js/views/             home, conjugator, declensions, dictionary (with stages),
+  js/views/             home, conjugator, declensions, dictionary, stages,
                         grammar
 
 test/                   offline, no network, a couple of seconds

@@ -3,11 +3,10 @@
  *
  * The header shows as many page links as fit its width; the ones that do not
  * fit move into this menu, last first, the way Duolingo's header folds. The
- * menu also lists the course stages, each opening the dictionary on it.
+ * menu also links the Stages page, which has no place in the header.
  */
 
 import { el, icon, ICONS } from './dom.js';
-import { BOOKS, STAGE_NUMBERS } from '../data/stages-la.js';
 
 export function mountMenu(nav) {
   const inner = nav.querySelector('.nav__inner');
@@ -65,35 +64,20 @@ export function mountMenu(nav) {
 
   function build() {
     const here = window.location.pathname.replace(/\/+$/, '') || '/';
-    const stage = here === '/diccionario' ? Number(new URLSearchParams(window.location.search).get('s')) : 0;
     const folded = links.filter((link) => link.hidden);
 
-    const pages = folded.length
-      ? [
-        el('p', { class: 'menu__title' }, 'Pages'),
-        el('div', { class: 'menu__rows' },
-          ...folded.map((link) => el('a', {
-            class: `menu__row${link.classList.contains('is-active') ? ' is-active' : ''}`,
-            href: link.getAttribute('href'),
-            'data-link': '',
-          }, link.textContent))),
-      ]
-      : [];
+    const row = (href, text, lit) => el('a', {
+      class: `menu__row${lit ? ' is-active' : ''}`, href, 'data-link': '',
+    }, text);
 
-    const stages = [
-      el('p', { class: `menu__title${folded.length ? ' menu__title--rule' : ''}` }, 'Stages'),
-      ...BOOKS.map((book) => el('div', { class: 'menu__book' },
-        el('span', { class: 'menu__label' }, book.label),
-        el('div', { class: 'menu__stages' },
-          ...STAGE_NUMBERS.filter((number) => number >= book.from && number <= book.to)
-            .map((number) => el('a', {
-              class: `menu__stage${number === stage ? ' is-active' : ''}`,
-              href: `/diccionario?s=${number}`,
-              'data-link': '',
-            }, String(number)))))),
+    const pages = [
+      el('p', { class: 'menu__title' }, 'Pages'),
+      el('div', { class: 'menu__rows' },
+        ...folded.map((link) => row(link.getAttribute('href'), link.textContent, link.classList.contains('is-active'))),
+        row('/stadia', 'Stages', here === '/stadia')),
     ];
 
-    const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': 'Menu' }, ...pages, ...stages);
+    const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': 'Menu' }, ...pages);
     // A link inside closes the menu; the router does the navigating.
     menu.addEventListener('click', (event) => { if (event.target.closest('a')) close(); });
     return menu;
