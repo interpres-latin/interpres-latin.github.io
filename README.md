@@ -31,14 +31,15 @@ The same site is published twice.
   `appscript/src/Code.js` at the other end. The address it calls is in
   `pages/config.json`.
 
-**Every change goes to both.** Pushing to `main` publishes Pages:
+**Every change goes to both.** `origin` pushes to two repositories, `yuzhe-chen/interpres` and
+`interpres-latin/interpres-latin.github.io`; the push to the second publishes Pages:
 `.github/workflows/pages.yml` runs the tests and `scripts/build-pages.mjs`. The
 Apps Script is redeployed by hand, to the same deployment so its address does
 not change, and since it is the server for both, a server change is not live
 anywhere until it is:
 
 ```bash
-git -c http.postBuffer=524288000 push          # tests, then Pages
+git -c http.postBuffer=524288000 push          # both repositories; tests, then Pages
 
 cd appscript
 node build.mjs
