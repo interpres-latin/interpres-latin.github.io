@@ -279,7 +279,7 @@ const LATIN = {
     title: latine('Lexicon et stadia', 'dictionary'),
     pageLead: latine(
       'Ad sinistram vocabula cursus per stadia; ad dextram lexicon. Preme verbum ut id quaeras.',
-      'Course vocabulary stage by stage, with the dictionary beside it. Click any word in a stage to look it up.',
+      'Course vocabulary stage by stage, with the dictionary below it. Click any word in a stage to look it up.',
     ),
     lead: latine(
       'Scribe formam quam in textu invenisti. Lexicon verbum principale, partes principales, et omnem lectionem formae dat.',

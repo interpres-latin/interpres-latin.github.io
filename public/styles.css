@@ -541,34 +541,63 @@ a.chip:hover { background: var(--blue-wash); }
 }
 
 .tablewrap {
-  overflow-x: auto;
+  overflow: hidden;
   border: 2px solid var(--line);
   border-bottom-width: 4px;
   border-radius: var(--radius);
   background: #fff;
 }
 
-table.conj { border-collapse: collapse; width: 100%; min-width: 940px; font-size: 16px; }
-table.conj th, table.conj td { padding: 11px 16px; text-align: left; border-bottom: 2px solid var(--line); }
+/* No table here ever scrolls sideways. The columns share the width evenly and
+   a long form wraps inside its cell; on a narrow page a conjugation or a
+   paradigm becomes a card per row, each form beside its column's name. */
+table.conj { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 16px; }
+table.conj th, table.conj td { padding: 11px 12px; text-align: left; border-bottom: 2px solid var(--line); overflow-wrap: break-word; }
 table.conj tr:last-child th, table.conj tr:last-child td { border-bottom: 0; }
 table.conj thead th {
   background: var(--panel-soft); font-weight: 800; font-size: 13px;
-  text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); white-space: nowrap;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint);
 }
 table.conj tbody th {
-  position: sticky; left: 0; z-index: 1; background: #fff;
-  font-weight: 800; font-size: 15px; color: var(--text); white-space: nowrap;
-  min-width: 170px; border-right: 2px solid var(--line);
+  background: #fff;
+  font-weight: 800; font-size: 15px; color: var(--text);
+  border-right: 2px solid var(--line);
 }
 table.conj tbody th small { display: block; font-weight: 600; font-size: 13px; color: var(--text-faint); margin-top: 2px; }
 table.conj tbody tr:hover td { background: var(--panel-soft); }
-table.conj td { white-space: nowrap; font-weight: 700; }
+table.conj td { font-weight: 700; }
 table.conj td.is-empty { color: var(--text-faint); }
+@media (max-width: 1000px) and (min-width: 861px) {
+  table.conj--persons, table.conj--paradigm { font-size: 15px; }
+  table.conj--persons th, table.conj--persons td, table.conj--paradigm th, table.conj--paradigm td { padding: 10px 8px; }
+}
+@media (max-width: 860px) {
+  table.conj--persons, table.conj--persons tbody, table.conj--persons tr, table.conj--persons th, table.conj--persons td,
+  table.conj--paradigm, table.conj--paradigm tbody, table.conj--paradigm tr, table.conj--paradigm th, table.conj--paradigm td { display: block; width: auto; }
+  table.conj--persons thead, table.conj--paradigm thead { display: none; }
+  table.conj--persons tbody tr, table.conj--paradigm tbody tr { border-bottom: 2px solid var(--line); }
+  table.conj--persons tbody tr:last-child, table.conj--paradigm tbody tr:last-child { border-bottom: 0; }
+  table.conj--persons tbody th, table.conj--paradigm tbody th { border-right: 0; border-bottom: 2px solid var(--line); background: var(--panel-soft); }
+  /* the column's name on the left, the form on the right; either wraps
+     rather than overflow */
+  table.conj--persons td, table.conj--paradigm td {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 12px;
+    border-bottom: 0; padding: 8px 14px; text-align: right; overflow-wrap: anywhere;
+  }
+  table.conj--persons td::before, table.conj--paradigm td::before {
+    content: attr(data-label); text-align: left;
+    font-size: 13px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint);
+  }
+  table.conj--persons tbody tr:hover td, table.conj--paradigm tbody tr:hover td { background: none; }
+}
+@media (max-width: 420px) {
+  table.conj { font-size: 15px; }
+  table.conj--persons td, table.conj--paradigm td { padding: 8px 10px; gap: 8px; }
+}
 .mark-irregular td.is-irregular { color: var(--red); font-weight: 900; }
 
 /* The stage word lists are two narrow columns, not a paradigm. */
-table.conj--words { min-width: 0; }
-table.conj--words tbody th { position: static; min-width: 0; border-right: 0; }
+table.conj--words tbody th { border-right: 0; }
 table.conj--words td { white-space: normal; color: var(--text-dim); font-weight: 600; }
 
 /* --- dictionary + stages: two columns ------------------------------------------- */
@@ -599,8 +628,10 @@ table.conj--words td { white-space: normal; color: var(--text-dim); font-weight:
 .panel .mood__title { font-size: 24px; margin: 22px 0 10px; }
 .panel .entry__head h2 { font-size: 40px; }
 
-.columns--single { grid-template-columns: minmax(0, 1fr); }
-.columns--single .panel--dictionary { position: static; max-height: none; overflow: visible; }
+.columns--single, .columns--stacked { grid-template-columns: minmax(0, 1fr); }
+.columns--single .panel--dictionary,
+.columns--stacked .panel--dictionary { position: static; max-height: none; overflow: visible; scroll-margin-top: 90px; }
+.wordcolumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .panel--stages .backlink { margin-bottom: 14px; }
 
 .stagecard { margin-bottom: 16px; }
@@ -699,12 +730,9 @@ table.conj--words td { white-space: normal; color: var(--text-dim); font-weight:
 .grammar__list li::marker { color: var(--red); }
 .grammar__card em, .grammar__use em { color: var(--red-dark); font-style: italic; }
 .grammar__table { margin: 14px 0; }
-.grammar__table table.conj { min-width: 0; }
-table.conj--paradigm thead th:first-child { position: sticky; left: 0; z-index: 2; }
-table.conj--paradigm tbody th { min-width: 0; }
 table.conj--prose td, table.conj--prose tbody th { white-space: normal; vertical-align: top; }
 table.conj--prose td { font-weight: 600; }
-table.conj--prose tbody th { position: static; border-right: 0; min-width: 0; }
+table.conj--prose tbody th { border-right: 0; }
 
 .grammar__casetags { display: flex; flex-wrap: wrap; gap: 8px; }
 .grammar__casetags .chip { font-size: 14px; padding: 4px 12px; }
@@ -771,9 +799,12 @@ table.conj--prose tbody th { position: static; border-right: 0; min-width: 0; }
   .footer__brand { width: 100%; }
   main[data-page] .page::before { display: none; }
   main[data-page] .page__head { padding-right: 0; }
+  .wordcolumns { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .wordcolumns .tablewrap + .tablewrap { border-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
+  .wordcolumns .tablewrap:first-child { border-bottom-width: 2px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 
   /* Prose tables stack on a phone: one block per row, each cell under its
-     column's name. Paradigms keep their columns and scroll sideways. */
+     column's name. (Paradigms stack too, at 860px; see table.conj above.) */
   .grammar__table--prose { overflow: visible; border: 0; background: none; }
   table.conj--prose, table.conj--prose tbody, table.conj--prose tr,
   table.conj--prose th, table.conj--prose td { display: block; width: 100%; }

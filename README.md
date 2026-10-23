@@ -57,7 +57,7 @@ npx -y @google/clasp create-deployment \
 | `/` | A hero with the Colosseum, the four tools, and a **dictionary search** that opens the dictionary page with your query already applied. |
 | `/conjugacion` | Every tense of the indicative, subjunctive and imperative, active and passive, across the five conjugations. Tabs for the model verbs, plus a search that conjugates anything you give principal parts for. Irregular forms are highlighted. |
 | `/declinationes` | The five noun declensions and the adjectives, in every case and number. Takes a noun the way a dictionary quotes it — nominative and genitive — because the genitive is what says which declension it is. |
-| `/diccionario` | Whitaker's Words: the headword with its principal parts, every way the form can be read, example sentences where a corpus has them. Opened with `?s=N`, the stage's word list sits on the left, and clicking a word looks it up on the right. |
+| `/diccionario` | Whitaker's Words: the headword with its principal parts, every way the form can be read, example sentences where a corpus has them. Opened with `?s=N`, the stage's word list comes first, in two columns, and clicking a word opens its entry in the dictionary below. |
 | `/stadia` | The Cambridge Latin Course stages as cards, grouped by book. Each opens `/diccionario?s=N`. |
 | `/grammatica` | The grammar topics, as tiles. Each opens its own page. |
 | `/grammatica/adiectiva` | Adjectives: rules, 1st/2nd and 3rd declension, comparison, adverbs. |
@@ -226,8 +226,8 @@ shares the nominative. Read as a two-termination adjective it produces
 
 The Cambridge Latin Course teaches in numbered stages and students revise by
 stage, so the Stages page (`/stadia`) lists every stage, and each opens the
-dictionary page with that stage's words in a column beside the dictionary;
-clicking any word looks it up there.
+dictionary page with that stage's words in two columns and the dictionary
+below them; clicking any word opens its entry there and scrolls to it.
 
 `?s=` answers to `21`, `stage 21`, the numeral `xxi`, or a stage's title. The numerals are derived rather than listed, which is the fix for
 a quiet one — they were a hand-written table that stopped at `xii`, so adding

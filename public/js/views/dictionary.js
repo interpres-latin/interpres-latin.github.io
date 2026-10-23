@@ -48,9 +48,9 @@ const label = (kind, key) => {
 };
 
 /**
- * The dictionary, and beside it one stage's words when the page is opened
- * from the Stages page with ?s=N: clicking a word in the stage looks it up
- * beside the list instead of leaving it.
+ * The dictionary, and above it one stage's words in two columns when the
+ * page is opened from the Stages page with ?s=N: clicking a word in the stage
+ * opens its entry in the dictionary below the list.
  *
  * Both keep their place in the query (?s= and ?q=), so a link to a stage with
  * a word open on it still works.
@@ -91,10 +91,8 @@ export function renderDictionary(main) {
   const params = new URLSearchParams(window.location.search);
   const stagePanel = buildStage(params.get('s'), (word) => {
     search(word);
-    // Stacked on a phone, the entry is below the list and out of sight.
-    if (window.matchMedia('(max-width: 900px)').matches) {
-      dictionaryPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    // The dictionary is below the list, so bring the entry into view.
+    dictionaryPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   main.append(el('div', { class: 'page shell' },
@@ -102,7 +100,7 @@ export function renderDictionary(main) {
       el('h1', {}, t('dictionary.title')),
       el('p', {}, t('dictionary.pageLead'))),
     stagePanel
-      ? el('div', { class: 'columns' }, stagePanel, dictionaryPanel)
+      ? el('div', { class: 'columns columns--stacked' }, stagePanel, dictionaryPanel)
       : el('div', { class: 'columns columns--single' }, dictionaryPanel),
     el('p', { class: 'footnote' },
       'Definitions from ',
@@ -152,8 +150,8 @@ function setQuery(key, value) {
 // ---------------------------------------------------------------------------
 
 /**
- * One stage's word list, beside the dictionary, when the page was opened with
- * ?s=N (from the Stages page, /stadia). Without a stage there is no column.
+ * One stage's word list, above the dictionary, when the page was opened with
+ * ?s=N (from the Stages page, /stadia). Without a stage there is no list.
  *
  * The lists are hand-compiled (the course publishes no vocabulary data) and
  * every word in them is checked against Whitaker's Words. What that provenance
@@ -170,10 +168,18 @@ function buildStage(raw, lookUp) {
       el('div', { class: 'verbcard__tags' },
         stage.book ? el('span', { class: 'chip chip--es' }, stage.book.label) : null,
         el('span', { class: 'chip' }, t('stages.wordCount', { n: stage.words.length })))),
-    wordTable(stage.words.map(([latin, english]) => ({ latin, english })), false, lookUp));
+    wordColumns(stage.words.map(([latin, english]) => ({ latin, english })), lookUp));
 }
 
-/** Each Latin word opens in the dictionary column beside the list. */
+/** A stage's words in two tables side by side, the first half on the left. */
+function wordColumns(words, lookUp) {
+  const half = Math.ceil(words.length / 2);
+  return el('div', { class: 'wordcolumns' },
+    wordTable(words.slice(0, half), false, lookUp),
+    wordTable(words.slice(half), false, lookUp));
+}
+
+/** Each Latin word opens in the dictionary below the list. */
 function wordTable(words, showStage, lookUp) {
   const head = el('tr', {},
     el('th', { scope: 'col' }, t('stages.latinWord')),

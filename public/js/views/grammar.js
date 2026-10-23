@@ -116,10 +116,10 @@ function block(item) {
 }
 
 /**
- * A paradigm (short forms in every cell) scrolls sideways on a phone with its
- * first column pinned, as the conjugation tables do. A table of prose stacks
- * instead, each cell under its column's name, because sideways scrolling
- * through sentences is no way to read them.
+ * No table scrolls sideways. A paradigm (short forms in every cell) becomes a
+ * card per row on a narrow page, each form beside its column's name, as the
+ * conjugation tables do. A table of prose stacks too, each cell under its
+ * column's name.
  */
 function table(head, rows) {
   const prose = rows.some((row) => row.some((cell) => plain(cell).length > 34));
