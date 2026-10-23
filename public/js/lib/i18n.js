@@ -98,7 +98,6 @@ const LATIN = {
     theme: latine('Mutare speciem', 'Switch theme'),
     menu: latine('Aperire indicem', 'Open menu'),
     langLabel: latine('Lingua paginae', 'Site language'),
-    more: latine('Plura', 'More'),
   },
 
   meta: {
@@ -130,7 +129,6 @@ const LATIN = {
     ),
     button: latine('Quaerere', 'Search'),
     tryWith: latine('Proba', 'Try'),
-    note: latine('Preme Enter ut paginam lexici aperias.', 'Press Enter to open the dictionary page.'),
     label: latine('Quaerere verbum in lexico', 'Search for a word in the dictionary'),
     samples: latine('canem,puellae,rexit,urbium,amavissent', 'canem,puellae,rexit,urbium,amavissent'),
   },

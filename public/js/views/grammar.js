@@ -16,7 +16,7 @@ export const TOPICS = [
     title: 'Adjectives',
     lead: 'Agreement, the two families of adjectives, comparison and adverbs.',
     blurb: 'bonus and omnis, the special genitive, comparison and adverbs.',
-    art: '/assets/art/laurel.svg',
+    art: '/assets/art/tablet.svg',
   },
   {
     slug: 'participia',

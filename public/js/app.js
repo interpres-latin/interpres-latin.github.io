@@ -4,6 +4,7 @@ import { renderDictionary } from './views/dictionary.js';
 import { renderDeclensions } from './views/declensions.js';
 import { renderGrammar, renderGrammarTopic } from './views/grammar.js';
 import { clear } from './lib/dom.js';
+import { mountMenu } from './lib/menu.js';
 
 const ROUTES = [
   { path: '/', nav: 'home', render: renderHome },
@@ -126,6 +127,8 @@ export function go(to) {
   history.pushState({}, '', url.pathname + url.search + url.hash);
   navigate();
 }
+
+mountMenu(document.getElementById('nav'));
 
 document.addEventListener('click', onClick);
 window.addEventListener('popstate', () => navigate());

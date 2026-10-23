@@ -29,13 +29,17 @@
       </a>
 
       <!-- Duolingo's header: plain uppercase links on the right, grey, the
-           current page a shade darker. No menu button at any width. -->
-      <nav class="nav__links" aria-label="Pages">
-        <a href="/conjugacion" data-link data-nav="conjugacion">Conjugations</a>
-        <a href="/declinationes" data-link data-nav="declinationes">Declensions</a>
-        <a href="/diccionario" data-link data-nav="diccionario">Dictionary</a>
-        <a href="/grammatica" data-link data-nav="grammatica">Grammar</a>
-      </nav>
+           current page a shade darker, then the menu. Links that do not fit
+           the width move into the menu (public/js/lib/menu.js). -->
+      <div class="nav__right">
+        <nav class="nav__links" aria-label="Pages">
+          <a href="/conjugacion" data-link data-nav="conjugacion">Conjugations</a>
+          <a href="/declinationes" data-link data-nav="declinationes">Declensions</a>
+          <a href="/diccionario" data-link data-nav="diccionario">Dictionary</a>
+          <a href="/grammatica" data-link data-nav="grammatica">Grammar</a>
+        </nav>
+        <div class="nav__end"></div>
+      </div>
     </div>
   </header>
 

@@ -351,76 +351,68 @@ def scroll():
     s.append(f'<rect x="60" y="62" width="6" height="4" rx="2" fill="{RED_L}"/>')
     write('scroll.svg', 96, 96, ''.join(s))
 
-def laurel():
-    s = []
-    def leaf(x, y, a, c):
-        return f'<ellipse cx="{f(x)}" cy="{f(y)}" rx="9" ry="4.5" fill="{c}" transform="rotate({f(a)} {f(x)} {f(y)})"/>'
-    for side in (-1, 1):
-        for i in range(6):
-            th = math.radians(200 - i * 26) if side < 0 else math.radians(-20 + i * 26)
-            r = 32
-            x = 48 + r * math.cos(th) * (1 if side > 0 else 1)
-            y = 50 - r * math.sin(th) * -1
-            x = 48 + side * abs(r * math.cos(math.radians(250 - i * 26 + 90)))
-            ang = 90 - i * 26
-            px = 48 + side * 32 * math.sin(math.radians(30 + i * 24))
-            py = 54 + 32 * math.cos(math.radians(30 + i * 24))
-            tilt = side * (60 + i * 24)
-            s.append(leaf(px, py, tilt, GREEN if (i % 2 == 0) else GREEN_D))
-            ox = 48 + side * 22 * math.sin(math.radians(40 + i * 24))
-            oy = 54 + 22 * math.cos(math.radians(40 + i * 24))
-            s.append(leaf(ox, oy, tilt + side * 40, GREEN_D if (i % 2 == 0) else GREEN))
-    s.append(f'<path d="M40 80l-8 12l8-2l4 4z" fill="{RED_D}"/><path d="M56 80l8 12l-8-2l-4 4z" fill="{RED_D}"/>')
-    s.append(f'<rect x="38" y="76" width="20" height="10" rx="5" fill="{RED}"/>')
-    write('laurel.svg', 96, 96, ''.join(s))
+def tablet():
+    """A wax writing tablet and its stylus: the grammar's picture."""
+    WOOD, WOOD_D, WOOD_L = ARCH, ARCH_D, '#D9894A'
+    WAX, WAX_LINE = '#5A3A1E', '#C98543'
+    s = ['<g transform="translate(-6 -2)">']
+    # the wooden frame, its right side in shade
+    s.append(f'<rect x="14" y="14" width="60" height="72" rx="9" fill="{WOOD}"/>')
+    s.append(f'<path d="M56 14h9a9 9 0 0 1 9 9v54a9 9 0 0 1-9 9H56z" fill="{WOOD_D}"/>')
+    s.append(f'<rect x="17.5" y="22" width="3.5" height="16" rx="1.75" fill="{WOOD_L}"/>')
+    # the wax, with lines scratched into it
+    s.append(f'<rect x="24" y="23" width="40" height="54" rx="4" fill="{WAX}"/>')
+    for y, w in ((32, 28), (42, 22), (52, 30), (62, 16)):
+        s.append(f'<rect x="30" y="{y}" width="{w}" height="4" rx="2" fill="{WAX_LINE}"/>')
+    # the stylus, leaning across the frame
+    s.append('<g transform="translate(76 54) rotate(20)">')
+    s.append(f'<rect x="-4" y="-32" width="8" height="54" rx="4" fill="{GOLD}"/>')
+    s.append(f'<path d="M0 -32a4 4 0 0 1 4 4v46a4 4 0 0 1-4 4z" fill="{GOLD_D}"/>')
+    s.append(f'<rect x="-2.5" y="-24" width="2.5" height="14" rx="1.25" fill="{GOLD_L}"/>')
+    s.append('<path d="M-4 20h8l-4 12z" fill="#4B4B4B"/>')
+    s.append(f'<rect x="-7" y="-38" width="14" height="8" rx="4" fill="{GOLD_D}"/>')
+    s.append('</g></g>')
+    write('tablet.svg', 96, 96, ''.join(s))
 
-def owl():
+def amphora():
+    """A terracotta amphora: the dictionary page's picture."""
+    TERRA, TERRA_D, TERRA_L = '#E07B39', '#B85C22', '#F5A66B'
+    body = 'M48 32C68 32 76 46 74 60C72 72 60 82 52 88H44C36 82 24 72 22 60C20 46 28 32 48 32Z'
+    s = [f'<defs><clipPath id="ab"><path d="{body}"/></clipPath></defs>']
+    # handles, from the neck down to the shoulder
+    for d in ('M41 20C27 18 22 32 31 41', 'M55 20C69 18 74 32 65 41'):
+        s.append(f'<path d="{d}" fill="none" stroke="{TERRA_D}" stroke-width="6" stroke-linecap="round"/>')
+    # neck and rim
+    s.append(f'<rect x="40" y="14" width="16" height="22" fill="{TERRA}"/>')
+    s.append(f'<rect x="49" y="14" width="7" height="22" fill="{TERRA_D}"/>')
+    s.append(f'<rect x="34" y="8" width="28" height="9" rx="4.5" fill="{TERRA_D}"/>')
+    # body, with its right side in shade and a painted band
+    s.append(f'<path d="{body}" fill="{TERRA}"/>')
+    s.append(f'<g clip-path="url(#ab)">'
+             f'<rect x="20" y="50" width="60" height="7" fill="{GOLD}"/>'
+             f'<rect x="20" y="60" width="60" height="3" fill="{GOLD_D}"/>'
+             f'<rect x="56" y="28" width="24" height="64" fill="{TERRA_D}" opacity=".45"/></g>')
+    s.append(f'<rect x="30" y="38" width="6" height="10" rx="3" fill="{TERRA_L}" transform="rotate(-25 33 43)"/>')
+    s.append(f'<rect x="28" y="64" width="5" height="8" rx="2.5" fill="{TERRA_L}" transform="rotate(25 30 68)"/>')
+    # foot
+    s.append(f'<path d="M43 86h10l-1.5 6a3.5 3.5 0 0 1-7 0z" fill="{TERRA_D}"/>')
+    write('amphora.svg', 96, 96, ''.join(s))
+
+def icons():
     """
-    Minerva's owl, in the Duolingo manner: a round body with no outlines, big
-    eyes, a shaded side and highlight pills, under a large crested helmet.
-    A still picture. Everything is drawn 10 units lower than the body's own
-    coordinates so the enlarged helmet has room above it.
+    The interface's glyphs. They are drawn black and used as CSS masks, so each
+    takes the colour of the text around it.
     """
-    BODY, BODY_D, BELLY, BELLY_D = '#C98543', '#A86A2C', '#F6DFB5', '#E8C48C'
-    s = []
-    s.append('<defs><clipPath id="ob"><path d="M60 28C88 28 100 48 100 72C100 98 84 110 60 110C36 110 20 98 20 72C20 48 32 28 60 28Z"/></clipPath></defs>')
-    s.append('<g transform="translate(0 10)">')
-    # feet
-    s.append(f'<rect x="40" y="104" width="14" height="9" rx="4.5" fill="{ORANGE}"/><rect x="66" y="104" width="14" height="9" rx="4.5" fill="{ORANGE}"/>')
-    # wings, behind the body, hinged at the shoulder
-    s.append(f'<path d="M30 60C14 66 8 84 14 98C22 94 30 86 32 74Z" fill="{BODY_D}"/>')
-    s.append(f'<path d="M90 60C106 66 112 84 106 98C98 94 90 86 88 74Z" fill="{BODY_D}"/>')
-    # body, with its right side in shade
-    body = 'M60 28C88 28 100 48 100 72C100 98 84 110 60 110C36 110 20 98 20 72C20 48 32 28 60 28Z'
-    s.append(f'<path d="{body}" fill="{BODY}"/>')
-    s.append(f'<rect x="78" y="20" width="40" height="100" fill="{BODY_D}" opacity=".45" clip-path="url(#ob)"/>')
-    s.append(f'<rect x="28" y="52" width="7" height="18" rx="3.5" fill="#E7A766"/>')
-    # belly with feather marks
-    s.append(f'<path d="M60 70C76 70 84 82 84 92C84 102 74 108 60 108C46 108 36 102 36 92C36 82 44 70 60 70Z" fill="{BELLY}"/>')
-    for x, y in ((50, 84), (60, 84), (70, 84), (55, 94), (65, 94)):
-        s.append(f'<path d="M{x-4} {y}q4 5 8 0" fill="none" stroke="{BELLY_D}" stroke-width="2.6" stroke-linecap="round"/>')
-    # eyes: pale rings, big whites, pupils looking up and to the right, a glint
-    for cx in (45, 75):
-        s.append(f'<circle cx="{cx}" cy="58" r="17" fill="{BELLY}"/>')
-        s.append(f'<circle cx="{cx}" cy="58" r="13" fill="#fff"/>'
-                 f'<circle cx="{cx+3}" cy="56" r="7.5" fill="#3C3C3C"/>'
-                 f'<circle cx="{cx+5.5}" cy="53.5" r="2.6" fill="#fff"/>')
-    # beak
-    s.append(f'<path d="M54 68Q60 66 66 68L61.5 77Q60 79 58.5 77Z" fill="{GOLD}"/>')
-    s.append(f'<path d="M60 67Q63 67 66 68L61.5 77Q60 79 60 77Z" fill="{GOLD_D}"/>')
-    # Minerva's helmet with its crest, a third bigger than the head would
-    # strictly need, scaled about the brim so it still sits on the head.
-    s.append('<g transform="translate(60 41) scale(1.35) translate(-60 -44)">')
-    s.append(f'<g><path d="M30 34C30 12 90 12 90 34C82 26 38 26 30 34Z" fill="{RED}"/>'
-             f'<path d="M60 18C76 18 88 24 90 34C84 28 72 25 60 25Z" fill="{RED_D}"/>'
-             f'<rect x="38" y="18" width="16" height="6" rx="3" fill="{RED_L}" transform="rotate(-12 46 21)"/></g>')
-    s.append(f'<path d="M34 42C34 30 46 24 60 24C74 24 86 30 86 42Z" fill="{GOLD}"/>')
-    s.append(f'<path d="M60 24C74 24 86 30 86 42H72C72 33 67 27 60 24Z" fill="{GOLD_D}"/>')
-    s.append(f'<rect x="40" y="30" width="12" height="6" rx="3" fill="{GOLD_L}" transform="rotate(-20 46 33)"/>')
-    s.append(f'<rect x="30" y="40" width="60" height="7" rx="3.5" fill="{GOLD_D}"/>')
-    s.append('</g>')
-    s.append('</g>')
-    write('owl.svg', 120, 130, ''.join(s))
+    def glyph(name, body, colour='#000'):
+        with open(os.path.join(OUT, f'icon-{name}.svg'), 'w') as fh:
+            fh.write('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" '
+                     f'fill="none" stroke="{colour}" stroke-linecap="round" stroke-linejoin="round">'
+                     f'{body}</svg>\n')
+    glyph('search', '<path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm10 2-4.35-4.35" stroke-width="2.6"/>')
+    glyph('caret', '<path d="M6 9.5l6 5.5 6-5.5" stroke-width="3"/>')
+    glyph('menu', '<path d="M4 6.5h16M4 12h16M4 17.5h16" stroke-width="2.8"/>')
+    # The checkbox's tick is a background rather than a mask, so it is white.
+    glyph('tick', '<path d="M5.25 12.75l4.5 4.5 9-10.5" stroke-width="3.9"/>', '#fff')
 
 
 def logo():
@@ -432,5 +424,5 @@ def logo():
     with open(os.path.join(OUT, '..', '..', 'favicon.svg'), 'w') as fh:
         fh.write(svg.replace('viewBox="0 0 96 96"', 'viewBox="6 4 84 88"'))
 
-colosseum(); helmet(); column(); scroll(); laurel(); owl(); logo()
+colosseum(); helmet(); column(); scroll(); tablet(); amphora(); icons(); logo()
 print('ok')

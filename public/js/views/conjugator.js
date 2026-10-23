@@ -1,4 +1,4 @@
-import { el, icon, ICONS, clear, debounce, fold } from '../lib/dom.js';
+import { el, icon, clear, debounce, fold } from '../lib/dom.js';
 import * as latin from '../lib/conjugator-la.js';
 import * as latinVerbs from '../data/verbs-la.js';
 import { lang, t } from '../lib/i18n.js';
@@ -120,7 +120,7 @@ export function renderConjugator(main) {
     el('div', { class: 'toolbar' },
       tabs,
       el('div', { class: 'search' },
-        el('div', { class: 'search__field' }, icon(ICONS.search, { size: 15 }), searchInput),
+        el('div', { class: 'search__field' }, icon('search'), searchInput),
         suggestions),
       el('label', { class: 'switch' }, highlightToggle, t('conjugator.highlight'))),
     results,

@@ -25,7 +25,7 @@ export function renderHome(main) {
       feature('/assets/art/helmet.svg', '/conjugacion', t('features.conjugation'), t('features.conjugationBody')),
       feature('/assets/art/column.svg', '/declinationes', t('features.declension'), t('features.declensionBody')),
       feature('/assets/art/scroll.svg', '/diccionario', t('features.dictionary'), t('features.dictionaryBody')),
-      feature('/assets/art/laurel.svg', '/grammatica', t('features.grammar'), t('features.grammarBody'))));
+      feature('/assets/art/tablet.svg', '/grammatica', t('features.grammar'), t('features.grammarBody'))));
 
   main.append(hero, el('hr', { class: 'rule shell' }), features, finder);
 }
@@ -78,6 +78,5 @@ function buildFinder() {
           el('div', { class: 'finder__hints' },
             el('span', {}, t('finder.tryWith')),
             ...t('finder.samples').split(',').map((word) =>
-              el('button', { type: 'button', onclick: () => openDictionary(word) }, word))),
-          el('p', { class: 'finder__note' }, t('finder.note'))))));
+              el('button', { type: 'button', onclick: () => openDictionary(word) }, word)))))));
 }

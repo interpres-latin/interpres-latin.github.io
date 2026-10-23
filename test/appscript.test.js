@@ -94,7 +94,7 @@ await test('the page carries every module, the styles and the art, and nothing b
   assert.ok(html.includes("__require('public/js/app.js')"));
   assert.ok(html.includes('.nav__links'), 'the stylesheet is inlined');
   // Every illustration the site uses, once in the logo and again in the views and the CSS.
-  for (const name of ['logo', 'colosseum', 'helmet', 'column', 'scroll', 'laurel', 'owl']) {
+  for (const name of ['logo', 'colosseum', 'helmet', 'column', 'scroll', 'tablet', 'amphora', 'icon-search', 'icon-caret', 'icon-menu', 'icon-tick']) {
     const svg = fs.readFileSync(path.join(HERE, '..', 'public/assets/art', `${name}.svg`));
     assert.ok(html.includes(svg.toString('base64')), `${name}.svg is not inlined`);
   }

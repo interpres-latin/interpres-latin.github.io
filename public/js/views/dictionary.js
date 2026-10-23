@@ -1,4 +1,4 @@
-import { el, icon, ICONS, clear, fold, getJson } from '../lib/dom.js';
+import { el, icon, clear, fold, getJson } from '../lib/dom.js';
 import {
   allWords, BOOKS, COURSE, findStage, STAGE_NUMBERS, STAGES,
 } from '../data/stages-la.js';
@@ -74,7 +74,7 @@ export function renderDictionary(main) {
 
   const form = el('form', { class: 'search' },
     el('div', { class: 'search__field' },
-      icon(ICONS.search, { size: 15 }),
+      icon('search'),
       input,
       el('button', { class: 'btn btn--primary btn--sm', type: 'submit' }, t('dictionary.button'))));
 
@@ -177,7 +177,7 @@ function buildStages(lookUp) {
 
   const form = el('form', { class: 'search' },
     el('div', { class: 'search__field' },
-      icon(ICONS.search, { size: 15 }),
+      icon('search'),
       input,
       el('button', { class: 'btn btn--primary btn--sm', type: 'submit' }, t('stages.button'))));
 
@@ -227,7 +227,7 @@ function buildStages(lookUp) {
 
       results.appendChild(el('div', { class: 'empty' },
         el('h3', {}, t('stages.notFound')),
-        el('p', {}, `${STAGE_NUMBERS[0]}–${STAGE_NUMBERS.at(-1)} · ${COURSE.name}, ${COURSE.book}`)));
+        el('p', {}, `${STAGE_NUMBERS[0]}–${STAGE_NUMBERS.at(-1)}, ${COURSE.name}, ${COURSE.book}`)));
       return;
     }
 
@@ -246,7 +246,7 @@ function buildStages(lookUp) {
 
   const panel = el('section', { class: 'panel panel--stages' },
     el('div', { class: 'panel__head' },
-      el('img', { class: 'panel__art', src: '/assets/art/laurel.svg', alt: '', width: 56, height: 56 }),
+      el('img', { class: 'panel__art', src: '/assets/art/tablet.svg', alt: '', width: 56, height: 56 }),
       el('div', {},
         el('h2', {}, t('stages.eyebrow')),
         el('p', {}, t('stages.lead')))),
@@ -273,7 +273,7 @@ function wordTable(words, showStage, lookUp) {
         onclick: () => lookUp(word.latin.split(',')[0]),
       }, word.latin)),
     el('td', {}, word.english),
-    showStage ? el('td', {}, `${word.book ? `${word.book.label} · ` : ''}${word.stage}`) : null)));
+    showStage ? el('td', {}, `${word.book ? `${word.book.label}, ` : ''}${word.stage}`) : null)));
 
   return el('div', { class: 'tablewrap' },
     el('table', { class: 'conj conj--words' }, el('thead', {}, head), body));
@@ -315,7 +315,7 @@ function renderEntry(data, search) {
   if (data.credit) {
     wrap.appendChild(el('p', { class: 'usage__credit' },
       el('a', { href: data.credit.url, target: '_blank', rel: 'noopener' }, data.credit.name),
-      ` · ${data.credit.licence}`));
+      `, ${data.credit.licence}`));
   }
 
   // The Spanish side still says when it is not the RAE, because there the RAE
@@ -323,7 +323,7 @@ function renderEntry(data, search) {
 
   // A short English gloss, where the dictionary gives only its own language.
   if (data.gloss?.senses?.length) {
-    wrap.appendChild(el('p', { class: 'entry__gloss' }, data.gloss.senses.join(' · ')));
+    wrap.appendChild(el('p', { class: 'entry__gloss' }, data.gloss.senses.join('; ')));
   }
 
   // Sentences from a corpus belong to the word, not to one sense: they contain
@@ -336,7 +336,7 @@ function renderEntry(data, search) {
         sentence.en ? el('p', {}, sentence.en) : null)),
       el('p', { class: 'usage__credit' },
         el('a', { href: data.usage.credit.url, target: '_blank', rel: 'noopener' }, data.usage.credit.name),
-        ` · ${data.usage.credit.licence}`)));
+        `, ${data.usage.credit.licence}`)));
   }
 
   let senseIndex = 0;
@@ -413,7 +413,7 @@ function renderSense(sense, example, exampleSource, search) {
   }
 
   return el('div', { class: 'sense' },
-    el('div', { class: 'sense__num' }, String(sense.number ?? '·')),
+    el('div', { class: 'sense__num' }, String(sense.number ?? '')),
     body);
 }
 
