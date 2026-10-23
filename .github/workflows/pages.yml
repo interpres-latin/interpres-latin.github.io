@@ -22,6 +22,8 @@ concurrency:
 
 jobs:
   build:
+    # Only the copy that GitHub Pages serves publishes; elsewhere this is skipped.
+    if: github.repository == 'interpres/interpres.github.io'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
