@@ -10,7 +10,7 @@
  *   - /api/… goes to the Apps Script web app named in pages/config.json.
  *     pages/client.js is inlined ahead of the app to do that.
  *
- * The site lives at the root of interpres.github.io, so every root-relative
+ * The site lives at the root of interpres-latin.github.io, so every root-relative
  * path in public/ stays as it is.
  *
  * Every route is a client-side route. Each one, old addresses included, gets

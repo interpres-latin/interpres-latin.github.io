@@ -24,8 +24,8 @@ The same site is published twice.
   also at [tinyurl.com/interpres-latin](https://tinyurl.com/interpres-latin).
   The whole site, page and server, in one web app. See
   [Google Apps Script](#google-apps-script).
-- **GitHub Pages**: [interpres.github.io](https://interpres.github.io), from
-  the repository `interpres/interpres.github.io` with Pages set to deploy from
+- **GitHub Pages**: [interpres-latin.github.io](https://interpres-latin.github.io), from
+  the repository `interpres-latin/interpres-latin.github.io` with Pages set to deploy from
   GitHub Actions. The files in `public/`, with `/api/…` sent to that same Apps
   Script web app: `pages/client.js` in the browser, `doPost` in
   `appscript/src/Code.js` at the other end. The address it calls is in

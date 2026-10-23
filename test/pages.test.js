@@ -1,5 +1,5 @@
 /**
- * The GitHub Pages build: public/ at the root of interpres.github.io, talking
+ * The GitHub Pages build: public/ at the root of interpres-latin.github.io, talking
  * to Apps Script. Built into a scratch directory and checked as files.
  */
 import assert from 'node:assert/strict';

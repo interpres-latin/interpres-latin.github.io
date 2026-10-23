@@ -1,4 +1,4 @@
-# Publish the site to GitHub Pages: https://interpres.github.io/
+# Publish the site to GitHub Pages: https://interpres-latin.github.io/
 #
 # Pages serves files only. The server half (Whitaker's Words, the example
 # sentences, pronunciation) runs on the Apps Script web app named in
@@ -23,7 +23,7 @@ concurrency:
 jobs:
   build:
     # Only the copy that GitHub Pages serves publishes; elsewhere this is skipped.
-    if: github.repository == 'interpres/interpres.github.io'
+    if: github.repository == 'interpres-latin/interpres-latin.github.io'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
