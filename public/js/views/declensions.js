@@ -9,7 +9,7 @@
  * of several patterns, and the page says so rather than guessing.
  */
 
-import { el, icon, clear, debounce, getJson } from '../lib/dom.js';
+import { el, icon, ICONS, clear, debounce, getJson } from '../lib/dom.js';
 import {
   CASE_ORDER, declineAdjective, declineNoun, parseParts,
 } from '../lib/decliner-la.js';
@@ -106,7 +106,7 @@ export function renderDeclensions(main) {
 
   const form = el('form', { class: 'search', style: { maxWidth: '620px' } },
     el('div', { class: 'search__field' },
-      icon('search'),
+      icon(ICONS.search, { size: 15 }),
       input,
       el('button', { class: 'btn btn--primary btn--sm', type: 'submit' }, t('declension.button'))));
 
@@ -139,7 +139,7 @@ export function renderDeclensions(main) {
         show(model.parts, model.gender);
       },
     }, label, model.variants
-      ? el('span', { class: 'tabmenu__caret' }, icon('caret'))
+      ? el('span', { class: 'tabmenu__caret' }, icon(ICONS.caret, { size: 12, width: 2.6 }))
       : null);
 
     holder.appendChild(button);

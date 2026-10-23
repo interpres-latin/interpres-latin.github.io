@@ -3,32 +3,11 @@
  *
  * The header shows as many page links as fit its width; the ones that do not
  * fit move into this menu, last first, the way Duolingo's header folds. The
- * menu also lists the course stages, each opening the dictionary on it, and
- * the sibling sites.
- *
- * The sibling sites differ between the two builds: the Apps Script one links
- * the other Apps Script web apps, the GitHub Pages one (and a local server)
- * the other github.io sites. The Apps Script page is the one that has
- * window.__INTERPRES__, which appscript/build.mjs puts there.
+ * menu also lists the course stages, each opening the dictionary on it.
  */
 
-import { el, icon } from './dom.js';
+import { el, icon, ICONS } from './dom.js';
 import { BOOKS, STAGE_NUMBERS } from '../data/stages-la.js';
-
-const SITES = {
-  appsScript: [
-    { name: 'ProfeGPT', href: 'https://script.google.com/macros/s/AKfycbzQJSe8rHdR9ZDTmpEfFtOtUaHbirB9jQd0rP8GuOYqA-5MNLCDGZYBfOPirBDVybsObQ/exec' },
-    { name: 'Saxon Planner', href: 'https://tinyurl.com/saxonplanner' },
-  ],
-  pages: [
-    { name: 'ProfeGPT', href: 'https://profegpt.github.io/' },
-    { name: 'Saxlan', href: 'https://saxlan.github.io/' },
-  ],
-};
-
-export function siblingSites() {
-  return '__INTERPRES__' in window ? SITES.appsScript : SITES.pages;
-}
 
 export function mountMenu(nav) {
   const inner = nav.querySelector('.nav__inner');
@@ -44,7 +23,7 @@ export function mountMenu(nav) {
     title: 'Menu',
     'aria-haspopup': 'true',
     'aria-expanded': 'false',
-  }, icon('menu'));
+  }, icon(ICONS.menu, { size: 20, width: 2.6 }));
   holder.replaceChildren(button);
 
   let panel = null;
@@ -114,18 +93,7 @@ export function mountMenu(nav) {
             }, String(number)))))),
     ];
 
-    const sites = [
-      el('p', { class: 'menu__title menu__title--rule' }, 'Sites'),
-      el('div', { class: 'menu__rows' },
-        ...siblingSites().map((site) => el('a', {
-          class: 'menu__row',
-          href: site.href,
-          target: '_blank',
-          rel: 'noopener',
-        }, site.name))),
-    ];
-
-    const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': 'Menu' }, ...pages, ...stages, ...sites);
+    const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': 'Menu' }, ...pages, ...stages);
     // A link inside closes the menu; the router does the navigating.
     menu.addEventListener('click', (event) => { if (event.target.closest('a')) close(); });
     return menu;

@@ -66,14 +66,7 @@ npx -y @google/clasp create-deployment \
 The four inner pages are the links at the top right of the header, followed
 by the menu (three lines, `public/js/lib/menu.js`). Links that do not fit the
 header's width fold into the menu, last first; the menu also lists the course
-stages (each opens `/diccionario?s=N`) and the sibling sites: ProfeGPT and
-Saxlan on GitHub Pages, ProfeGPT's web app and Saxon Planner in the Apps Script
-build (told apart by `window.__INTERPRES__`, which only that build sets). The
-home page is the logo.
-
-Every drawing is a file in `public/assets/art/`, drawn by
-`scripts/draw-art.py`; the interface glyphs (`icon-*.svg`) are used as CSS
-masks so they take the text's colour. `/stadia` (the old stages page) redirects to
+stages (each opens `/diccionario?s=N`). The home page is the logo. `/stadia` (the old stages page) redirects to
 `/diccionario` with its `?s=` intact, and `/chat` to the home page.
 
 The interface is English. The Latin string pack is still in

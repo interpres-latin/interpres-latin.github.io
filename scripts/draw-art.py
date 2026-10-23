@@ -398,23 +398,6 @@ def amphora():
     s.append(f'<path d="M43 86h10l-1.5 6a3.5 3.5 0 0 1-7 0z" fill="{TERRA_D}"/>')
     write('amphora.svg', 96, 96, ''.join(s))
 
-def icons():
-    """
-    The interface's glyphs. They are drawn black and used as CSS masks, so each
-    takes the colour of the text around it.
-    """
-    def glyph(name, body, colour='#000'):
-        with open(os.path.join(OUT, f'icon-{name}.svg'), 'w') as fh:
-            fh.write('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" '
-                     f'fill="none" stroke="{colour}" stroke-linecap="round" stroke-linejoin="round">'
-                     f'{body}</svg>\n')
-    glyph('search', '<path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm10 2-4.35-4.35" stroke-width="2.6"/>')
-    glyph('caret', '<path d="M6 9.5l6 5.5 6-5.5" stroke-width="3"/>')
-    glyph('menu', '<path d="M4 6.5h16M4 12h16M4 17.5h16" stroke-width="2.8"/>')
-    # The checkbox's tick is a background rather than a mask, so it is white.
-    glyph('tick', '<path d="M5.25 12.75l4.5 4.5 9-10.5" stroke-width="3.9"/>', '#fff')
-
-
 def logo():
     """The logo and the favicon are the dictionary's scroll."""
     with open(os.path.join(OUT, 'scroll.svg')) as fh:
@@ -424,5 +407,5 @@ def logo():
     with open(os.path.join(OUT, '..', '..', 'favicon.svg'), 'w') as fh:
         fh.write(svg.replace('viewBox="0 0 96 96"', 'viewBox="6 4 84 88"'))
 
-colosseum(); helmet(); column(); scroll(); tablet(); amphora(); icons(); logo()
+colosseum(); helmet(); column(); scroll(); tablet(); amphora(); logo()
 print('ok')
