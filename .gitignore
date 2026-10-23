@@ -9,3 +9,6 @@ logs/
 # The Apps Script build is generated; .clasp.json names your own script.
 appscript/dist/
 appscript/.clasp.json
+
+# The GitHub Pages build is generated.
+_site/

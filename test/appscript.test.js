@@ -58,7 +58,7 @@ async function test(name, run) {
 await test('only the entry points are callable', () => {
   const context = project().execution();
   const callable = Object.keys(context).filter((key) => typeof context[key] === 'function' && !key.endsWith('_'));
-  assert.deepEqual(callable.sort(), ['api', 'apiResult', 'doGet']);
+  assert.deepEqual(callable.sort(), ['api', 'apiResult', 'doGet', 'doPost']);
 });
 
 await test('doGet turns the path and query into the first route', () => {
@@ -258,6 +258,40 @@ await test('a browser that gets real answers stops the stashing', async () => {
   const app = project();
   await call(app, { id: 'abcdef123456', unwrapped: true, url: '/api/health' });
   assert.equal(app.execution().apiResult('abcdef123456'), null);
+});
+
+await test('the HTTP API for GitHub Pages: a POST starts the request, ?result collects it', async () => {
+  const app = project({ respond: dictionaryHosts });
+
+  const posted = app.execution().doPost({
+    postData: { contents: JSON.stringify({ method: 'GET', url: '/api/dictionary?word=canem&lang=la', headers: {} }) },
+  });
+  assert.equal(posted.mimeType, 'application/json');
+  const { id } = JSON.parse(posted.getContent());
+  assert.match(id, /^[0-9a-f]{32}$/);
+
+  // The handler settles after doPost returns, as it does on Apps Script.
+  await new Promise((resolve) => { setImmediate(resolve); });
+
+  // A different execution collects it, as the browser's second request would.
+  const collected = JSON.parse(app.execution().doGet({ parameter: { result: id } }).getContent());
+  assert.equal(collected.status, 200, JSON.stringify(collected));
+  assert.ok(collected.body.includes('canis'));
+
+  // Collected once only.
+  const again = JSON.parse(app.execution().doGet({ parameter: { result: id } }).getContent());
+  assert.equal(again.pending, true);
+});
+
+await test('the HTTP API answers only the allowed routes', () => {
+  const context = project().execution();
+  const refused = ['not json', JSON.stringify({ url: '/index.html' }), JSON.stringify({}),
+    JSON.stringify({ url: '/api/other' }), JSON.stringify({ url: '/api/dictionaryx?word=a' })];
+  for (const contents of refused) {
+    const answer = JSON.parse(context.doPost({ postData: { contents } }).getContent());
+    assert.ok(answer.error && !answer.id, contents);
+  }
+  assert.equal(JSON.parse(context.doGet({ parameter: { result: '../nope' } }).getContent()).pending, true);
 });
 
 console.log(`✓ all ${passed} Apps Script checks passed`);

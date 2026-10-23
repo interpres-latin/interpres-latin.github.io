@@ -3,20 +3,27 @@
  *
  * Every top-level function in this project without a trailing underscore can
  * be called by any visitor's browser through google.script.run, so there are
- * exactly three: the page, the API, and the API's fallback. Everything else
- * lives inside interpres_(), in the generated server.js.
+ * exactly four: the page, the API, the API's fallback, and the same API over
+ * plain HTTP for the site on GitHub Pages (doPost, with doGet collecting its
+ * answers). Everything else lives inside interpres_(), in the generated
+ * server.js.
  *
  * This folder is generated: edit appscript/src/ and run `npm run appscript:build`.
  */
 
-/* global interpres_, HtmlService, CacheService, ScriptApp */
+/* global interpres_, HtmlService, CacheService, ScriptApp, ContentService, Utilities */
 
 /** Served by jsDelivr from the public repository, since Apps Script has no static files. */
 const FAVICON_ = 'https://cdn.jsdelivr.net/gh/yuzhe-chen/interpres@main/public/favicon.svg';
 
-/** The page. Any path or query the visitor arrived with becomes the first route. */
+/**
+ * The page. Any path or query the visitor arrived with becomes the first route.
+ *
+ * `?result=<id>` is not a page: it is the second half of doPost, below.
+ */
 function doGet(e) {
   const parameters = Object.assign({}, (e && e.parameter) || {});
+  if (parameters.result !== undefined) return json_(apiResult(parameters.result) || { pending: true });
   const page = String((e && e.pathInfo) || parameters.page || '').replace(/^\/+|\/+$/g, '');
   delete parameters.page;
 
@@ -77,6 +84,63 @@ function apiResult(id) {
 
   cache.removeAll(keys.concat(`r:${id}`));
   return JSON.parse(keys.map((key) => parts[key]).join(''));
+}
+
+/** The only API routes the Pages site may call, as on the Node server. */
+const HTTP_ROUTES_ = ['/api/dictionary', '/api/speak', '/api/health'];
+
+function allowedRoute_(url) {
+  if (typeof url !== 'string' || url.length > 2048) return false;
+  const path = url.split('?')[0];
+  return HTTP_ROUTES_.some((route) => path === route || path.indexOf(`${route}/`) === 0);
+}
+
+/**
+ * The API over plain HTTP, for the copy of the site on GitHub Pages
+ * (pages/client.js is the other half).
+ *
+ * Apps Script does not wait for a promise returned from doPost, so a doPost
+ * that returned the handler's promise would hand back nothing. So this
+ * starts the request and answers at once with an id; the handler settles a
+ * moment later (everything it awaits is already synchronous here) and
+ * leaves its response in the cache, where `doGet(?result=id)` collects it.
+ * The same stash api() falls back on.
+ *
+ * The body is JSON sent as text/plain, which keeps the browser's request
+ * "simple": no preflight, which Apps Script cannot answer. Its responses are
+ * served from googleusercontent.com with CORS open to every origin.
+ */
+function doPost(e) {
+  let request = null;
+  try {
+    const contents = (e && e.postData && e.postData.contents) || 'null';
+    request = contents.length > 300 * 1024 ? null : JSON.parse(contents);
+  } catch (error) {
+    request = null;
+  }
+  if (!request || typeof request !== 'object' || !allowedRoute_(request.url)) {
+    return json_({ error: 'Expected { method, url: "/api/dictionary…" or "/api/speak…", headers, body }.' });
+  }
+
+  const id = Utilities.getUuid().replace(/-/g, '');
+  const failed = (error) => ({
+    status: 500,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ error: String((error && error.message) || error) }),
+  });
+
+  interpres_().handle({
+    method: String(request.method || 'GET').toUpperCase(),
+    url: request.url,
+    headers: request.headers && typeof request.headers === 'object' ? request.headers : {},
+    body: typeof request.body === 'string' ? request.body : undefined,
+  }).then((response) => stashResponse_(id, response), (error) => stashResponse_(id, failed(error)));
+
+  return json_({ id });
+}
+
+function json_(value) {
+  return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON);
 }
 
 // ---------------------------------------------------------------------------

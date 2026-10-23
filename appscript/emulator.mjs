@@ -89,6 +89,18 @@ export function project({ dist, properties = {}, urlFetch, console: log = { log(
         return output;
       },
     },
+    ContentService: {
+      MimeType: { JSON: 'application/json', TEXT: 'text/plain' },
+      createTextOutput(text) {
+        const output = {
+          text: String(text),
+          mimeType: 'text/plain',
+          setMimeType(type) { output.mimeType = type; return output; },
+          getContent: () => output.text,
+        };
+        return output;
+      },
+    },
     ScriptApp: {
       getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/EMULATED/exec' }),
       getOAuthToken: () => 'emulated-oauth-token',

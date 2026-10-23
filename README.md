@@ -15,6 +15,40 @@ Latin and nothing else. There were once a Spanish side and a French one behind
 the same pages; they are gone, along with everything that existed only to serve
 them.
 
+## The two sites
+
+The same site is published twice.
+
+- **Apps Script**:
+  [the web app](https://script.google.com/macros/s/AKfycbyfS0EeA5rlHcOyaDjO88BjaxAes0Zwvsh92wXzPKYgDciVoRuDa2eQXZ_eiJNECofn/exec),
+  also at [tinyurl.com/interpres-latin](https://tinyurl.com/interpres-latin).
+  The whole site, page and server, in one web app. See
+  [Google Apps Script](#google-apps-script).
+- **GitHub Pages**: [interpres.github.io](https://interpres.github.io), from
+  the repository `interpres/interpres.github.io` with Pages set to deploy from
+  GitHub Actions. The files in `public/`, with `/api/…` sent to that same Apps
+  Script web app: `pages/client.js` in the browser, `doPost` in
+  `appscript/src/Code.js` at the other end. The address it calls is in
+  `pages/config.json`.
+
+**Every change goes to both.** Pushing to `main` publishes Pages:
+`.github/workflows/pages.yml` runs the tests and `scripts/build-pages.mjs`. The
+Apps Script is redeployed by hand, to the same deployment so its address does
+not change, and since it is the server for both, a server change is not live
+anywhere until it is:
+
+```bash
+git -c http.postBuffer=524288000 push          # tests, then Pages
+
+cd appscript
+node build.mjs
+npx -y @google/clasp push --force
+npx -y @google/clasp create-deployment \
+  -i AKfycbyfS0EeA5rlHcOyaDjO88BjaxAes0Zwvsh92wXzPKYgDciVoRuDa2eQXZ_eiJNECofn -d Interpres
+```
+
+`npm run pages:build` makes the Pages copy in `_site/` to look at locally.
+
 ## The pages
 
 | Route | What it does |
@@ -318,6 +352,9 @@ server/
   routes/               dictionary, speak
 
 appscript/               the Google Apps Script build — see above
+pages/                  the GitHub Pages build: the API's address, and the
+                        browser half that sends /api/… to Apps Script
+scripts/build-pages.mjs public/ → _site/, for GitHub Pages
   build.mjs             server/ and public/ → dist/
   emulator.mjs          Apps Script's services, for the tests and the preview
   preview.mjs           the build, served locally
@@ -343,7 +380,7 @@ public/
 test/                   offline, no network, a couple of seconds
 ```
 
-`npm test` runs all 574 checks.
+`npm test` runs all 580 checks.
 
 ```
 latin.test.js             296 on the declension and conjugation engines and
@@ -353,8 +390,10 @@ conjugator-view.test.js   230 that every tense the page names exists in the
 corpus.test.js             11 on how a corpus sentence is chosen
 speech.test.js             17 on what may be spoken, and what is refused before
                               a character of the month is spent
-appscript.test.js          20 on the Apps Script build: its entry points, the
-                              inlined page, the dictionary, speech and Claude
+appscript.test.js          22 on the Apps Script build: its entry points, the
+                              inlined page, the dictionary, speech, Claude, and
+                              the HTTP API the Pages site calls
+pages.test.js               4 on the GitHub Pages build
 ```
 
 ## Google Apps Script
@@ -381,6 +420,7 @@ server, so `appscript/build.mjs` makes up the difference:
 | `.env` | Project Settings → Script properties, the same names as `.env.example` |
 | the Anthropic SDK | `appscript/src/modules/anthropic.js`, the same provider as a plain Messages API request |
 | `/conjugacion?v=…` | `…/exec?page=conjugacion&v=…`, kept in the address bar with `google.script.history` |
+| the API from another site | `doPost`: the GitHub Pages copy posts `{ method, url, headers, body }` as text/plain and collects the answer with `?result=<id>`. Only `/api/dictionary`, `/api/speak` and `/api/health` are accepted |
 
 `npm test` runs the built project in a bare V8 context with every outside host
 stubbed (`appscript/emulator.mjs`), and checks it serves the same dictionary
