@@ -295,7 +295,7 @@ const LATIN = {
     looking: latine('Lexicon consulens…', 'Looking it up…'),
     noResults: latine('Nihil inventum', 'No results'),
     didYouMean: latine('Fortasse?', 'Did you mean?'),
-    seeOnRae: latine('videre plenum lemma ↗', 'view the full entry ↗'),
+    seeOnRae: latine('videre plenum lemma ↗', 'view the full entry'),
     synonyms: latine('Synonyma', 'Synonyms'),
     antonyms: latine('Contraria', 'Antonyms'),
     locutions: latine('Locutiones', 'Phrases'),

@@ -237,7 +237,7 @@ function renderEntry(data, search) {
   if (data.credit) {
     wrap.appendChild(el('p', { class: 'usage__credit' },
       el('a', { href: data.credit.url, target: '_blank', rel: 'noopener' }, data.credit.name),
-      ` · ${data.credit.licence}`));
+      `, ${data.credit.licence}`));
   }
 
   // The Spanish side still says when it is not the RAE, because there the RAE
@@ -245,7 +245,7 @@ function renderEntry(data, search) {
 
   // A short English gloss, where the dictionary gives only its own language.
   if (data.gloss?.senses?.length) {
-    wrap.appendChild(el('p', { class: 'entry__gloss' }, data.gloss.senses.join(' · ')));
+    wrap.appendChild(el('p', { class: 'entry__gloss' }, data.gloss.senses.join('; ')));
   }
 
   // Sentences from a corpus belong to the word, not to one sense: they contain
@@ -258,7 +258,7 @@ function renderEntry(data, search) {
         sentence.en ? el('p', {}, sentence.en) : null)),
       el('p', { class: 'usage__credit' },
         el('a', { href: data.usage.credit.url, target: '_blank', rel: 'noopener' }, data.usage.credit.name),
-        ` · ${data.usage.credit.licence}`)));
+        `, ${data.usage.credit.licence}`)));
   }
 
   let senseIndex = 0;
