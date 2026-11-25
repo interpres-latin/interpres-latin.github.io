@@ -195,7 +195,7 @@ function wordTable(words, showStage, lookUp) {
         onclick: () => lookUp(word.latin.split(',')[0]),
       }, word.latin)),
     el('td', {}, word.english),
-    showStage ? el('td', {}, `${word.book ? `${word.book.label} · ` : ''}${word.stage}`) : null)));
+    showStage ? el('td', {}, `${word.book ? `${word.book.label}, ` : ''}${word.stage}`) : null)));
 
   return el('div', { class: 'tablewrap' },
     el('table', { class: 'conj conj--words' }, el('thead', {}, head), body));
